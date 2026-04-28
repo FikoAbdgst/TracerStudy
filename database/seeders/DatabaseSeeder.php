@@ -25,8 +25,31 @@ class DatabaseSeeder extends Seeder
             'email' => 'superadmin@sitami.com',
             'password' => bcrypt('password123') // Sesuaikan password
         ]);
-
         // Assign role ke user tersebut
         $superAdmin->assignRole('Super Admin');
+
+        // Buat User Admin Kampus
+        $adminKampus = User::factory()->create([
+            'name' => 'Admin Kampus SITAMI',
+            'email' => 'adminkampus@sitami.com',
+            'password' => bcrypt('password123') // Sesuaikan password
+        ]);
+        $adminKampus->assignRole('Admin Kampus');
+
+        // Buat User Admin PT
+        $adminPT = User::factory()->create([
+            'name' => 'Admin PT SITAMI',
+            'email' => 'perusahaan@sitami.com',
+            'password' => bcrypt('password123') // Sesuaikan password
+        ]);
+        $adminPT->assignRole('Admin PT');
+
+        // Buat User Alumni
+        $alumni = User::factory()->create([
+            'name' => 'Alumni SITAMI',
+            'email' => 'alumni@sitami.com',
+            'password' => bcrypt('password123') // Sesuaikan password
+        ]);
+        $alumni->assignRole('Alumni');
     }
 }

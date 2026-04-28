@@ -23,6 +23,7 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+    // app/Models/User.php
     public function alumniProfile()
     {
         return $this->hasOne(AlumniProfile::class);

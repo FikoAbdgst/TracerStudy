@@ -1,25 +1,32 @@
 <?php
-
+// database/seeders/DatabaseSeeder.php
 namespace Database\Seeders;
 
 use App\Models\User;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Spatie\Permission\Models\Role;
 
 class DatabaseSeeder extends Seeder
 {
-    use WithoutModelEvents;
-
-    /**
-     * Seed the application's database.
-     */
     public function run(): void
     {
-        // User::factory(10)->create();
+        // Reset cached roles and permissions bawaan Spatie
+        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+        // Buat 4 Role utama sesuai Use Case
+        $roles = ['Super Admin', 'Admin Kampus', 'Admin PT', 'Alumni'];
+        foreach ($roles as $role) {
+            Role::firstOrCreate(['name' => $role]);
+        }
+
+        // Buat User Super Admin
+        $superAdmin = User::factory()->create([
+            'name' => 'Super Admin SITAMI',
+            'email' => 'superadmin@sitami.com',
+            'password' => bcrypt('password123') // Sesuaikan password
         ]);
+
+        // Assign role ke user tersebut
+        $superAdmin->assignRole('Super Admin');
     }
 }

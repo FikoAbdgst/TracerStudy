@@ -1,27 +1,55 @@
 <?php
 
-use App\Http\Controllers\ProfileController;
-use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+use App\Http\Controllers\ProfileController;
+// Import Dashboard Controllers
+use App\Http\Controllers\SuperAdmin\DashboardController as SuperAdminDashboard;
+use App\Http\Controllers\AdminKampus\DashboardController as AdminKampusDashboard;
+use App\Http\Controllers\AdminPT\DashboardController as AdminPTDashboard;
+use App\Http\Controllers\Alumni\DashboardController as AlumniDashboard;
 
 Route::get('/', function () {
-    return Inertia::render('Welcome', [
-        'canLogin' => Route::has('login'),
-        'canRegister' => Route::has('register'),
-        'laravelVersion' => Application::VERSION,
-        'phpVersion' => PHP_VERSION,
-    ]);
+    return Inertia::render('Welcome');
 });
 
-Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+Route::middleware(['auth', 'verified'])->group(function () {
+    // Dashboard Utama (Logic Redirect ada di AuthenticatedSessionController)
+    Route::get('/dashboard', function () {
+        return Inertia::render('Dashboard');
+    })->name('dashboard');
 
-Route::middleware('auth')->group(function () {
+    // Profile Settings (Common for all)
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    // --- GRUP SUPER ADMIN ---
+    Route::middleware(['role:Super Admin'])->prefix('super-admin')->name('superadmin.')->group(function () {
+        Route::get('/dashboard', [SuperAdminDashboard::class, 'index'])->name('dashboard');
+        Route::get('/master-data', [SuperAdminDashboard::class, 'masterData'])->name('master-data');
+    });
+
+    // --- GRUP ADMIN KAMPUS ---
+    Route::middleware(['role:Admin Kampus'])->prefix('admin-kampus')->name('adminkampus.')->group(function () {
+        Route::get('/dashboard', [AdminKampusDashboard::class, 'index'])->name('dashboard');
+        Route::get('/tracer-study', [AdminKampusDashboard::class, 'tracerStudy'])->name('tracer');
+        Route::get('/verifikasi-pt', [AdminKampusDashboard::class, 'verifyCompany'])->name('verify-pt');
+    });
+
+    // --- GRUP ADMIN PT (Perusahaan) ---
+    Route::middleware(['role:Admin PT'])->prefix('perusahaan')->name('perusahaan.')->group(function () {
+        Route::get('/dashboard', [AdminPTDashboard::class, 'index'])->name('dashboard');
+        Route::get('/lowongan', [AdminPTDashboard::class, 'vacancies'])->name('lowongan');
+        Route::get('/pelamar', [AdminPTDashboard::class, 'applicants'])->name('pelamar');
+    });
+
+    // --- GRUP ALUMNI ---
+    Route::middleware(['role:Alumni'])->prefix('alumni')->name('alumni.')->group(function () {
+        Route::get('/dashboard', [AlumniDashboard::class, 'index'])->name('dashboard');
+        Route::get('/kuesioner', [AlumniDashboard::class, 'questionnaire'])->name('kuesioner');
+        Route::get('/loker', [AlumniDashboard::class, 'jobPortal'])->name('loker');
+    });
 });
 
-require __DIR__.'/auth.php';
+require __DIR__ . '/auth.php';

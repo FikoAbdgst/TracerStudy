@@ -32,7 +32,18 @@ class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
             'auth' => [
-                'user' => $request->user(),
+                'user' => $request->user() ? [
+                    'id' => $request->user()->id,
+                    'name' => $request->user()->name,
+                    'email' => $request->user()->email,
+                    // Mengambil daftar role array dari Spatie
+                    'roles' => $request->user()->getRoleNames(),
+                ] : null,
+            ],
+            // Opsional: Untuk menampilkan flash message sukses/error dari backend
+            'flash' => [
+                'message' => fn() => $request->session()->get('message'),
+                'error' => fn() => $request->session()->get('error'),
             ],
         ];
     }

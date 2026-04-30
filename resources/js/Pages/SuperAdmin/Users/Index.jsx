@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Head, router, useForm } from '@inertiajs/react';
+import React, { useEffect, useState } from 'react';
+import { Head, router, useForm, usePage } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
@@ -17,6 +17,15 @@ export default function UserIndex({ users, roles, filters }) {
     const [isEditOpen, setIsEditOpen] = useState(false);
     const [isDeleteOpen, setIsDeleteOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState(null);
+
+    const { flash } = usePage().props;
+
+    useEffect(() => {
+        if (flash.message) {
+            // Kamu bisa menggunakan library toast seperti sonner atau react-hot-toast
+            console.log(flash.message);
+        }
+    }, [flash]);
 
     // Form Handle menggunakan Inertia
     const { data, setData, post, put, delete: destroy, processing, errors, reset, clearErrors } = useForm({

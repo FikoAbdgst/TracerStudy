@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use App\Http\Controllers\ProfileController;
 // Import Dashboard Controllers
+use App\Http\Controllers\SuperAdmin\MasterDataController;
 use App\Http\Controllers\SuperAdmin\DashboardController as SuperAdminDashboard;
 use App\Http\Controllers\SuperAdmin\UserController;
 use App\Http\Controllers\AdminKampus\DashboardController as AdminKampusDashboard;
@@ -26,11 +27,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     // --- GRUP SUPER ADMIN ---
-    Route::middleware(['role:Super Admin'])->prefix('super-admin')->name('superadmin.')->group(function () {
-        Route::get('/dashboard', [SuperAdminDashboard::class, 'index'])->name('dashboard');
-        Route::get('/master-data', [SuperAdminDashboard::class, 'masterData'])->name('master-data');
+    // routes/web.php
 
-        // Tambahkan baris ini untuk Mengelola Hak Akses (Users)
+    Route::middleware(['role:Super Admin'])->prefix('super-admin')->name('superadmin.')->group(function () {
+        // 1. Rute Dashboard (Tujuan setelah login)
+        Route::get('/dashboard', [SuperAdminDashboard::class, 'index'])->name('dashboard');
+
+        Route::post('/master-data/prodi', [MasterDataController::class, 'storeProdi'])->name('master-data.prodi.store');
+        Route::post('/master-data/industry', [MasterDataController::class, 'storeIndustry'])->name('master-data.industry.store');
+        Route::delete('/master-data/prodi/{prodi}', [MasterDataController::class, 'destroyProdi'])->name('master-data.prodi.destroy');
+        Route::delete('/master-data/industry/{industry}', [MasterDataController::class, 'destroyIndustry'])->name('master-data.industry.destroy');
+        Route::get('/master-data', [MasterDataController::class, 'index'])->name('master-data');
+
+        // 3. Rute Mengelola Hak Akses (User Management) yang baru kita buat
         Route::resource('users', UserController::class)->except(['create', 'show', 'edit']);
     });
 

@@ -8,8 +8,11 @@ use App\Http\Controllers\SuperAdmin\MasterDataController;
 use App\Http\Controllers\SuperAdmin\DashboardController as SuperAdminDashboard;
 use App\Http\Controllers\SuperAdmin\UserController;
 use App\Http\Controllers\AdminKampus\DashboardController as AdminKampusDashboard;
-use App\Http\Controllers\AdminPT\DashboardController as AdminPTDashboard;
 use App\Http\Controllers\Alumni\DashboardController as AlumniDashboard;
+use App\Http\Controllers\Perusahaan\ApplicantController;
+use App\Http\Controllers\Perusahaan\CompanyProfileController;
+use App\Http\Controllers\Perusahaan\DashboardController as AdminPTDashboard;
+use App\Http\Controllers\Perusahaan\JobPostingController;
 
 Route::get('/', function () {
     return Inertia::render('Welcome');
@@ -51,10 +54,24 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 
     // --- GRUP ADMIN PT (Perusahaan) ---
-    Route::middleware(['role:Admin PT'])->prefix('perusahaan')->name('perusahaan.')->group(function () {
+    Route::middleware(['auth', 'role:Admin PT'])->prefix('perusahaan')->name('perusahaan.')->group(function () {
+        // Dashboard & Profil ...
         Route::get('/dashboard', [AdminPTDashboard::class, 'index'])->name('dashboard');
-        Route::get('/lowongan', [AdminPTDashboard::class, 'vacancies'])->name('lowongan');
-        Route::get('/pelamar', [AdminPTDashboard::class, 'applicants'])->name('pelamar');
+        Route::get('/profil', [CompanyProfileController::class, 'edit'])->name('profile.edit');
+        Route::post('/profil', [CompanyProfileController::class, 'update'])->name('profile.update');
+
+        // --- HAPUS ROUTE DUMMY LAMA, GANTI DENGAN INI ---
+        Route::get('/lowongan', [JobPostingController::class, 'index'])->name('lowongan');
+        Route::post('/lowongan', [JobPostingController::class, 'store'])->name('lowongan.store');
+        Route::put('/lowongan/{lowongan}', [JobPostingController::class, 'update'])->name('lowongan.update');
+        Route::delete('/lowongan/{lowongan}', [JobPostingController::class, 'destroy'])->name('lowongan.destroy');
+        // Rute Toggle Switch
+        Route::patch('/lowongan/{lowongan}/toggle', [JobPostingController::class, 'toggleStatus'])->name('lowongan.toggle');
+
+        Route::get('/pelamar', [ApplicantController::class, 'index'])->name('pelamar');
+
+        // Rute untuk mengubah status lamaran
+        Route::patch('/pelamar/{lamaran}/status', [ApplicantController::class, 'updateStatus'])->name('pelamar.status');
     });
 
     // --- GRUP ALUMNI ---

@@ -19,10 +19,20 @@ return new class extends Migration
                 ->cascadeOnDelete();
             $table->string('title');
             $table->text('description');
+
+            // 1. Tambahkan requirements
+            $table->text('requirements')->nullable();
+
             $table->string('location')->nullable();
-            $table->enum('job_type', ['full_time', 'part_time', 'contract', 'internship', 'remote']);
+
+            // 2. Buat nullable sementara jika form belum mengirim jenis pekerjaan
+            $table->enum('job_type', ['full_time', 'part_time', 'contract', 'internship', 'remote'])->nullable();
+
             $table->string('salary_range')->nullable();
-            $table->boolean('is_open')->default(true);
+
+            // 3. Ubah is_open menjadi is_active agar sesuai dengan frontend
+            $table->boolean('is_active')->default(true);
+
             $table->timestamp('deadline')->nullable();
             $table->timestamps();
         });

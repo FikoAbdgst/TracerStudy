@@ -19,6 +19,10 @@ return new class extends Migration
                 ->cascadeOnDelete();
             $table->string('name');
             $table->string('industry')->nullable();
+
+            // Tambahkan baris ini untuk menyimpan deskripsi perusahaan
+            $table->text('description')->nullable();
+
             $table->text('address')->nullable();
             $table->string('website')->nullable();
             $table->string('logo_url')->nullable();

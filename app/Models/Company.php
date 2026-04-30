@@ -9,7 +9,18 @@ class Company extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['user_id', 'name', 'industry', 'description', 'address', 'website', 'is_verified'];
+    // Sesuaikan dengan kolom yang ada di file migrasi kamu
+    protected $fillable = [
+        'user_id',
+        'name',
+        'industry',
+        'description',
+        'address',
+        'website',
+        'logo_url',
+        'verification_status',
+        'verified_at'
+    ];
 
     public function user()
     {

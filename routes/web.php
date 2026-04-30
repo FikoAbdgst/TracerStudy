@@ -5,6 +5,7 @@ use Inertia\Inertia;
 use App\Http\Controllers\ProfileController;
 // Import Dashboard Controllers
 use App\Http\Controllers\SuperAdmin\DashboardController as SuperAdminDashboard;
+use App\Http\Controllers\SuperAdmin\UserController;
 use App\Http\Controllers\AdminKampus\DashboardController as AdminKampusDashboard;
 use App\Http\Controllers\AdminPT\DashboardController as AdminPTDashboard;
 use App\Http\Controllers\Alumni\DashboardController as AlumniDashboard;
@@ -28,6 +29,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware(['role:Super Admin'])->prefix('super-admin')->name('superadmin.')->group(function () {
         Route::get('/dashboard', [SuperAdminDashboard::class, 'index'])->name('dashboard');
         Route::get('/master-data', [SuperAdminDashboard::class, 'masterData'])->name('master-data');
+
+        // Tambahkan baris ini untuk Mengelola Hak Akses (Users)
+        Route::resource('users', UserController::class)->except(['create', 'show', 'edit']);
     });
 
     // --- GRUP ADMIN KAMPUS ---

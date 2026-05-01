@@ -22,6 +22,7 @@ const menuConfig = {
     ],
     'Admin PT': [
         { name: 'Dashboard', href: route('perusahaan.dashboard') },
+        { name: 'Profil Perusahaan', href: route('perusahaan.profile.edit') },  // ← tambah ini
         { name: 'Kelola Lowongan', href: route('perusahaan.lowongan') },
         { name: 'Daftar Pelamar', href: route('perusahaan.pelamar') },
     ],

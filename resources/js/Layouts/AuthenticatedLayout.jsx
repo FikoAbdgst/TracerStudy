@@ -20,7 +20,8 @@ const menuConfig = {
         { name: 'Data Alumni', href: route('adminkampus.alumni.index'), icon: '🎓' },
         { name: 'Kuesioner Tracer Study', href: route('adminkampus.tracer'), icon: '📝' },
         { name: 'Verifikasi PT', href: route('adminkampus.verify-pt'), icon: '🏢' },
-        { name: 'Tinjau Lowongan', href: route('adminkampus.tinjau-lowongan'), icon: '🔍' }, // <-- Tambahkan ini
+        { name: 'Tinjau Lowongan', href: route('adminkampus.tinjau-lowongan'), icon: '🔍' },
+        { name: 'Dokumen MoU', href: route('adminkampus.mou.index'), icon: '📄' }, // <-- Tambahkan ini
     ],
     'Admin PT': [
         { name: 'Dashboard', href: route('perusahaan.dashboard') },

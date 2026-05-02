@@ -9,6 +9,7 @@ use App\Http\Controllers\SuperAdmin\DashboardController as SuperAdminDashboard;
 use App\Http\Controllers\SuperAdmin\UserController;
 use App\Http\Controllers\AdminKampus\DashboardController as AdminKampusDashboard;
 use App\Http\Controllers\AdminKampus\AlumniController;
+use App\Http\Controllers\AdminKampus\MouController;
 use App\Http\Controllers\AdminKampus\ReviewJobController;
 use App\Http\Controllers\AdminKampus\TracerStudyController;
 use App\Http\Controllers\AdminKampus\VerifyCompanyController;
@@ -68,6 +69,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         Route::get('/tinjau-lowongan', [ReviewJobController::class, 'index'])->name('tinjau-lowongan');
         Route::patch('/tinjau-lowongan/{job}/force-close', [ReviewJobController::class, 'forceClose'])->name('tinjau-lowongan.force-close');
+
+        Route::get('/mou', [MouController::class, 'index'])->name('mou.index');
+        Route::post('/mou', [MouController::class, 'store'])->name('mou.store');
+        Route::patch('/mou/{mou}/terminate', [MouController::class, 'terminate'])->name('mou.terminate');
     });
 
     // --- GRUP ADMIN PT (Perusahaan) ---

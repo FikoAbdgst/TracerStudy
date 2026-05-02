@@ -16,9 +16,11 @@ const menuConfig = {
         { name: 'Master Data', href: route('superadmin.master-data') },
     ],
     'Admin Kampus': [
-        { name: 'Dashboard', href: route('adminkampus.dashboard') },
-        { name: 'Tracer Study', href: route('adminkampus.tracer') },
-        { name: 'Verifikasi PT', href: route('adminkampus.verify-pt') },
+        { name: 'Dashboard', href: route('adminkampus.dashboard'), icon: '🏠' },
+        { name: 'Data Alumni', href: route('adminkampus.alumni.index'), icon: '🎓' },
+        { name: 'Kuesioner Tracer Study', href: route('adminkampus.tracer'), icon: '📝' },
+        { name: 'Verifikasi PT', href: route('adminkampus.verify-pt'), icon: '🏢' },
+        { name: 'Tinjau Lowongan', href: route('adminkampus.tinjau-lowongan'), icon: '🔍' }, // <-- Tambahkan ini
     ],
     'Admin PT': [
         { name: 'Dashboard', href: route('perusahaan.dashboard') },

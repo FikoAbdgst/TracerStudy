@@ -14,8 +14,12 @@ class DashboardController extends Controller
         return Inertia::render('AdminKampus/Dashboard', [
             'stats' => [
                 'totalAlumni' => AlumniProfile::count(),
-                'pendingCompanies' => Company::where('is_verified', false)->count(),
-                'responseRate' => 75, // Contoh kalkulasi % kuesioner
+
+                // --- BAGIAN YANG DIPERBAIKI ---
+                // Ubah dari 'is_verified', false menjadi 'verification_status', 'pending'
+                'pendingCompanies' => Company::where('verification_status', 'pending')->count(),
+
+                'responseRate' => 75, // Contoh kalkulasi sementara
             ]
         ]);
     }

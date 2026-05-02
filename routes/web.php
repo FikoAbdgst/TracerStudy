@@ -8,6 +8,10 @@ use App\Http\Controllers\SuperAdmin\MasterDataController;
 use App\Http\Controllers\SuperAdmin\DashboardController as SuperAdminDashboard;
 use App\Http\Controllers\SuperAdmin\UserController;
 use App\Http\Controllers\AdminKampus\DashboardController as AdminKampusDashboard;
+use App\Http\Controllers\AdminKampus\AlumniController;
+use App\Http\Controllers\AdminKampus\ReviewJobController;
+use App\Http\Controllers\AdminKampus\TracerStudyController;
+use App\Http\Controllers\AdminKampus\VerifyCompanyController;
 use App\Http\Controllers\Alumni\DashboardController as AlumniDashboard;
 use App\Http\Controllers\Perusahaan\ApplicantController;
 use App\Http\Controllers\Perusahaan\CompanyProfileController;
@@ -47,10 +51,23 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 
     // --- GRUP ADMIN KAMPUS ---
-    Route::middleware(['role:Admin Kampus'])->prefix('admin-kampus')->name('adminkampus.')->group(function () {
+    Route::middleware(['auth', 'role:Admin Kampus'])->prefix('admin-kampus')->name('adminkampus.')->group(function () {
         Route::get('/dashboard', [AdminKampusDashboard::class, 'index'])->name('dashboard');
-        Route::get('/tracer-study', [AdminKampusDashboard::class, 'tracerStudy'])->name('tracer');
-        Route::get('/verifikasi-pt', [AdminKampusDashboard::class, 'verifyCompany'])->name('verify-pt');
+
+        // Rute Mengelola Data Alumni
+        Route::get('/alumni', [AlumniController::class, 'index'])->name('alumni.index');
+
+        Route::get('/tracer-study', [TracerStudyController::class, 'index'])->name('tracer');
+        Route::post('/tracer-study', [TracerStudyController::class, 'store'])->name('tracer.store');
+        Route::put('/tracer-study/{tracer}', [TracerStudyController::class, 'update'])->name('tracer.update');
+        Route::delete('/tracer-study/{tracer}', [TracerStudyController::class, 'destroy'])->name('tracer.destroy');
+        Route::patch('/tracer-study/{tracer}/toggle', [TracerStudyController::class, 'toggleActive'])->name('tracer.toggle');
+
+        Route::get('/verifikasi-pt', [VerifyCompanyController::class, 'index'])->name('verify-pt');
+        Route::patch('/verifikasi-pt/{company}/status', [VerifyCompanyController::class, 'updateStatus'])->name('verify-pt.status');
+
+        Route::get('/tinjau-lowongan', [ReviewJobController::class, 'index'])->name('tinjau-lowongan');
+        Route::patch('/tinjau-lowongan/{job}/force-close', [ReviewJobController::class, 'forceClose'])->name('tinjau-lowongan.force-close');
     });
 
     // --- GRUP ADMIN PT (Perusahaan) ---

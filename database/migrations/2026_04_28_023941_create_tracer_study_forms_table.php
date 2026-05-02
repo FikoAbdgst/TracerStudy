@@ -16,6 +16,10 @@ return new class extends Migration
             $table->id();
             $table->string('title');
             $table->text('description')->nullable();
+
+            // Tambahkan kolom JSON ini untuk menampung data form builder
+            $table->json('questions')->nullable();
+
             $table->boolean('is_active')->default(false);
             $table->timestamp('period_start')->nullable();
             $table->timestamp('period_end')->nullable();

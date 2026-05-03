@@ -6,11 +6,16 @@ use Illuminate\Database\Eloquent\Model;
 
 class TracerStudyResponse extends Model
 {
-    protected $fillable = ['form_id', 'alumni_id', 'answers'];
+    protected $fillable = ['tracer_study_form_id', 'alumni_id', 'answers'];
 
     protected $casts = [
-        'answers' => 'array', // Memudahkan manipulasi data kuesioner JSON
+        'answers' => 'array', // Pastikan di-cast ke array agar format JSON-nya aman
     ];
+
+    public function form()
+    {
+        return $this->belongsTo(TracerStudyForm::class, 'tracer_study_form_id');
+    }
 
     public function alumni()
     {

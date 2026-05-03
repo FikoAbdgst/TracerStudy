@@ -13,7 +13,11 @@ use App\Http\Controllers\AdminKampus\MouController;
 use App\Http\Controllers\AdminKampus\ReviewJobController;
 use App\Http\Controllers\AdminKampus\TracerStudyController;
 use App\Http\Controllers\AdminKampus\VerifyCompanyController;
+use App\Http\Controllers\Alumni\AlumniProfileController;
+use App\Http\Controllers\Alumni\TracerStudyController as AlumniTracerController;
 use App\Http\Controllers\Alumni\DashboardController as AlumniDashboard;
+use App\Http\Controllers\Alumni\ForumController;
+use App\Http\Controllers\Alumni\JobPortalController;
 use App\Http\Controllers\Perusahaan\ApplicantController;
 use App\Http\Controllers\Perusahaan\CompanyProfileController;
 use App\Http\Controllers\Perusahaan\DashboardController as AdminPTDashboard;
@@ -97,10 +101,23 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 
     // --- GRUP ALUMNI ---
-    Route::middleware(['role:Alumni'])->prefix('alumni')->name('alumni.')->group(function () {
+    Route::middleware(['auth', 'role:Alumni'])->prefix('alumni')->name('alumni.')->group(function () {
         Route::get('/dashboard', [AlumniDashboard::class, 'index'])->name('dashboard');
-        Route::get('/kuesioner', [AlumniDashboard::class, 'questionnaire'])->name('kuesioner');
-        Route::get('/loker', [AlumniDashboard::class, 'jobPortal'])->name('loker');
+
+        // Fitur Mengelola Profil Alumni
+        Route::get('/profil', [AlumniProfileController::class, 'edit'])->name('profile.edit');
+        Route::post('/profil', [AlumniProfileController::class, 'update'])->name('profile.update');
+
+        Route::get('/kuesioner', [AlumniTracerController::class, 'index'])->name('kuesioner');
+        Route::get('/kuesioner/{kuesioner}', [AlumniTracerController::class, 'show'])->name('kuesioner.show');
+        Route::post('/kuesioner/{kuesioner}', [AlumniTracerController::class, 'store'])->name('kuesioner.store');
+        Route::get('/loker', [JobPortalController::class, 'index'])->name('loker');
+        Route::post('/loker/{job}/apply', [JobPortalController::class, 'apply'])->name('loker.apply');
+        Route::get('/lamaran', [JobPortalController::class, 'applications'])->name('lamaran');
+        Route::get('/forum', [ForumController::class, 'index'])->name('forum.index');
+        Route::post('/forum', [ForumController::class, 'store'])->name('forum.store');
+        Route::get('/forum/{forum}', [ForumController::class, 'show'])->name('forum.show');
+        Route::post('/forum/{forum}/reply', [ForumController::class, 'reply'])->name('forum.reply');
     });
 });
 

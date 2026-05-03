@@ -30,9 +30,12 @@ const menuConfig = {
         { name: 'Daftar Pelamar', href: route('perusahaan.pelamar') },
     ],
     'Alumni': [
-        { name: 'Dashboard', href: route('alumni.dashboard') },
-        { name: 'Kuesioner', href: route('alumni.kuesioner') },
-        { name: 'Bursa Kerja', href: route('alumni.loker') },
+        { name: 'Dashboard', href: route('alumni.dashboard'), icon: '🏠' },
+        { name: 'Profil Alumni', href: route('alumni.profile.edit'), icon: '🎓' },
+        { name: 'Kuesioner', href: route('alumni.kuesioner'), icon: '📝' },
+        { name: 'Bursa Kerja', href: route('alumni.loker'), icon: '💼' },
+        { name: 'Status Lamaran', href: route('alumni.lamaran'), icon: '📊' },
+        { name: 'Ruang Diskusi', href: route('alumni.forum.index'), icon: '💬' },
     ],
 };
 

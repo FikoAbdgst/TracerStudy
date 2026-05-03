@@ -14,20 +14,15 @@ return new class extends Migration
     {
         Schema::create('alumni_profiles', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
 
-            $table->foreignId('user_id')
-                ->constrained()
-                ->cascadeOnDelete();
-
-            $table->string('nim')->unique();
-            $table->string('angkatan', 4);
-            $table->string('prodi');
-            $table->string('phone')->nullable();
+            // Kolom-kolom baru yang dibutuhkan oleh form
+            $table->string('nim');
+            $table->string('major'); // <-- Ini yang tadi bikin error
+            $table->integer('graduation_year');
+            $table->string('phone_number')->nullable();
+            $table->text('skills')->nullable();
             $table->text('address')->nullable();
-            $table->string('current_job')->nullable();
-            $table->string('current_company')->nullable();
-            $table->string('linkedin_url')->nullable();
-            $table->string('photo_url')->nullable();
 
             $table->timestamps();
         });

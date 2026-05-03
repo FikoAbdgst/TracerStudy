@@ -102,18 +102,24 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // --- GRUP ALUMNI ---
     Route::middleware(['auth', 'role:Alumni'])->prefix('alumni')->name('alumni.')->group(function () {
+        // 1. Dashboard
         Route::get('/dashboard', [AlumniDashboard::class, 'index'])->name('dashboard');
 
-        // Fitur Mengelola Profil Alumni
+        // 2. Profil Alumni
         Route::get('/profil', [AlumniProfileController::class, 'edit'])->name('profile.edit');
         Route::post('/profil', [AlumniProfileController::class, 'update'])->name('profile.update');
 
+        // 3. Kuesioner Tracer Study
         Route::get('/kuesioner', [AlumniTracerController::class, 'index'])->name('kuesioner');
         Route::get('/kuesioner/{kuesioner}', [AlumniTracerController::class, 'show'])->name('kuesioner.show');
         Route::post('/kuesioner/{kuesioner}', [AlumniTracerController::class, 'store'])->name('kuesioner.store');
+
+        // 4. Bursa Kerja (Loker) & Lamaran
         Route::get('/loker', [JobPortalController::class, 'index'])->name('loker');
         Route::post('/loker/{job}/apply', [JobPortalController::class, 'apply'])->name('loker.apply');
         Route::get('/lamaran', [JobPortalController::class, 'applications'])->name('lamaran');
+
+        // 5. Forum Diskusi
         Route::get('/forum', [ForumController::class, 'index'])->name('forum.index');
         Route::post('/forum', [ForumController::class, 'store'])->name('forum.store');
         Route::get('/forum/{forum}', [ForumController::class, 'show'])->name('forum.show');

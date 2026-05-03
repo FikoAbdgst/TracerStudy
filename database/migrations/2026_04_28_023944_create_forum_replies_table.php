@@ -13,6 +13,13 @@ return new class extends Migration
     {
         Schema::create('forum_replies', function (Blueprint $table) {
             $table->id();
+            // Relasi ke topik induknya
+            $table->foreignId('forum_topic_id')->constrained()->cascadeOnDelete();
+            // Relasi ke user (pemberi balasan)
+            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+
+            $table->text('content');
+
             $table->timestamps();
         });
     }

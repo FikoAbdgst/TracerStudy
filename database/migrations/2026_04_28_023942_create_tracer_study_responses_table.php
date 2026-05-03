@@ -14,15 +14,13 @@ return new class extends Migration
     {
         Schema::create('tracer_study_responses', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('form_id')
-                ->constrained('tracer_study_forms')
-                ->cascadeOnDelete();
-            $table->foreignId('alumni_id')
-                ->constrained('alumni_profiles')
-                ->cascadeOnDelete();
+            // Relasi ke kuesioner
+            $table->foreignId('tracer_study_form_id')->constrained()->cascadeOnDelete();
+            // Relasi ke alumni
+            $table->foreignId('alumni_id')->constrained('alumni_profiles')->cascadeOnDelete();
+            // Menyimpan jawaban kuesioner dalam format JSON
             $table->json('answers');
-            $table->timestamp('submitted_at')->useCurrent();
-            $table->unique(['form_id', 'alumni_id']);
+
             $table->timestamps();
         });
     }

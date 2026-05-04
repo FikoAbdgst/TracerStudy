@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Alumni;
 use App\Http\Controllers\Controller;
 use App\Models\JobPosting;
 use App\Models\JobApplication;
+use App\Notifications\SystemNotification;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
@@ -68,6 +69,12 @@ class JobPortalController extends Controller
             'cv_path' => $path,
             'status' => 'pending',
         ]);
+        $hrd = $job->company->user; // Asumsi tabel company punya user_id
+        $hrd->notify(new SystemNotification(
+            'Lamaran Baru Masuk!',
+            $alumniProfile->user->name . ' telah melamar untuk posisi ' . $job->title,
+            route('perusahaan.pelamar') // URL tujuan jika di klik
+        ));
 
         return back()->with('message', 'Lamaran dan CV Anda berhasil dikirim!');
     }

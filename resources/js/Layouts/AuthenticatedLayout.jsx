@@ -213,20 +213,54 @@ export default function AuthenticatedLayout({ header, children }) {
                     {/* Right */}
                     <div className="ml-auto flex items-center gap-3">
 
-                        {/* Bell */}
-                        <button
-                            className="w-9 h-9 rounded-lg flex items-center justify-center transition-colors"
-                            style={{ border: '1px solid #e8edf5', background: '#f8fafc', color: '#9aa5b4' }}
-                            onMouseEnter={e => e.currentTarget.style.background = '#f0f4f8'}
-                            onMouseLeave={e => e.currentTarget.style.background = '#f8fafc'}
-                        >
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                            </svg>
-                        </button>
+                        {/* Bell Notification */}
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <button className="relative w-9 h-9 rounded-lg flex items-center justify-center transition-colors border border-gray-200 bg-gray-50 text-gray-500 hover:bg-gray-100">
+                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                                    </svg>
 
-                        {/* Divider */}
-                        <div style={{ width: '1px', height: '20px', background: '#e8edf5' }} />
+                                    {/* Indikator Merah jika ada notifikasi */}
+                                    {auth.notifications?.length > 0 && (
+                                        <span className="absolute top-1.5 right-2 w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                                    )}
+                                </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-80 p-0">
+                                <div className="bg-gray-50 border-b px-4 py-2 font-semibold text-sm text-gray-700 flex justify-between items-center">
+                                    Notifikasi
+                                    <span className="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full">{auth.notifications?.length || 0} Baru</span>
+                                </div>
+                                <div className="max-h-[300px] overflow-y-auto">
+                                    {auth.notifications?.length > 0 ? (
+                                        auth.notifications.map((notif) => (
+                                            <Link
+                                                key={notif.id}
+                                                href={notif.data.url}
+                                                method="post" // Kita pakai POST untuk memicu markAsRead sekalian pindah halaman
+                                                data={{ _method: 'post' }}
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    // Tandai dibaca dulu, lalu redirect
+                                                    window.axios.post(route('notifications.read', notif.id)).then(() => {
+                                                        window.location.href = notif.data.url;
+                                                    });
+                                                }}
+                                                className="block px-4 py-3 border-b hover:bg-gray-50 transition"
+                                            >
+                                                <p className="text-sm font-semibold text-gray-800">{notif.data.title}</p>
+                                                <p className="text-xs text-gray-600 mt-0.5 line-clamp-2">{notif.data.message}</p>
+                                            </Link>
+                                        ))
+                                    ) : (
+                                        <div className="px-4 py-8 text-center text-sm text-gray-500">
+                                            Tidak ada notifikasi baru.
+                                        </div>
+                                    )}
+                                </div>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
 
                         {/* User Dropdown */}
                         <DropdownMenu>

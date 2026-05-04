@@ -26,6 +26,14 @@ use App\Http\Controllers\Perusahaan\JobPostingController;
 Route::get('/', function () {
     return Inertia::render('Welcome');
 });
+// Rute Notifikasi Universal (Bisa diakses semua role yang login)
+Route::post('/notifications/{id}/read', function ($id) {
+    $notification = auth()->user()->notifications()->find($id);
+    if ($notification) {
+        $notification->markAsRead();
+    }
+    return back();
+})->name('notifications.read');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     // Dashboard Utama (Logic Redirect ada di AuthenticatedSessionController)

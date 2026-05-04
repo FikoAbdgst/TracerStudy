@@ -38,6 +38,8 @@ class HandleInertiaRequests extends Middleware
                     'email' => $request->user()->email,
                     // Mengambil daftar role array dari Spatie
                     'roles' => $request->user()->getRoleNames(),
+                    // Tambahkan baris ini untuk menarik 5 notifikasi yang belum dibaca
+                    'notifications' => $request->user() ? $request->user()->unreadNotifications()->take(5)->get() : [],
                 ] : null,
             ],
             // Opsional: Untuk menampilkan flash message sukses/error dari backend

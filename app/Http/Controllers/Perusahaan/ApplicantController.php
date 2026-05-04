@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Perusahaan;
 
 use App\Http\Controllers\Controller;
 use App\Models\JobApplication;
+use App\Notifications\SystemNotification;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
@@ -48,6 +49,12 @@ class ApplicantController extends Controller
 
         // Jika statusnya Diterima atau Ditolak, biasanya ERP akan mengirim notifikasi/email ke pelamar.
         // Untuk sekarang, kita cukup update statusnya.
+        $alumniUser = $lamaran->alumni->user;
+        $alumniUser->notify(new SystemNotification(
+            'Status Lamaran Diperbarui!',
+            'Status lamaran Anda di ' . $lamaran->jobPosting->company->name . ' berubah menjadi: ' . $validated['status'],
+            route('alumni.lamaran')
+        ));
 
         return back()->with('message', 'Status pelamar berhasil diperbarui menjadi: ' . strtoupper($validated['status']));
     }

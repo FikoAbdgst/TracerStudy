@@ -16,12 +16,12 @@ const menuConfig = {
         { name: 'Master Data', href: route('superadmin.master-data') },
     ],
     'Admin Kampus': [
-        { name: 'Dashboard', href: route('adminkampus.dashboard'), icon: '🏠' },
-        { name: 'Data Alumni', href: route('adminkampus.alumni.index'), icon: '🎓' },
-        { name: 'Kuesioner Tracer Study', href: route('adminkampus.tracer'), icon: '📝' },
-        { name: 'Verifikasi PT', href: route('adminkampus.verify-pt'), icon: '🏢' },
-        { name: 'Tinjau Lowongan', href: route('adminkampus.tinjau-lowongan'), icon: '🔍' },
-        { name: 'Dokumen MoU', href: route('adminkampus.mou.index'), icon: '📄' }, // <-- Tambahkan ini
+        { name: 'Dashboard', href: route('adminkampus.dashboard') },
+        { name: 'Data Alumni', href: route('adminkampus.alumni.index') },
+        { name: 'Tracer Study', href: route('adminkampus.tracer') },
+        { name: 'Verifikasi PT', href: route('adminkampus.verify-pt') },
+        { name: 'Tinjau Lowongan', href: route('adminkampus.tinjau-lowongan') },
+        { name: 'Dokumen MoU', href: route('adminkampus.mou.index') }, // <-- sekalian perbaiki yang MoU
     ],
     'Admin PT': [
         { name: 'Dashboard', href: route('perusahaan.dashboard') },

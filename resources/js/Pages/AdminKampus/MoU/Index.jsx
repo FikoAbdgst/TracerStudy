@@ -1,118 +1,178 @@
 import React, { useState } from 'react';
 import { Head, useForm, router } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/Components/ui/table';
-import { Button } from '@/Components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/Components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/Components/ui/select';
-import { Input } from '@/Components/ui/input';
-import { Label } from '@/Components/ui/label';
-import { Badge } from '@/Components/ui/badge';
 import InputError from '@/Components/InputError';
+
+const fieldStyle = {
+    height: '40px', padding: '0 12px', border: '1.5px solid #e2e8f0',
+    borderRadius: '8px', background: '#f8fafc', color: '#1a3560',
+    fontSize: '14px', outline: 'none', width: '100%', transition: 'all 0.15s',
+};
+const onFocus = (e) => { e.target.style.borderColor = '#1a3560'; e.target.style.background = '#fff'; e.target.style.boxShadow = '0 0 0 3px rgba(26,53,96,0.08)'; };
+const onBlur = (e) => { e.target.style.borderColor = '#e2e8f0'; e.target.style.background = '#f8fafc'; e.target.style.boxShadow = 'none'; };
+
+const FieldLabel = ({ children }) => (
+    <label className="block text-xs font-bold uppercase mb-1.5" style={{ color: '#4a5568', letterSpacing: '0.08em' }}>
+        {children}
+    </label>
+);
+
+const mouStatusMap = {
+    active: { bg: '#f0fdf4', color: '#166534', label: 'Aktif' },
+    expired: { bg: '#fff5f5', color: '#c53030', label: 'Kadaluwarsa' },
+    terminated: { bg: '#f4f6fa', color: '#718096', label: 'Diakhiri' },
+};
+
+const MouStatusBadge = ({ status, expiresAt }) => {
+    const isExpired = status === 'active' && new Date(expiresAt) < new Date();
+    const key = isExpired ? 'expired' : status;
+    const s = mouStatusMap[key] ?? mouStatusMap.active;
+    return (
+        <span className="text-xs font-bold px-2.5 py-1 rounded-full"
+            style={{ background: s.bg, color: s.color }}>
+            {s.label}
+        </span>
+    );
+};
 
 export default function MoUIndex({ mous, companies }) {
     const [isModalOpen, setIsModalOpen] = useState(false);
 
-    // useForm Inertia sudah mendukung upload file secara otomatis
     const { data, setData, post, processing, errors, reset, clearErrors } = useForm({
-        company_id: '',
-        file: null,
-        signed_at: '',
-        expires_at: '',
+        company_id: '', file: null, signed_at: '', expires_at: '',
     });
 
-    const openCreateModal = () => {
-        reset(); clearErrors(); setIsModalOpen(true);
-    };
+    const openCreateModal = () => { reset(); clearErrors(); setIsModalOpen(true); };
 
     const handleUpload = (e) => {
         e.preventDefault();
-        post(route('adminkampus.mou.store'), {
-            onSuccess: () => setIsModalOpen(false)
-        });
+        post(route('adminkampus.mou.store'), { onSuccess: () => setIsModalOpen(false) });
     };
 
     const handleTerminate = (id) => {
-        if (confirm('Yakin ingin mengakhiri kerja sama ini secara paksa?')) {
+        if (confirm('Yakin ingin mengakhiri kerja sama ini?')) {
             router.patch(route('adminkampus.mou.terminate', id));
         }
     };
 
-    const getStatusBadge = (status, expiresAt) => {
-        // Cek jika statusnya active, tapi tanggal sudah lewat
-        if (status === 'active' && new Date(expiresAt) < new Date()) {
-            return <Badge variant="destructive">Kadaluwarsa</Badge>;
-        }
-
-        switch (status) {
-            case 'active': return <Badge className="bg-green-500">Aktif</Badge>;
-            case 'expired': return <Badge variant="destructive">Kadaluwarsa</Badge>;
-            case 'terminated': return <Badge variant="secondary">Diakhiri</Badge>;
-            default: return <Badge>{status}</Badge>;
-        }
-    };
+    const formatDate = (d) => d ? new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(d)) : '—';
 
     return (
-        <AuthenticatedLayout header={<h2 className="font-semibold text-xl text-gray-800">Manajemen Kerja Sama (MoU)</h2>}>
-            <Head title="Dokumen MoU" />
+        <AuthenticatedLayout
+            header={
+                <div>
+                    <h2 className="text-lg font-bold" style={{ color: '#1a3560' }}>Manajemen Kerja Sama (MoU)</h2>
+                    <p className="text-xs mt-0.5" style={{ color: '#a0aec0' }}>
+                        Arsip dan pelacakan masa berlaku dokumen MoU perusahaan mitra
+                    </p>
+                </div>
+            }
+        >
+            <Head title="Dokumen MoU — SITAMI" />
 
-            <div className="bg-white p-6 rounded-lg shadow-sm border mb-6">
-                <div className="flex justify-between items-center mb-6">
-                    <p className="text-gray-500 text-sm">Arsip dan pelacakan masa berlaku dokumen MoU dengan perusahaan mitra.</p>
-                    <Button onClick={openCreateModal}>+ Unggah MoU Baru</Button>
+            <div className="rounded-xl p-5" style={{ background: '#fff', border: '1px solid #e8edf5' }}>
+                <div className="flex items-center justify-between mb-5">
+                    <p className="text-sm" style={{ color: '#a0aec0' }}>
+                        Total <span className="font-semibold" style={{ color: '#1a3560' }}>{mous.length}</span> dokumen MoU
+                    </p>
+                    <button
+                        onClick={openCreateModal}
+                        className="flex items-center gap-2 px-4 text-sm font-semibold rounded-lg"
+                        style={{ height: '40px', background: '#f97316', color: '#fff', border: 'none', cursor: 'pointer' }}
+                        onMouseEnter={e => e.target.style.background = '#ea6c0a'}
+                        onMouseLeave={e => e.target.style.background = '#f97316'}
+                    >
+                        + Unggah MoU Baru
+                    </button>
                 </div>
 
-                <div className="rounded-md border">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Perusahaan Mitra</TableHead>
-                                <TableHead>Tanggal TTD</TableHead>
-                                <TableHead>Berlaku Sampai</TableHead>
-                                <TableHead>Dokumen</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead className="text-right">Aksi</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
+                <div className="rounded-xl overflow-hidden" style={{ border: '1px solid #e8edf5' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead>
+                            <tr style={{ background: '#f4f6fa', borderBottom: '1px solid #e8edf5' }}>
+                                {['Perusahaan Mitra', 'Tgl. Penandatanganan', 'Berlaku Sampai', 'Dokumen', 'Status', 'Aksi'].map((h, i) => (
+                                    <th key={i} className="text-xs font-bold uppercase"
+                                        style={{ padding: '10px 16px', color: '#1a3560', letterSpacing: '0.1em', textAlign: i === 5 ? 'right' : 'left' }}>
+                                        {h}
+                                    </th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody>
                             {mous.map(mou => (
-                                <TableRow key={mou.id}>
-                                    <TableCell className="font-medium">{mou.company?.name || 'Perusahaan Dihapus'}</TableCell>
-                                    <TableCell>{mou.signed_at}</TableCell>
-                                    <TableCell>{mou.expires_at}</TableCell>
-                                    <TableCell>
-                                        <a href={`/storage/${mou.file_url}`} target="_blank" className="text-blue-600 hover:underline">
+                                <tr key={mou.id} style={{ borderBottom: '1px solid #f4f6fa' }}
+                                    onMouseEnter={e => e.currentTarget.style.background = '#fafbfc'}
+                                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                                    <td style={{ padding: '13px 16px' }}>
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0"
+                                                style={{ background: '#e8f0fb', color: '#1a3560' }}>
+                                                {(mou.company?.name ?? 'P').charAt(0).toUpperCase()}
+                                            </div>
+                                            <div className="font-semibold text-sm" style={{ color: '#1a3560' }}>
+                                                {mou.company?.name ?? 'Perusahaan Dihapus'}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td style={{ padding: '13px 16px', fontSize: '13px', color: '#4a5568' }}>
+                                        {formatDate(mou.signed_at)}
+                                    </td>
+                                    <td style={{ padding: '13px 16px', fontSize: '13px', color: '#4a5568' }}>
+                                        {formatDate(mou.expires_at)}
+                                    </td>
+                                    <td style={{ padding: '13px 16px' }}>
+                                        <a href={`/storage/${mou.file_url}`} target="_blank"
+                                            className="text-xs font-semibold flex items-center gap-1.5"
+                                            style={{ color: '#f97316', textDecoration: 'none' }}>
+                                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                                            </svg>
                                             Unduh PDF
                                         </a>
-                                    </TableCell>
-                                    <TableCell>{getStatusBadge(mou.status, mou.expires_at)}</TableCell>
-                                    <TableCell className="text-right">
+                                    </td>
+                                    <td style={{ padding: '13px 16px' }}>
+                                        <MouStatusBadge status={mou.status} expiresAt={mou.expires_at} />
+                                    </td>
+                                    <td style={{ padding: '13px 16px', textAlign: 'right' }}>
                                         {mou.status === 'active' && (
-                                            <Button variant="destructive" size="sm" onClick={() => handleTerminate(mou.id)}>Akhiri</Button>
+                                            <button
+                                                onClick={() => handleTerminate(mou.id)}
+                                                className="text-xs font-semibold px-3 rounded-lg"
+                                                style={{ height: '32px', border: '1px solid #fecaca', background: '#fff5f5', color: '#e53e3e', cursor: 'pointer' }}
+                                                onMouseEnter={e => e.target.style.background = '#fee2e2'}
+                                                onMouseLeave={e => e.target.style.background = '#fff5f5'}
+                                            >
+                                                Akhiri
+                                            </button>
                                         )}
-                                    </TableCell>
-                                </TableRow>
+                                    </td>
+                                </tr>
                             ))}
                             {mous.length === 0 && (
-                                <TableRow><TableCell colSpan={6} className="text-center py-6 text-gray-500">Belum ada dokumen MoU yang diunggah.</TableCell></TableRow>
+                                <tr>
+                                    <td colSpan={6} className="text-center py-12 text-sm" style={{ color: '#a0aec0' }}>
+                                        Belum ada dokumen MoU yang diunggah.
+                                    </td>
+                                </tr>
                             )}
-                        </TableBody>
-                    </Table>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
-            {/* MODAL UPLOAD MoU */}
+            {/* Modal Upload MoU */}
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Unggah Dokumen MoU</DialogTitle>
+                        <DialogTitle style={{ color: '#1a3560' }}>Unggah Dokumen MoU</DialogTitle>
                     </DialogHeader>
-                    <form onSubmit={handleUpload} className="space-y-4">
-
-                        <div className="space-y-2">
-                            <Label>Perusahaan Mitra</Label>
-                            <Select value={data.company_id} onValueChange={(val) => setData('company_id', val)}>
-                                <SelectTrigger>
+                    <form onSubmit={handleUpload} className="space-y-4 pt-1">
+                        <div>
+                            <FieldLabel>Perusahaan Mitra</FieldLabel>
+                            <Select value={data.company_id} onValueChange={v => setData('company_id', v)}>
+                                <SelectTrigger style={{ height: '40px', borderRadius: '8px' }}>
                                     <SelectValue placeholder="Pilih perusahaan..." />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -121,39 +181,60 @@ export default function MoUIndex({ mous, companies }) {
                                     ))}
                                 </SelectContent>
                             </Select>
-                            <InputError message={errors.company_id} />
+                            <InputError message={errors.company_id} className="mt-1" />
                         </div>
-
-                        <div className="space-y-2">
-                            <Label>Tanggal Penandatanganan</Label>
-                            <Input type="date" value={data.signed_at} onChange={e => setData('signed_at', e.target.value)} />
-                            <InputError message={errors.signed_at} />
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <FieldLabel>Tanggal Penandatanganan</FieldLabel>
+                                <input type="date" style={fieldStyle} value={data.signed_at}
+                                    onChange={e => setData('signed_at', e.target.value)}
+                                    onFocus={onFocus} onBlur={onBlur} />
+                                <InputError message={errors.signed_at} className="mt-1" />
+                            </div>
+                            <div>
+                                <FieldLabel>Berlaku Sampai</FieldLabel>
+                                <input type="date" style={fieldStyle} value={data.expires_at}
+                                    onChange={e => setData('expires_at', e.target.value)}
+                                    onFocus={onFocus} onBlur={onBlur} />
+                                <InputError message={errors.expires_at} className="mt-1" />
+                            </div>
                         </div>
-
-                        <div className="space-y-2">
-                            <Label>Berlaku Sampai (Kedaluwarsa)</Label>
-                            <Input type="date" value={data.expires_at} onChange={e => setData('expires_at', e.target.value)} />
-                            <InputError message={errors.expires_at} />
+                        <div>
+                            <FieldLabel>File Dokumen (PDF, Maks 5MB)</FieldLabel>
+                            <div
+                                className="rounded-lg px-4 py-3 flex items-center gap-3"
+                                style={{ border: '1.5px dashed #e2e8f0', background: '#f8fafc', cursor: 'pointer' }}
+                            >
+                                <svg className="w-5 h-5 flex-shrink-0" style={{ color: '#a0aec0' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m6.75 12l-3-3m0 0l-3 3m3-3v6m-1.5-15H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                                </svg>
+                                <div className="flex-1">
+                                    <div className="text-xs font-semibold" style={{ color: '#4a5568' }}>
+                                        {data.file ? data.file.name : 'Klik untuk memilih file PDF'}
+                                    </div>
+                                    <div className="text-xs" style={{ color: '#a0aec0' }}>Maksimal ukuran 5MB</div>
+                                </div>
+                                <input type="file" accept=".pdf" className="absolute inset-0 opacity-0 cursor-pointer w-full"
+                                    style={{ position: 'absolute', opacity: 0 }}
+                                    onChange={e => setData('file', e.target.files[0])} />
+                            </div>
+                            <InputError message={errors.file} className="mt-1" />
                         </div>
-
-                        <div className="space-y-2">
-                            <Label>File Dokumen (PDF, Maks 5MB)</Label>
-                            <Input
-                                type="file"
-                                accept=".pdf"
-                                onChange={e => setData('file', e.target.files[0])}
-                            />
-                            <InputError message={errors.file} />
-                        </div>
-
                         <DialogFooter>
-                            <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)}>Batal</Button>
-                            <Button type="submit" disabled={processing}>Unggah & Simpan</Button>
+                            <button type="button" onClick={() => setIsModalOpen(false)}
+                                className="px-4 text-sm rounded-lg"
+                                style={{ height: '38px', color: '#718096', cursor: 'pointer', background: 'transparent', border: '1px solid #e2e8f0' }}>
+                                Batal
+                            </button>
+                            <button type="submit" disabled={processing}
+                                className="px-5 text-sm font-semibold rounded-lg"
+                                style={{ height: '38px', background: '#f97316', color: '#fff', border: 'none', cursor: 'pointer', opacity: processing ? 0.6 : 1 }}>
+                                {processing ? 'Mengunggah...' : 'Unggah & Simpan'}
+                            </button>
                         </DialogFooter>
                     </form>
                 </DialogContent>
             </Dialog>
-
         </AuthenticatedLayout>
     );
 }

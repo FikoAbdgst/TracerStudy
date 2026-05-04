@@ -1,38 +1,37 @@
 import React, { useState } from 'react';
 import { Head, useForm, router } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Button } from '@/Components/ui/button';
-import { Input } from '@/Components/ui/input';
-import { Textarea } from '@/Components/ui/textarea';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/Components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/Components/ui/dialog';
-import { Switch } from '@/Components/ui/switch';
-import { Badge } from '@/Components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/Components/ui/select';
-import { Label } from '@/Components/ui/label';
+import { Switch } from '@/Components/ui/switch';
+
+const fieldStyle = {
+    height: '40px', padding: '0 12px', border: '1.5px solid #e2e8f0',
+    borderRadius: '8px', background: '#f8fafc', color: '#1a3560',
+    fontSize: '14px', outline: 'none', width: '100%', transition: 'all 0.15s',
+};
+const onFocus = (e) => { e.target.style.borderColor = '#1a3560'; e.target.style.background = '#fff'; e.target.style.boxShadow = '0 0 0 3px rgba(26,53,96,0.08)'; };
+const onBlur = (e) => { e.target.style.borderColor = '#e2e8f0'; e.target.style.background = '#f8fafc'; e.target.style.boxShadow = 'none'; };
+
+const FieldLabel = ({ children }) => (
+    <label className="block text-xs font-bold uppercase mb-1.5" style={{ color: '#4a5568', letterSpacing: '0.08em' }}>
+        {children}
+    </label>
+);
 
 export default function TracerStudyIndex({ forms }) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [selectedId, setSelectedId] = useState(null);
 
-    const { data, setData, post, put, delete: destroy, processing, reset } = useForm({
-        title: '',
-        description: '',
-        questions: [],
+    const { data, setData, post, put, processing, reset } = useForm({
+        title: '', description: '', questions: [],
     });
 
-    const openCreate = () => {
-        reset(); setIsEditing(false); setIsModalOpen(true);
-    };
-
+    const openCreate = () => { reset(); setIsEditing(false); setIsModalOpen(true); };
     const openEdit = (form) => {
         setSelectedId(form.id);
-        setData({
-            title: form.title,
-            description: form.description || '',
-            questions: form.questions || [],
-        });
+        setData({ title: form.title, description: form.description || '', questions: form.questions || [] });
         setIsEditing(true); setIsModalOpen(true);
     };
 
@@ -45,159 +44,239 @@ export default function TracerStudyIndex({ forms }) {
         }
     };
 
-    const toggleStatus = (id) => {
-        router.patch(route('adminkampus.tracer.toggle', id), {}, { preserveScroll: true });
-    };
+    const toggleStatus = (id) => router.patch(route('adminkampus.tracer.toggle', id), {}, { preserveScroll: true });
 
-    // --- LOGIKA FORM BUILDER JSON ---
-    const addQuestion = () => {
-        setData('questions', [...data.questions, { id: Date.now(), type: 'text', question: '', options: [] }]);
-    };
-
-    const updateQuestion = (id, field, value) => {
-        const newQuestions = data.questions.map(q => q.id === id ? { ...q, [field]: value } : q);
-        setData('questions', newQuestions);
-    };
-
-    const removeQuestion = (id) => {
-        setData('questions', data.questions.filter(q => q.id !== id));
-    };
-
-    const addOption = (questionId) => {
-        const newQuestions = data.questions.map(q => {
-            if (q.id === questionId) return { ...q, options: [...q.options, 'Opsi Baru'] };
-            return q;
-        });
-        setData('questions', newQuestions);
-    };
-
-    const updateOption = (questionId, optionIndex, value) => {
-        const newQuestions = data.questions.map(q => {
-            if (q.id === questionId) {
-                const newOptions = [...q.options];
-                newOptions[optionIndex] = value;
-                return { ...q, options: newOptions };
-            }
-            return q;
-        });
-        setData('questions', newQuestions);
-    };
-    // ---------------------------------
+    const addQuestion = () => setData('questions', [...data.questions, { id: Date.now(), type: 'text', question: '', options: [] }]);
+    const updateQuestion = (id, field, value) => setData('questions', data.questions.map(q => q.id === id ? { ...q, [field]: value } : q));
+    const removeQuestion = (id) => setData('questions', data.questions.filter(q => q.id !== id));
+    const addOption = (qId) => setData('questions', data.questions.map(q => q.id === qId ? { ...q, options: [...q.options, 'Opsi Baru'] } : q));
+    const updateOption = (qId, idx, val) => setData('questions', data.questions.map(q => {
+        if (q.id !== qId) return q;
+        const opts = [...q.options]; opts[idx] = val; return { ...q, options: opts };
+    }));
 
     return (
-        <AuthenticatedLayout header={<h2 className="font-semibold text-xl text-gray-800">Kelola Kuesioner Tracer Study</h2>}>
-            <Head title="Tracer Study" />
+        <AuthenticatedLayout
+            header={
+                <div>
+                    <h2 className="text-lg font-bold" style={{ color: '#1a3560' }}>Kuesioner Tracer Study</h2>
+                    <p className="text-xs mt-0.5" style={{ color: '#a0aec0' }}>Buat dan kelola form kuesioner untuk alumni</p>
+                </div>
+            }
+        >
+            <Head title="Tracer Study — SITAMI" />
 
-            <div className="bg-white p-6 rounded-lg shadow-sm border mb-6">
-                <div className="flex justify-between items-center mb-6">
-                    <p className="text-gray-500 text-sm">Buat dan kelola pertanyaan kuesioner untuk dilacak dari alumni.</p>
-                    <Button onClick={openCreate}>+ Buat Kuesioner Baru</Button>
+            <div className="rounded-xl p-5" style={{ background: '#fff', border: '1px solid #e8edf5' }}>
+                <div className="flex items-center justify-between mb-5">
+                    <p className="text-sm" style={{ color: '#a0aec0' }}>
+                        Total <span className="font-semibold" style={{ color: '#1a3560' }}>{forms.length}</span> kuesioner
+                    </p>
+                    <button
+                        onClick={openCreate}
+                        className="flex items-center gap-2 px-4 text-sm font-semibold rounded-lg"
+                        style={{ height: '40px', background: '#f97316', color: '#fff', border: 'none', cursor: 'pointer' }}
+                        onMouseEnter={e => e.target.style.background = '#ea6c0a'}
+                        onMouseLeave={e => e.target.style.background = '#f97316'}
+                    >
+                        + Buat Kuesioner
+                    </button>
                 </div>
 
-                <div className="rounded-md border">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Judul Kuesioner</TableHead>
-                                <TableHead>Jml Pertanyaan</TableHead>
-                                <TableHead>Status Aktif</TableHead>
-                                <TableHead className="text-right">Aksi</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
+                <div className="rounded-xl overflow-hidden" style={{ border: '1px solid #e8edf5' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead>
+                            <tr style={{ background: '#f4f6fa', borderBottom: '1px solid #e8edf5' }}>
+                                {['Judul Kuesioner', 'Jumlah Pertanyaan', 'Status', 'Aksi'].map((h, i) => (
+                                    <th key={i} className="text-xs font-bold uppercase"
+                                        style={{ padding: '10px 16px', color: '#1a3560', letterSpacing: '0.1em', textAlign: i === 3 ? 'right' : 'left' }}>
+                                        {h}
+                                    </th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody>
                             {forms.map(form => (
-                                <TableRow key={form.id}>
-                                    <TableCell className="font-medium">{form.title}</TableCell>
-                                    <TableCell>{form.questions?.length || 0} Pertanyaan</TableCell>
-                                    <TableCell>
+                                <tr key={form.id} style={{ borderBottom: '1px solid #f4f6fa' }}
+                                    onMouseEnter={e => e.currentTarget.style.background = '#fafbfc'}
+                                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                                    <td style={{ padding: '13px 16px' }}>
+                                        <div className="font-semibold text-sm" style={{ color: '#1a3560' }}>{form.title}</div>
+                                        {form.description && (
+                                            <div className="text-xs mt-0.5 truncate max-w-xs" style={{ color: '#a0aec0' }}>{form.description}</div>
+                                        )}
+                                    </td>
+                                    <td style={{ padding: '13px 16px' }}>
+                                        <span className="text-xs font-bold px-2.5 py-1 rounded-full"
+                                            style={{ background: '#e8f0fb', color: '#1a3560' }}>
+                                            {form.questions?.length || 0} Pertanyaan
+                                        </span>
+                                    </td>
+                                    <td style={{ padding: '13px 16px' }}>
                                         <div className="flex items-center gap-2">
                                             <Switch checked={form.is_active} onCheckedChange={() => toggleStatus(form.id)} />
-                                            {form.is_active ? <Badge className="bg-green-500">Aktif</Badge> : <Badge variant="secondary">Draft</Badge>}
+                                            <span className="text-xs font-bold px-2.5 py-1 rounded-full"
+                                                style={{
+                                                    background: form.is_active ? '#f0fdf4' : '#f4f6fa',
+                                                    color: form.is_active ? '#166534' : '#718096',
+                                                }}>
+                                                {form.is_active ? 'Aktif' : 'Draft'}
+                                            </span>
                                         </div>
-                                    </TableCell>
-                                    <TableCell className="text-right space-x-2">
-                                        <Button variant="outline" size="sm" onClick={() => openEdit(form)}>Edit Form</Button>
-                                    </TableCell>
-                                </TableRow>
+                                    </td>
+                                    <td style={{ padding: '13px 16px', textAlign: 'right' }}>
+                                        <button
+                                            onClick={() => openEdit(form)}
+                                            className="text-xs font-semibold px-3 rounded-lg"
+                                            style={{ height: '32px', border: '1px solid #e2e8f0', background: '#f8fafc', color: '#1a3560', cursor: 'pointer' }}
+                                            onMouseEnter={e => { e.target.style.borderColor = '#1a3560'; e.target.style.background = '#e8f0fb'; }}
+                                            onMouseLeave={e => { e.target.style.borderColor = '#e2e8f0'; e.target.style.background = '#f8fafc'; }}
+                                        >
+                                            Edit Form
+                                        </button>
+                                    </td>
+                                </tr>
                             ))}
                             {forms.length === 0 && (
-                                <TableRow><TableCell colSpan={4} className="text-center py-6 text-gray-500">Belum ada form kuesioner.</TableCell></TableRow>
+                                <tr>
+                                    <td colSpan={4} className="text-center py-12 text-sm" style={{ color: '#a0aec0' }}>
+                                        Belum ada form kuesioner dibuat.
+                                    </td>
+                                </tr>
                             )}
-                        </TableBody>
-                    </Table>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
-            {/* MODAL FORM BUILDER */}
+            {/* Modal Form Builder */}
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
                 <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
-                        <DialogTitle>{isEditing ? 'Edit Kuesioner' : 'Rancang Kuesioner Baru'}</DialogTitle>
+                        <DialogTitle style={{ color: '#1a3560' }}>
+                            {isEditing ? 'Edit Kuesioner' : 'Rancang Kuesioner Baru'}
+                        </DialogTitle>
                     </DialogHeader>
-                    <form onSubmit={handleSubmit} className="space-y-6">
-                        <div className="space-y-4 p-4 bg-gray-50 rounded-lg border">
+
+                    <form onSubmit={handleSubmit} className="space-y-5 pt-1">
+                        {/* Info dasar */}
+                        <div className="rounded-xl p-4 space-y-3" style={{ background: '#f4f6fa', border: '1px solid #e8edf5' }}>
                             <div>
-                                <Label>Judul Kuesioner</Label>
-                                <Input value={data.title} onChange={e => setData('title', e.target.value)} placeholder="Misal: Tracer Study Lulusan 2025" required />
+                                <FieldLabel>Judul Kuesioner</FieldLabel>
+                                <input style={fieldStyle} value={data.title}
+                                    onChange={e => setData('title', e.target.value)}
+                                    placeholder="Contoh: Tracer Study Lulusan 2025"
+                                    onFocus={onFocus} onBlur={onBlur} required />
                             </div>
                             <div>
-                                <Label>Deskripsi (Opsional)</Label>
-                                <Textarea value={data.description} onChange={e => setData('description', e.target.value)} placeholder="Penjelasan singkat..." />
+                                <FieldLabel>Deskripsi (Opsional)</FieldLabel>
+                                <textarea
+                                    style={{ ...fieldStyle, height: 'auto', padding: '10px 12px', resize: 'vertical' }}
+                                    rows={2} value={data.description}
+                                    onChange={e => setData('description', e.target.value)}
+                                    placeholder="Penjelasan singkat tujuan kuesioner..."
+                                    onFocus={onFocus} onBlur={onBlur}
+                                />
                             </div>
                         </div>
 
-                        {/* RENDER PERTANYAAN (JSON BUILDER) */}
-                        <div className="space-y-4">
-                            <div className="flex justify-between items-center">
-                                <h3 className="font-semibold">Daftar Pertanyaan</h3>
-                                <Button type="button" variant="secondary" size="sm" onClick={addQuestion}>+ Tambah Pertanyaan</Button>
+                        {/* Question Builder */}
+                        <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <div style={{ width: '4px', height: '16px', background: '#f97316', borderRadius: '2px' }} />
+                                    <span className="text-xs font-bold uppercase tracking-wider" style={{ color: '#1a3560' }}>
+                                        Daftar Pertanyaan ({data.questions.length})
+                                    </span>
+                                </div>
+                                <button type="button" onClick={addQuestion}
+                                    className="text-xs font-semibold px-3 rounded-lg"
+                                    style={{ height: '32px', border: '1px solid #f97316', background: '#fff3eb', color: '#f97316', cursor: 'pointer' }}>
+                                    + Tambah Pertanyaan
+                                </button>
                             </div>
 
                             {data.questions.map((q, index) => (
-                                <div key={q.id} className="p-4 border rounded-md relative group bg-white shadow-sm">
-                                    <button type="button" onClick={() => removeQuestion(q.id)} className="absolute top-2 right-2 text-red-500 text-sm opacity-0 group-hover:opacity-100 transition-opacity">Hapus</button>
-
-                                    <div className="grid grid-cols-3 gap-4 mb-4">
+                                <div key={q.id} className="rounded-xl p-4 relative"
+                                    style={{ border: '1px solid #e8edf5', background: '#fff' }}>
+                                    <div className="flex items-center justify-between mb-3">
+                                        <span className="text-xs font-bold px-2.5 py-1 rounded-full"
+                                            style={{ background: '#e8f0fb', color: '#1a3560' }}>
+                                            Pertanyaan {index + 1}
+                                        </span>
+                                        <button type="button" onClick={() => removeQuestion(q.id)}
+                                            className="text-xs font-semibold px-2.5 py-1 rounded-lg"
+                                            style={{ border: '1px solid #fecaca', background: '#fff5f5', color: '#e53e3e', cursor: 'pointer' }}>
+                                            Hapus
+                                        </button>
+                                    </div>
+                                    <div className="grid grid-cols-3 gap-3 mb-3">
                                         <div className="col-span-2">
-                                            <Label>Pertanyaan {index + 1}</Label>
-                                            <Input value={q.question} onChange={e => updateQuestion(q.id, 'question', e.target.value)} placeholder="Tulis pertanyaan Anda..." required />
+                                            <FieldLabel>Teks Pertanyaan</FieldLabel>
+                                            <input style={fieldStyle} value={q.question}
+                                                onChange={e => updateQuestion(q.id, 'question', e.target.value)}
+                                                placeholder="Tulis pertanyaan Anda..."
+                                                onFocus={onFocus} onBlur={onBlur} required />
                                         </div>
                                         <div>
-                                            <Label>Tipe Jawaban</Label>
+                                            <FieldLabel>Tipe Jawaban</FieldLabel>
                                             <Select value={q.type} onValueChange={v => updateQuestion(q.id, 'type', v)}>
-                                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                                <SelectTrigger style={{ height: '40px', borderRadius: '8px', fontSize: '13px' }}>
+                                                    <SelectValue />
+                                                </SelectTrigger>
                                                 <SelectContent>
                                                     <SelectItem value="text">Teks Singkat</SelectItem>
-                                                    <SelectItem value="textarea">Paragraf (Teks Panjang)</SelectItem>
-                                                    <SelectItem value="radio">Pilihan Ganda (Satu Jawaban)</SelectItem>
-                                                    <SelectItem value="master_industry">Dropdown (Master Data Industri)</SelectItem>
+                                                    <SelectItem value="textarea">Paragraf</SelectItem>
+                                                    <SelectItem value="radio">Pilihan Ganda</SelectItem>
+                                                    <SelectItem value="master_industry">Dropdown Industri</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         </div>
                                     </div>
-
-                                    {/* Jika tipe adalah radio (Pilihan Ganda), tampilkan builder opsi */}
                                     {q.type === 'radio' && (
-                                        <div className="pl-4 border-l-2 space-y-2 mt-2">
-                                            <Label className="text-xs text-gray-500">Pilihan Jawaban:</Label>
+                                        <div className="pl-4 pt-2 space-y-2"
+                                            style={{ borderLeft: '3px solid #f97316' }}>
+                                            <div className="text-xs font-bold uppercase" style={{ color: '#a0aec0', letterSpacing: '0.08em' }}>
+                                                Pilihan Jawaban
+                                            </div>
                                             {q.options.map((opt, optIdx) => (
-                                                <Input key={optIdx} value={opt} onChange={e => updateOption(q.id, optIdx, e.target.value)} className="w-2/3 h-8 text-sm mb-1" />
+                                                <input key={optIdx} style={{ ...fieldStyle, width: 'calc(66.66% - 8px)' }}
+                                                    value={opt} onChange={e => updateOption(q.id, optIdx, e.target.value)}
+                                                    onFocus={onFocus} onBlur={onBlur} />
                                             ))}
-                                            <Button type="button" variant="link" size="sm" onClick={() => addOption(q.id)} className="text-blue-600 p-0 h-auto">+ Tambah Opsi</Button>
+                                            <button type="button" onClick={() => addOption(q.id)}
+                                                className="text-xs font-semibold"
+                                                style={{ color: '#f97316', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0' }}>
+                                                + Tambah Opsi
+                                            </button>
                                         </div>
                                     )}
                                 </div>
                             ))}
+
+                            {data.questions.length === 0 && (
+                                <div className="text-center py-8 rounded-xl"
+                                    style={{ border: '2px dashed #e8edf5', color: '#a0aec0' }}>
+                                    <div className="text-2xl mb-2">📝</div>
+                                    <div className="text-sm">Belum ada pertanyaan. Klik "+ Tambah Pertanyaan" untuk mulai.</div>
+                                </div>
+                            )}
                         </div>
 
                         <DialogFooter>
-                            <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)}>Batal</Button>
-                            <Button type="submit" disabled={processing}>Simpan Kuesioner</Button>
+                            <button type="button" onClick={() => setIsModalOpen(false)}
+                                className="px-4 text-sm rounded-lg"
+                                style={{ height: '38px', color: '#718096', cursor: 'pointer', background: 'transparent', border: '1px solid #e2e8f0' }}>
+                                Batal
+                            </button>
+                            <button type="submit" disabled={processing}
+                                className="px-5 text-sm font-semibold rounded-lg"
+                                style={{ height: '38px', background: '#f97316', color: '#fff', border: 'none', cursor: 'pointer', opacity: processing ? 0.6 : 1 }}>
+                                {processing ? 'Menyimpan...' : 'Simpan Kuesioner'}
+                            </button>
                         </DialogFooter>
                     </form>
                 </DialogContent>
             </Dialog>
-
         </AuthenticatedLayout>
     );
 }

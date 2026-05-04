@@ -4,15 +4,14 @@ namespace App\Http\Controllers\AdminKampus;
 
 use App\Http\Controllers\Controller;
 use App\Models\AlumniProfile;
-use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class AlumniController extends Controller
 {
     public function index()
     {
-        // Menarik data profil alumni beserta relasi akun (user) dan Program Studi jika ada
-        $alumni = AlumniProfile::with(['user', 'programStudi'])
+        // Cukup panggil relasi 'user' saja, karena prodi (major) sudah ada di dalam tabel AlumniProfile
+        $alumni = AlumniProfile::with(['user'])
             ->latest()
             ->get();
 

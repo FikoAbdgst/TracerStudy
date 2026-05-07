@@ -32,14 +32,15 @@ class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
             'auth' => [
+                // Pastikan user ada sebelum mencoba mengambil data
                 'user' => $request->user() ? [
                     'id' => $request->user()->id,
                     'name' => $request->user()->name,
                     'email' => $request->user()->email,
-                    // Mengambil daftar role array dari Spatie
-                    'roles' => $request->user()->getRoleNames(),
-                    // Tambahkan baris ini untuk menarik 5 notifikasi yang belum dibaca
-                    'notifications' => $request->user() ? $request->user()->unreadNotifications()->take(5)->get() : [],
+                    // Tarik nama rolenya sebagai array sederhana
+                    'roles' => $request->user()->roles->pluck('name'),
+                    // Tarik notifikasi, pastikan di-load sebagai array object sederhana
+                    'notifications' => $request->user()->unreadNotifications()->take(5)->get()->toArray(),
                 ] : null,
             ],
             // Opsional: Untuk menampilkan flash message sukses/error dari backend

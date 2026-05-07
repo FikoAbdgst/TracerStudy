@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link, usePage } from '@inertiajs/react';
 import {
     DropdownMenu,
@@ -21,27 +21,28 @@ const menuConfig = {
         { name: 'Tracer Study', href: route('adminkampus.tracer') },
         { name: 'Verifikasi PT', href: route('adminkampus.verify-pt') },
         { name: 'Tinjau Lowongan', href: route('adminkampus.tinjau-lowongan') },
-        { name: 'Dokumen MoU', href: route('adminkampus.mou.index') }, // <-- sekalian perbaiki yang MoU
+        { name: 'Dokumen MoU', href: route('adminkampus.mou.index') },
     ],
     'Admin PT': [
         { name: 'Dashboard', href: route('perusahaan.dashboard') },
-        { name: 'Profil Perusahaan', href: route('perusahaan.profile.edit') },  // ← tambah ini
+        { name: 'Profil Perusahaan', href: route('perusahaan.profile.edit') },
         { name: 'Kelola Lowongan', href: route('perusahaan.lowongan') },
         { name: 'Daftar Pelamar', href: route('perusahaan.pelamar') },
     ],
     'Alumni': [
-        { name: 'Dashboard', href: route('alumni.dashboard'), icon: '🏠' },
-        { name: 'Profil Alumni', href: route('alumni.profile.edit'), icon: '🎓' },
-        { name: 'Kuesioner', href: route('alumni.kuesioner'), icon: '📝' },
-        { name: 'Bursa Kerja', href: route('alumni.loker'), icon: '💼' },
-        { name: 'Status Lamaran', href: route('alumni.lamaran'), icon: '📊' },
-        { name: 'Ruang Diskusi', href: route('alumni.forum.index'), icon: '💬' },
+        { name: 'Dashboard', href: route('alumni.dashboard') },
+        { name: 'Profil Alumni', href: route('alumni.profile.edit') },
+        { name: 'Kuesioner', href: route('alumni.kuesioner') },
+        { name: 'Bursa Kerja', href: route('alumni.loker') },
+        { name: 'Status Lamaran', href: route('alumni.lamaran') },
+        { name: 'Ruang Diskusi', href: route('alumni.forum.index') },
     ],
 };
 
 export default function AuthenticatedLayout({ header, children }) {
     const { auth } = usePage().props;
     const [mobileOpen, setMobileOpen] = useState(false);
+    const navRef = useRef(null);
 
     const userRole = auth.user.roles?.[0] ?? 'Alumni';
     const navigationMenu = menuConfig[userRole] ?? [];
@@ -55,206 +56,372 @@ export default function AuthenticatedLayout({ header, children }) {
         }
     };
 
-    const NavItem = ({ item }) => {
-        const active = isActive(item.href);
-        return (
-            <Link href={item.href}>
-                <div
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all"
-                    style={{
-                        background: active ? '#f97316' : 'transparent',
-                        color: active ? '#ffffff' : '#7fa3cc',
-                        fontWeight: active ? '600' : '400',
-                    }}
-                    onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
-                    onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}
-                >
-                    <span
-                        className="flex-shrink-0 rounded-full"
-                        style={{
-                            width: '6px',
-                            height: '6px',
-                            background: active ? '#fff' : '#3a6090',
-                        }}
-                    />
-                    {item.name}
-                </div>
-            </Link>
-        );
-    };
-
-    const SidebarContent = () => (
-        <div className="flex flex-col h-full">
-            {/* Logo */}
-            <div
-                className="flex items-center gap-3 px-5 flex-shrink-0"
-                style={{ height: '64px', borderBottom: '1px solid #1e3d6e' }}
-            >
-                <div
-                    className="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold flex-shrink-0"
-                    style={{ background: '#f97316', color: '#fff' }}
-                >
-                    M
-                </div>
-                <div>
-                    <div className="text-xs font-bold tracking-wider" style={{ color: '#fff', letterSpacing: '0.12em' }}>
-                        SITAMI
-                    </div>
-                    <div className="text-xs" style={{ color: '#7fa3cc', fontSize: '10px' }}>
-                        STMIK Mardira
-                    </div>
-                </div>
-            </div>
-
-            {/* Role badge */}
-            <div className="px-5 pt-5 pb-2">
-                <div
-                    className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded"
-                    style={{
-                        background: 'rgba(249,115,22,0.15)',
-                        color: '#f97316',
-                        letterSpacing: '0.1em',
-                        fontSize: '10px',
-                    }}
-                >
-                    <span
-                        style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#f97316', display: 'inline-block' }}
-                    />
-                    {userRole.toUpperCase()}
-                </div>
-            </div>
-
-            {/* Nav */}
-            <nav className="flex-1 overflow-y-auto px-3 pb-4 space-y-0.5 mt-1">
-                {navigationMenu.map((item) => (
-                    <NavItem key={item.name} item={item} />
-                ))}
-            </nav>
-
-            {/* User bottom */}
-            <div
-                className="px-4 py-4 flex-shrink-0"
-                style={{ borderTop: '1px solid #1e3d6e' }}
-            >
-                <div className="flex items-center gap-3 px-1">
-                    <div
-                        className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
-                        style={{ background: '#f97316', color: '#fff' }}
-                    >
-                        {auth.user.name.charAt(0).toUpperCase()}
-                    </div>
-                    <div className="min-w-0">
-                        <div className="text-xs font-semibold truncate" style={{ color: '#e2eaf5' }}>
-                            {auth.user.name}
-                        </div>
-                        <div className="text-xs truncate" style={{ color: '#4a6a8a', fontSize: '10px' }}>
-                            {auth.user.email}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
+    // Close mobile menu on outside click
+    useEffect(() => {
+        const handler = (e) => {
+            if (navRef.current && !navRef.current.contains(e.target)) {
+                setMobileOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, []);
 
     return (
-        <div className="flex min-h-screen" style={{ background: '#f4f6fa' }}>
+        <>
+            <style>{`
+                @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
-            {/* Desktop Sidebar */}
-            <aside
-                className="hidden md:flex flex-col w-60 fixed inset-y-0 left-0 z-30"
-                style={{ background: '#1a3560' }}
-            >
-                <SidebarContent />
-            </aside>
+                .al-root {
+                    font-family: 'Plus Jakarta Sans', sans-serif;
+                    min-height: 100vh;
+                    background: #f0f4f9;
+                    display: flex;
+                    flex-direction: column;
+                }
 
-            {/* Mobile Overlay */}
-            {mobileOpen && (
-                <div className="md:hidden fixed inset-0 z-40 flex">
-                    <div
-                        className="fixed inset-0"
-                        style={{ background: 'rgba(0,0,0,0.45)' }}
-                        onClick={() => setMobileOpen(false)}
-                    />
-                    <aside className="relative w-60 flex flex-col z-50" style={{ background: '#1a3560' }}>
-                        <SidebarContent />
-                    </aside>
-                </div>
-            )}
+                /* ======= NAVBAR ======= */
+                .al-navbar {
+                    position: sticky;
+                    top: 0;
+                    z-index: 50;
+                    height: 60px;
+                    background: #ffffff;
+                    border-bottom: 1px solid #e8edf5;
+                    box-shadow: 0 1px 3px rgba(26,53,96,0.06);
+                    display: flex;
+                    align-items: center;
+                    padding: 0 24px;
+                    gap: 0;
+                }
 
-            {/* Main */}
-            <div className="flex-1 flex flex-col md:pl-60">
+                .al-brand {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    text-decoration: none;
+                    flex-shrink: 0;
+                    margin-right: 32px;
+                }
 
-                {/* Topbar */}
-                <header
-                    className="sticky top-0 z-20 flex items-center justify-between px-4 md:px-6"
-                    style={{
-                        height: '64px',
-                        background: '#ffffff',
-                        borderBottom: '1px solid #e8edf5',
-                        boxShadow: '0 1px 4px rgba(26,53,96,0.06)',
-                    }}
-                >
-                    {/* Hamburger */}
-                    <button
-                        className="md:hidden p-2 rounded-lg transition-colors"
-                        style={{ color: '#1a3560' }}
-                        onClick={() => setMobileOpen(true)}
-                    >
-                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                .al-brand-mark {
+                    width: 32px;
+                    height: 32px;
+                    border-radius: 8px;
+                    background: #1a3560;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 12px;
+                    font-weight: 800;
+                    color: #fff;
+                }
+
+                .al-brand-text {
+                    font-size: 14px;
+                    font-weight: 800;
+                    color: #1a3560;
+                    letter-spacing: 0.06em;
+                }
+
+                .al-brand-divider {
+                    width: 1px;
+                    height: 20px;
+                    background: #e2e8f0;
+                    margin: 0 2px;
+                }
+
+                .al-brand-role {
+                    font-size: 10px;
+                    font-weight: 600;
+                    color: #f97316;
+                    letter-spacing: 0.08em;
+                    text-transform: uppercase;
+                }
+
+                /* Desktop nav links */
+                .al-nav-links {
+                    display: flex;
+                    align-items: center;
+                    gap: 2px;
+                    flex: 1;
+                }
+
+                .al-nav-link {
+                    position: relative;
+                    padding: 6px 13px;
+                    border-radius: 7px;
+                    font-size: 13px;
+                    font-weight: 500;
+                    color: #64748b;
+                    text-decoration: none;
+                    transition: color 0.15s, background 0.15s;
+                    white-space: nowrap;
+                }
+
+                .al-nav-link:hover {
+                    color: #1a3560;
+                    background: #f0f4f9;
+                }
+
+                .al-nav-link.active {
+                    color: #1a3560;
+                    font-weight: 700;
+                    background: #e8f0fb;
+                }
+
+                .al-nav-link.active::after {
+                    content: '';
+                    position: absolute;
+                    bottom: -10px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    width: 20px;
+                    height: 2px;
+                    border-radius: 2px;
+                    background: #f97316;
+                }
+
+                /* Right side */
+                .al-nav-right {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    margin-left: auto;
+                    flex-shrink: 0;
+                }
+
+                /* Icon button */
+                .al-icon-btn {
+                    position: relative;
+                    width: 36px;
+                    height: 36px;
+                    border-radius: 8px;
+                    border: 1px solid #e8edf5;
+                    background: #f8fafc;
+                    color: #64748b;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    cursor: pointer;
+                    transition: background 0.15s, border-color 0.15s;
+                }
+
+                .al-icon-btn:hover {
+                    background: #f0f4f9;
+                    border-color: #d1d9e3;
+                    color: #1a3560;
+                }
+
+                /* User button */
+                .al-user-btn {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    padding: 5px 12px 5px 6px;
+                    border-radius: 8px;
+                    border: 1px solid #e8edf5;
+                    background: #f8fafc;
+                    cursor: pointer;
+                    transition: background 0.15s, border-color 0.15s;
+                }
+
+                .al-user-btn:hover {
+                    background: #f0f4f9;
+                    border-color: #d1d9e3;
+                }
+
+                .al-avatar {
+                    width: 26px;
+                    height: 26px;
+                    border-radius: 50%;
+                    background: #1a3560;
+                    color: #fff;
+                    font-size: 11px;
+                    font-weight: 700;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    flex-shrink: 0;
+                }
+
+                .al-user-name {
+                    font-size: 13px;
+                    font-weight: 600;
+                    color: #1a3560;
+                    max-width: 96px;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                }
+
+                /* Mobile hamburger */
+                .al-hamburger {
+                    display: none;
+                    width: 36px;
+                    height: 36px;
+                    border-radius: 8px;
+                    border: 1px solid #e8edf5;
+                    background: #f8fafc;
+                    align-items: center;
+                    justify-content: center;
+                    cursor: pointer;
+                    color: #1a3560;
+                    margin-right: 12px;
+                    transition: background 0.15s;
+                }
+
+                .al-hamburger:hover { background: #f0f4f9; }
+
+                /* Mobile menu drawer */
+                .al-mobile-menu {
+                    position: fixed;
+                    top: 60px;
+                    left: 0;
+                    right: 0;
+                    background: #ffffff;
+                    border-bottom: 1px solid #e8edf5;
+                    box-shadow: 0 8px 24px rgba(26,53,96,0.1);
+                    z-index: 49;
+                    padding: 12px 16px 16px;
+                    transform-origin: top;
+                    animation: mobileMenuIn 0.22s cubic-bezier(0.22, 1, 0.36, 1) both;
+                }
+
+                @keyframes mobileMenuIn {
+                    from { opacity: 0; transform: scaleY(0.92); }
+                    to   { opacity: 1; transform: scaleY(1); }
+                }
+
+                .al-mobile-link {
+                    display: block;
+                    padding: 10px 14px;
+                    border-radius: 8px;
+                    font-size: 14px;
+                    font-weight: 500;
+                    color: #374151;
+                    text-decoration: none;
+                    transition: background 0.12s, color 0.12s;
+                    margin-bottom: 2px;
+                }
+
+                .al-mobile-link:hover { background: #f0f4f9; color: #1a3560; }
+                .al-mobile-link.active {
+                    background: #e8f0fb;
+                    color: #1a3560;
+                    font-weight: 700;
+                }
+
+                /* Notification badge */
+                .notif-dot {
+                    position: absolute;
+                    top: 7px;
+                    right: 7px;
+                    width: 7px;
+                    height: 7px;
+                    border-radius: 50%;
+                    background: #ef4444;
+                    border: 1.5px solid #fff;
+                }
+
+                /* Page header */
+                .al-page-header {
+                    background: #fff;
+                    border-bottom: 1px solid #e8edf5;
+                    padding: 16px 28px;
+                }
+
+                /* Main content */
+                .al-main {
+                    flex: 1;
+                    padding: 28px;
+                }
+
+                @media (max-width: 768px) {
+                    .al-nav-links { display: none; }
+                    .al-hamburger { display: flex; }
+                    .al-brand { margin-right: 0; }
+                    .al-main { padding: 18px 16px; }
+                    .al-page-header { padding: 14px 16px; }
+                    .al-navbar { padding: 0 16px; }
+                    .al-user-name { display: none; }
+                }
+            `}</style>
+
+            <div className="al-root">
+                {/* ===== NAVBAR ===== */}
+                <nav className="al-navbar" ref={navRef}>
+                    {/* Mobile hamburger */}
+                    <button className="al-hamburger" onClick={() => setMobileOpen(o => !o)} aria-label="Menu">
+                        <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                            {mobileOpen
+                                ? <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                : <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />}
                         </svg>
                     </button>
 
-                    {/* Mobile brand */}
-                    <div className="md:hidden font-bold text-sm" style={{ color: '#1a3560' }}>
-                        SITAMI
+                    {/* Brand */}
+                    <a href="#" className="al-brand">
+                        <div className="al-brand-mark">M</div>
+                        <div className="al-brand-divider" />
+                        <span className="al-brand-text">SITAMI</span>
+                        <span className="al-brand-role">{userRole}</span>
+                    </a>
+
+                    {/* Desktop Nav Links */}
+                    <div className="al-nav-links">
+                        {navigationMenu.map((item) => (
+                            <Link
+                                key={item.name}
+                                href={item.href}
+                                className={`al-nav-link${isActive(item.href) ? ' active' : ''}`}
+                            >
+                                {item.name}
+                            </Link>
+                        ))}
                     </div>
 
-                    {/* Right */}
-                    <div className="ml-auto flex items-center gap-3">
-
-                        {/* Bell Notification */}
+                    {/* Right side */}
+                    <div className="al-nav-right">
+                        {/* Notification bell */}
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <button className="relative w-9 h-9 rounded-lg flex items-center justify-center transition-colors border border-gray-200 bg-gray-50 text-gray-500 hover:bg-gray-100">
-                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
+                                <button className="al-icon-btn">
+                                    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                                     </svg>
-
-                                    {/* Indikator Merah jika ada notifikasi */}
-                                    {auth.notifications?.length > 0 && (
-                                        <span className="absolute top-1.5 right-2 w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                                    {auth.user?.notifications?.length > 0 && (
+                                        <span className="notif-dot" />
                                     )}
                                 </button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-80 p-0">
-                                <div className="bg-gray-50 border-b px-4 py-2 font-semibold text-sm text-gray-700 flex justify-between items-center">
-                                    Notifikasi
-                                    <span className="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full">{auth.notifications?.length || 0} Baru</span>
+                            <DropdownMenuContent align="end" className="w-80 p-0 bg-white border border-gray-100 shadow-2xl rounded-xl overflow-hidden">
+                                <div className="bg-slate-50 border-b border-gray-100 px-4 py-2.5 flex justify-between items-center">
+                                    <span className="font-bold text-sm text-slate-700">Notifikasi</span>
+                                    <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+                                        {auth.user?.notifications?.length || 0} Baru
+                                    </span>
                                 </div>
-                                <div className="max-h-[300px] overflow-y-auto">
-                                    {auth.notifications?.length > 0 ? (
-                                        auth.notifications.map((notif) => (
+                                <div className="max-h-72 overflow-y-auto">
+                                    {auth.user?.notifications?.length > 0 ? (
+                                        auth.user.notifications.map((notif) => (
                                             <Link
                                                 key={notif.id}
                                                 href={notif.data.url}
-                                                method="post" // Kita pakai POST untuk memicu markAsRead sekalian pindah halaman
-                                                data={{ _method: 'post' }}
                                                 onClick={(e) => {
                                                     e.preventDefault();
-                                                    // Tandai dibaca dulu, lalu redirect
                                                     window.axios.post(route('notifications.read', notif.id)).then(() => {
                                                         window.location.href = notif.data.url;
                                                     });
                                                 }}
-                                                className="block px-4 py-3 border-b hover:bg-gray-50 transition"
+                                                className="block px-4 py-3 border-b border-slate-50 hover:bg-slate-50 transition"
                                             >
-                                                <p className="text-sm font-semibold text-gray-800">{notif.data.title}</p>
-                                                <p className="text-xs text-gray-600 mt-0.5 line-clamp-2">{notif.data.message}</p>
+                                                <p className="text-sm font-semibold text-slate-800">{notif.data.title}</p>
+                                                <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{notif.data.message}</p>
                                             </Link>
                                         ))
                                     ) : (
-                                        <div className="px-4 py-8 text-center text-sm text-gray-500">
+                                        <div className="px-4 py-10 text-center text-sm text-slate-400">
                                             Tidak ada notifikasi baru.
                                         </div>
                                     )}
@@ -262,41 +429,27 @@ export default function AuthenticatedLayout({ header, children }) {
                             </DropdownMenuContent>
                         </DropdownMenu>
 
-                        {/* User Dropdown */}
+                        {/* User dropdown */}
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <button
-                                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors"
-                                    style={{
-                                        border: '1px solid #e8edf5',
-                                        background: '#f8fafc',
-                                        color: '#1a3560',
-                                    }}
-                                    onMouseEnter={e => e.currentTarget.style.background = '#f0f4f8'}
-                                    onMouseLeave={e => e.currentTarget.style.background = '#f8fafc'}
-                                >
-                                    <div
-                                        className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
-                                        style={{ background: '#f97316', color: '#fff' }}
-                                    >
+                                <button className="al-user-btn">
+                                    <div className="al-avatar">
                                         {auth.user.name.charAt(0).toUpperCase()}
                                     </div>
-                                    <span className="font-semibold text-xs max-w-[100px] truncate">
-                                        {auth.user.name}
-                                    </span>
-                                    <svg className="h-3 w-3" style={{ color: '#9aa5b4' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                    <span className="al-user-name">{auth.user.name}</span>
+                                    <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="#94a3b8" strokeWidth="2.5">
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
                                     </svg>
                                 </button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-52">
+                            <DropdownMenuContent align="end" className="w-52 bg-white border border-gray-100 shadow-2xl rounded-xl">
                                 <DropdownMenuLabel>
-                                    <p className="text-sm font-semibold" style={{ color: '#1a3560' }}>{auth.user.name}</p>
-                                    <p className="text-xs font-normal" style={{ color: '#9aa5b4' }}>{auth.user.email}</p>
+                                    <p className="text-sm font-bold text-slate-800">{auth.user.name}</p>
+                                    <p className="text-xs font-normal text-slate-400 mt-0.5">{auth.user.email}</p>
                                 </DropdownMenuLabel>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem asChild>
-                                    <Link href={route('profile.edit')} className="cursor-pointer w-full text-sm">
+                                    <Link href={route('profile.edit')} className="cursor-pointer w-full text-sm text-slate-700">
                                         Pengaturan Profil
                                     </Link>
                                 </DropdownMenuItem>
@@ -306,8 +459,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                         href={route('logout')}
                                         method="post"
                                         as="button"
-                                        className="cursor-pointer w-full text-sm"
-                                        style={{ color: '#e53e3e' }}
+                                        className="cursor-pointer w-full text-sm text-red-500"
                                     >
                                         Keluar dari Sistem
                                     </Link>
@@ -315,23 +467,36 @@ export default function AuthenticatedLayout({ header, children }) {
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </div>
-                </header>
+                </nav>
+
+                {/* Mobile Menu Drawer */}
+                {mobileOpen && (
+                    <div className="al-mobile-menu">
+                        {navigationMenu.map((item) => (
+                            <Link
+                                key={item.name}
+                                href={item.href}
+                                className={`al-mobile-link${isActive(item.href) ? ' active' : ''}`}
+                                onClick={() => setMobileOpen(false)}
+                            >
+                                {item.name}
+                            </Link>
+                        ))}
+                    </div>
+                )}
 
                 {/* Page Header */}
                 {header && (
-                    <div
-                        className="px-6 py-4"
-                        style={{ background: '#fff', borderBottom: '1px solid #e8edf5' }}
-                    >
+                    <div className="al-page-header">
                         {header}
                     </div>
                 )}
 
-                {/* Content */}
-                <main className="flex-1 p-6">
+                {/* Main Content */}
+                <main className="al-main">
                     {children}
                 </main>
             </div>
-        </div>
+        </>
     );
 }

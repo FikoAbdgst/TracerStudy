@@ -36,21 +36,18 @@ class JobPortalController extends Controller
         ]);
     }
 
-    // Fitur 4: Melamar Pekerjaan (Upload CV)
     public function apply(Request $request, JobPosting $job)
     {
         $alumniProfile = Auth::user()->alumniProfile;
 
-        // Cegah alumni melamar jika profilnya belum diisi
         if (!$alumniProfile) {
             return back()->with('error', 'Silakan lengkapi Profil Alumni Anda terlebih dahulu sebelum melamar.');
         }
 
         $request->validate([
-            'cv_file' => 'required|file|mimes:pdf|max:5120', // Wajib PDF, maks 5MB
+            'cv_file' => 'required|file|mimes:pdf|max:5120',
         ]);
 
-        // Cegah melamar lowongan yang sama 2 kali
         $exists = JobApplication::where('job_posting_id', $job->id)
             ->where('alumni_id', $alumniProfile->id)
             ->exists();
@@ -59,22 +56,24 @@ class JobPortalController extends Controller
             return back()->with('error', 'Anda sudah pernah melamar ke lowongan ini.');
         }
 
-        // Upload CV
         $path = $request->file('cv_file')->store('cv_documents', 'public');
 
-        // Simpan data lamaran
         JobApplication::create([
             'job_posting_id' => $job->id,
             'alumni_id' => $alumniProfile->id,
             'cv_path' => $path,
             'status' => 'pending',
         ]);
-        $hrd = $job->company->user; // Asumsi tabel company punya user_id
-        $hrd->notify(new SystemNotification(
-            'Lamaran Baru Masuk!',
-            $alumniProfile->user->name . ' telah melamar untuk posisi ' . $job->title,
-            route('perusahaan.pelamar') // URL tujuan jika di klik
-        ));
+
+        // --- NEW: SEND NOTIFICATION TO COMPANY HR ---
+        if ($job->company && $job->company->user) {
+            $hrdUser = $job->company->user;
+            $hrdUser->notify(new SystemNotification(
+                'Lamaran Baru Masuk!',
+                $alumniProfile->user->name . ' telah melamar untuk posisi ' . $job->title,
+                route('perusahaan.pelamar')
+            ));
+        }
 
         return back()->with('message', 'Lamaran dan CV Anda berhasil dikirim!');
     }

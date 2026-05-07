@@ -1,240 +1,313 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Head, useForm, router } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/Components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/Components/ui/select';
 import InputError from '@/Components/InputError';
 
-const fieldStyle = {
-    height: '40px', padding: '0 12px', border: '1.5px solid #e2e8f0',
-    borderRadius: '8px', background: '#f8fafc', color: '#1a3560',
-    fontSize: '14px', outline: 'none', width: '100%', transition: 'all 0.15s',
+const T = {
+    navy: '#0f1f3d', navyMid: '#1a3560', navyLight: '#e8f0fb',
+    orange: '#f97316', orangeLight: '#fff3eb',
+    border: '#e2e8f0', borderSoft: '#f1f5f9', bg: '#f8fafc',
+    muted: '#94a3b8', mutedDark: '#64748b',
+    green: '#16a34a', greenLight: '#f0fdf4',
+    red: '#dc2626', redLight: '#fff1f2',
 };
-const onFocus = (e) => { e.target.style.borderColor = '#1a3560'; e.target.style.background = '#fff'; e.target.style.boxShadow = '0 0 0 3px rgba(26,53,96,0.08)'; };
-const onBlur = (e) => { e.target.style.borderColor = '#e2e8f0'; e.target.style.background = '#f8fafc'; e.target.style.boxShadow = 'none'; };
 
-const FieldLabel = ({ children }) => (
-    <label className="block text-xs font-bold uppercase mb-1.5" style={{ color: '#4a5568', letterSpacing: '0.08em' }}>
-        {children}
-    </label>
+/* ─── Modal ──────────────────────────────────────────────────────────────── */
+function Modal({ open, onClose, title, children, footer }) {
+    const [visible, setVisible] = useState(false);
+    const [render, setRender] = useState(false);
+    useEffect(() => {
+        if (open) { setRender(true); requestAnimationFrame(() => requestAnimationFrame(() => setVisible(true))); }
+        else { setVisible(false); const t = setTimeout(() => setRender(false), 260); return () => clearTimeout(t); }
+    }, [open]);
+    if (!render) return null;
+    return (
+        <div onClick={e => { if (e.target === e.currentTarget) onClose(); }} style={{
+            position: 'fixed', inset: 0, zIndex: 300,
+            background: 'rgba(10,20,40,0.45)', backdropFilter: 'blur(3px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
+            opacity: visible ? 1 : 0, transition: 'opacity 0.25s ease',
+        }}>
+            <div style={{
+                background: '#fff', borderRadius: 16, width: '100%', maxWidth: 500,
+                boxShadow: '0 24px 60px rgba(10,20,40,0.2)', overflow: 'hidden',
+                opacity: visible ? 1 : 0,
+                transform: visible ? 'translateY(0) scale(1)' : 'translateY(10px) scale(0.97)',
+                transition: 'opacity 0.25s ease, transform 0.25s cubic-bezier(0.22,1,0.36,1)',
+            }}>
+                <div style={{ padding: '20px 22px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${T.borderSoft}` }}>
+                    <span style={{ fontSize: 15, fontWeight: 800, color: T.navy }}>{title}</span>
+                    <button onClick={onClose} style={{ width: 28, height: 28, borderRadius: 7, border: 'none', background: T.bg, color: T.mutedDark, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.15s' }}
+                        onMouseEnter={e => e.currentTarget.style.background = T.border}
+                        onMouseLeave={e => e.currentTarget.style.background = T.bg}>
+                        <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
+                <div style={{ padding: '18px 22px' }}>{children}</div>
+                {footer && <>
+                    <div style={{ height: 1, background: T.borderSoft, margin: '0 22px' }} />
+                    <div style={{ padding: '14px 22px', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>{footer}</div>
+                </>}
+            </div>
+        </div>
+    );
+}
+
+const BtnGhost = ({ children, onClick }) => (
+    <button type="button" onClick={onClick} style={{ height: 36, padding: '0 14px', borderRadius: 8, border: `1.5px solid ${T.border}`, background: 'transparent', color: T.mutedDark, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}
+        onMouseEnter={e => e.currentTarget.style.background = T.bg}
+        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+    >{children}</button>
 );
 
+const FieldLabel = ({ children }) => (
+    <label style={{ display: 'block', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#374151', marginBottom: 5 }}>{children}</label>
+);
+
+const fieldBase = { height: 42, padding: '0 13px', border: `1.5px solid ${T.border}`, borderRadius: 9, background: T.bg, color: T.navy, fontSize: 13.5, outline: 'none', width: '100%', transition: 'all 0.18s', fontFamily: 'inherit', boxSizing: 'border-box' };
+const onFocus = e => { e.target.style.borderColor = T.navyMid; e.target.style.background = '#fff'; e.target.style.boxShadow = '0 0 0 3px rgba(26,53,96,0.09)'; };
+const onBlur = e => { e.target.style.borderColor = T.border; e.target.style.background = T.bg; e.target.style.boxShadow = 'none'; };
+
 const mouStatusMap = {
-    active: { bg: '#f0fdf4', color: '#166534', label: 'Aktif' },
-    expired: { bg: '#fff5f5', color: '#c53030', label: 'Kadaluwarsa' },
-    terminated: { bg: '#f4f6fa', color: '#718096', label: 'Diakhiri' },
+    active: { bg: T.greenLight, color: T.green, label: 'Aktif' },
+    expired: { bg: T.redLight, color: T.red, label: 'Kadaluwarsa' },
+    terminated: { bg: T.borderSoft, color: T.mutedDark, label: 'Diakhiri' },
 };
 
-const MouStatusBadge = ({ status, expiresAt }) => {
+const MouBadge = ({ status, expiresAt }) => {
     const isExpired = status === 'active' && new Date(expiresAt) < new Date();
-    const key = isExpired ? 'expired' : status;
-    const s = mouStatusMap[key] ?? mouStatusMap.active;
-    return (
-        <span className="text-xs font-bold px-2.5 py-1 rounded-full"
-            style={{ background: s.bg, color: s.color }}>
-            {s.label}
-        </span>
-    );
+    const s = mouStatusMap[isExpired ? 'expired' : status] ?? mouStatusMap.active;
+    return <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20, background: s.bg, color: s.color }}>{s.label}</span>;
 };
+
+const formatDate = d => d ? new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(d)) : '—';
 
 export default function MoUIndex({ mous, companies }) {
-    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [uploadOpen, setUploadOpen] = useState(false);
+    const [terminateTarget, setTerminateTarget] = useState(null);
+    const [terminating, setTerminating] = useState(false);
 
     const { data, setData, post, processing, errors, reset, clearErrors } = useForm({
         company_id: '', file: null, signed_at: '', expires_at: '',
     });
 
-    const openCreateModal = () => { reset(); clearErrors(); setIsModalOpen(true); };
+    const openUpload = () => { reset(); clearErrors(); setUploadOpen(true); };
 
-    const handleUpload = (e) => {
+    const handleUpload = e => {
         e.preventDefault();
-        post(route('adminkampus.mou.store'), { onSuccess: () => setIsModalOpen(false) });
+        post(route('adminkampus.mou.store'), { onSuccess: () => setUploadOpen(false) });
     };
 
-    const handleTerminate = (id) => {
-        if (confirm('Yakin ingin mengakhiri kerja sama ini?')) {
-            router.patch(route('adminkampus.mou.terminate', id));
-        }
+    const handleTerminate = () => {
+        setTerminating(true);
+        router.patch(route('adminkampus.mou.terminate', terminateTarget.id), {}, {
+            onFinish: () => { setTerminating(false); setTerminateTarget(null); },
+        });
     };
 
-    const formatDate = (d) => d ? new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(d)) : '—';
+    // summary counts
+    const activeCount = mous.filter(m => m.status === 'active' && new Date(m.expires_at) >= new Date()).length;
+    const expiredCount = mous.filter(m => m.status !== 'terminated' && new Date(m.expires_at) < new Date()).length;
 
     return (
         <AuthenticatedLayout
             header={
-                <div>
-                    <h2 className="text-lg font-bold" style={{ color: '#1a3560' }}>Manajemen Kerja Sama (MoU)</h2>
-                    <p className="text-xs mt-0.5" style={{ color: '#a0aec0' }}>
-                        Arsip dan pelacakan masa berlaku dokumen MoU perusahaan mitra
-                    </p>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+                    <div>
+                        <h2 style={{ fontSize: 17, fontWeight: 800, color: T.navy, margin: 0, letterSpacing: '-0.01em' }}>Manajemen Kerja Sama (MoU)</h2>
+                        <p style={{ fontSize: 12, color: T.muted, margin: '3px 0 0' }}>Arsip dan pelacakan masa berlaku dokumen MoU perusahaan mitra</p>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                        <div style={{ padding: '4px 10px', borderRadius: 8, background: T.greenLight, border: `1px solid ${T.green}22`, fontSize: 12, fontWeight: 700, color: T.green }}>{activeCount} Aktif</div>
+                        {expiredCount > 0 && <div style={{ padding: '4px 10px', borderRadius: 8, background: T.redLight, border: `1px solid ${T.red}22`, fontSize: 12, fontWeight: 700, color: T.red }}>{expiredCount} Kadaluwarsa</div>}
+                    </div>
                 </div>
             }
         >
             <Head title="Dokumen MoU — SITAMI" />
 
-            <div className="rounded-xl p-5" style={{ background: '#fff', border: '1px solid #e8edf5' }}>
-                <div className="flex items-center justify-between mb-5">
-                    <p className="text-sm" style={{ color: '#a0aec0' }}>
-                        Total <span className="font-semibold" style={{ color: '#1a3560' }}>{mous.length}</span> dokumen MoU
-                    </p>
-                    <button
-                        onClick={openCreateModal}
-                        className="flex items-center gap-2 px-4 text-sm font-semibold rounded-lg"
-                        style={{ height: '40px', background: '#f97316', color: '#fff', border: 'none', cursor: 'pointer' }}
-                        onMouseEnter={e => e.target.style.background = '#ea6c0a'}
-                        onMouseLeave={e => e.target.style.background = '#f97316'}
-                    >
-                        + Unggah MoU Baru
-                    </button>
-                </div>
+            <style>{`
+                @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+                .ak-root * { font-family:'Plus Jakarta Sans',sans-serif; }
+                @keyframes cardIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+                @keyframes rowIn  { from{opacity:0;transform:translateX(-4px)} to{opacity:1;transform:translateX(0)} }
+                .tbl-row:hover td { background:#fafbfc; }
+            `}</style>
 
-                <div className="rounded-xl overflow-hidden" style={{ border: '1px solid #e8edf5' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                        <thead>
-                            <tr style={{ background: '#f4f6fa', borderBottom: '1px solid #e8edf5' }}>
-                                {['Perusahaan Mitra', 'Tgl. Penandatanganan', 'Berlaku Sampai', 'Dokumen', 'Status', 'Aksi'].map((h, i) => (
-                                    <th key={i} className="text-xs font-bold uppercase"
-                                        style={{ padding: '10px 16px', color: '#1a3560', letterSpacing: '0.1em', textAlign: i === 5 ? 'right' : 'left' }}>
-                                        {h}
-                                    </th>
+            <div className="ak-root">
+                <div style={{ background: '#fff', borderRadius: 14, border: `1px solid ${T.borderSoft}`, padding: 20, animation: 'cardIn 0.38s cubic-bezier(0.22,1,0.36,1) both' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+                        <p style={{ fontSize: 13, color: T.muted, margin: 0 }}>
+                            Total <span style={{ fontWeight: 700, color: T.navy }}>{mous.length}</span> dokumen MoU
+                        </p>
+                        <button onClick={openUpload} style={{
+                            height: 40, padding: '0 16px', borderRadius: 9, border: 'none',
+                            background: T.orange, color: '#fff', fontSize: 13, fontWeight: 700,
+                            cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s',
+                            display: 'flex', alignItems: 'center', gap: 6,
+                            boxShadow: '0 2px 8px rgba(249,115,22,0.25)',
+                        }}
+                            onMouseEnter={e => { e.currentTarget.style.background = '#ea6c0a'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(249,115,22,0.35)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = T.orange; e.currentTarget.style.boxShadow = '0 2px 8px rgba(249,115,22,0.25)'; e.currentTarget.style.transform = 'none'; }}
+                        >
+                            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                            Unggah MoU Baru
+                        </button>
+                    </div>
+
+                    <div style={{ borderRadius: 10, overflow: 'hidden', border: `1px solid ${T.borderSoft}` }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                            <thead>
+                                <tr style={{ background: T.bg, borderBottom: `1px solid ${T.border}` }}>
+                                    {['Perusahaan Mitra', 'Tgl. TTD', 'Berlaku Sampai', 'Dokumen', 'Status', 'Aksi'].map((h, i) => (
+                                        <th key={i} style={{ padding: '10px 14px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#374151', textAlign: i === 5 ? 'right' : 'left' }}>{h}</th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {mous.map((mou, i) => (
+                                    <tr key={mou.id} className="tbl-row" style={{ borderBottom: `1px solid ${T.borderSoft}`, animation: `rowIn 0.26s ${i * 0.04}s both` }}>
+                                        <td style={{ padding: '13px 14px' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                                <div style={{ width: 32, height: 32, borderRadius: 8, background: T.navyLight, color: T.navyMid, fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                                    {(mou.company?.name ?? 'P').charAt(0).toUpperCase()}
+                                                </div>
+                                                <span style={{ fontSize: 13.5, fontWeight: 700, color: T.navy }}>{mou.company?.name ?? 'Perusahaan Dihapus'}</span>
+                                            </div>
+                                        </td>
+                                        <td style={{ padding: '13px 14px', fontSize: 13, color: T.mutedDark }}>{formatDate(mou.signed_at)}</td>
+                                        <td style={{ padding: '13px 14px', fontSize: 13, color: T.mutedDark }}>{formatDate(mou.expires_at)}</td>
+                                        <td style={{ padding: '13px 14px' }}>
+                                            <a href={`/storage/${mou.file_url}`} target="_blank" style={{ color: T.orange, fontSize: 12, fontWeight: 600, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4, transition: 'opacity 0.15s' }}
+                                                onMouseEnter={e => e.currentTarget.style.opacity = '0.75'}
+                                                onMouseLeave={e => e.currentTarget.style.opacity = '1'}>
+                                                <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
+                                                PDF
+                                            </a>
+                                        </td>
+                                        <td style={{ padding: '13px 14px' }}><MouBadge status={mou.status} expiresAt={mou.expires_at} /></td>
+                                        <td style={{ padding: '13px 14px', textAlign: 'right' }}>
+                                            {mou.status === 'active' && (
+                                                <button onClick={() => setTerminateTarget(mou)} style={{
+                                                    height: 30, padding: '0 12px', borderRadius: 7,
+                                                    border: `1.5px solid #fecaca`, background: T.redLight,
+                                                    color: T.red, fontSize: 12, fontWeight: 600,
+                                                    cursor: 'pointer', fontFamily: 'inherit', transition: 'background 0.14s',
+                                                }}
+                                                    onMouseEnter={e => e.currentTarget.style.background = '#fee2e2'}
+                                                    onMouseLeave={e => e.currentTarget.style.background = T.redLight}
+                                                >Akhiri</button>
+                                            )}
+                                        </td>
+                                    </tr>
                                 ))}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {mous.map(mou => (
-                                <tr key={mou.id} style={{ borderBottom: '1px solid #f4f6fa' }}
-                                    onMouseEnter={e => e.currentTarget.style.background = '#fafbfc'}
-                                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                                    <td style={{ padding: '13px 16px' }}>
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0"
-                                                style={{ background: '#e8f0fb', color: '#1a3560' }}>
-                                                {(mou.company?.name ?? 'P').charAt(0).toUpperCase()}
-                                            </div>
-                                            <div className="font-semibold text-sm" style={{ color: '#1a3560' }}>
-                                                {mou.company?.name ?? 'Perusahaan Dihapus'}
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td style={{ padding: '13px 16px', fontSize: '13px', color: '#4a5568' }}>
-                                        {formatDate(mou.signed_at)}
-                                    </td>
-                                    <td style={{ padding: '13px 16px', fontSize: '13px', color: '#4a5568' }}>
-                                        {formatDate(mou.expires_at)}
-                                    </td>
-                                    <td style={{ padding: '13px 16px' }}>
-                                        <a href={`/storage/${mou.file_url}`} target="_blank"
-                                            className="text-xs font-semibold flex items-center gap-1.5"
-                                            style={{ color: '#f97316', textDecoration: 'none' }}>
-                                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                                                <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                                            </svg>
-                                            Unduh PDF
-                                        </a>
-                                    </td>
-                                    <td style={{ padding: '13px 16px' }}>
-                                        <MouStatusBadge status={mou.status} expiresAt={mou.expires_at} />
-                                    </td>
-                                    <td style={{ padding: '13px 16px', textAlign: 'right' }}>
-                                        {mou.status === 'active' && (
-                                            <button
-                                                onClick={() => handleTerminate(mou.id)}
-                                                className="text-xs font-semibold px-3 rounded-lg"
-                                                style={{ height: '32px', border: '1px solid #fecaca', background: '#fff5f5', color: '#e53e3e', cursor: 'pointer' }}
-                                                onMouseEnter={e => e.target.style.background = '#fee2e2'}
-                                                onMouseLeave={e => e.target.style.background = '#fff5f5'}
-                                            >
-                                                Akhiri
-                                            </button>
-                                        )}
-                                    </td>
-                                </tr>
-                            ))}
-                            {mous.length === 0 && (
-                                <tr>
-                                    <td colSpan={6} className="text-center py-12 text-sm" style={{ color: '#a0aec0' }}>
-                                        Belum ada dokumen MoU yang diunggah.
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
+                                {mous.length === 0 && (
+                                    <tr><td colSpan={6} style={{ padding: '48px 16px', textAlign: 'center', fontSize: 13, color: T.muted }}>Belum ada dokumen MoU.</td></tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
-            {/* Modal Upload MoU */}
-            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle style={{ color: '#1a3560' }}>Unggah Dokumen MoU</DialogTitle>
-                    </DialogHeader>
-                    <form onSubmit={handleUpload} className="space-y-4 pt-1">
+            {/* Upload Modal */}
+            <Modal open={uploadOpen} onClose={() => setUploadOpen(false)} title="Unggah Dokumen MoU"
+                footer={<>
+                    <BtnGhost onClick={() => setUploadOpen(false)}>Batal</BtnGhost>
+                    <button type="submit" form="mou-form" disabled={processing} style={{
+                        height: 36, padding: '0 18px', borderRadius: 8, border: 'none',
+                        background: processing ? T.muted : T.orange, color: '#fff',
+                        fontSize: 13, fontWeight: 700, cursor: processing ? 'not-allowed' : 'pointer',
+                        fontFamily: 'inherit', transition: 'all 0.15s',
+                        boxShadow: processing ? 'none' : '0 2px 8px rgba(249,115,22,0.3)',
+                    }}>
+                        {processing ? 'Mengunggah...' : 'Unggah & Simpan'}
+                    </button>
+                </>}
+            >
+                <form id="mou-form" onSubmit={handleUpload} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    <div>
+                        <FieldLabel>Perusahaan Mitra</FieldLabel>
+                        <Select value={data.company_id} onValueChange={v => setData('company_id', v)}>
+                            <SelectTrigger style={{ height: 42, borderRadius: 9, border: `1.5px solid ${T.border}`, background: T.bg, fontSize: 13.5 }}>
+                                <SelectValue placeholder="Pilih perusahaan..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {companies.map(c => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                        <InputError message={errors.company_id} className="mt-1.5" />
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                         <div>
-                            <FieldLabel>Perusahaan Mitra</FieldLabel>
-                            <Select value={data.company_id} onValueChange={v => setData('company_id', v)}>
-                                <SelectTrigger style={{ height: '40px', borderRadius: '8px' }}>
-                                    <SelectValue placeholder="Pilih perusahaan..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {companies.map(c => (
-                                        <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            <InputError message={errors.company_id} className="mt-1" />
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                            <div>
-                                <FieldLabel>Tanggal Penandatanganan</FieldLabel>
-                                <input type="date" style={fieldStyle} value={data.signed_at}
-                                    onChange={e => setData('signed_at', e.target.value)}
-                                    onFocus={onFocus} onBlur={onBlur} />
-                                <InputError message={errors.signed_at} className="mt-1" />
-                            </div>
-                            <div>
-                                <FieldLabel>Berlaku Sampai</FieldLabel>
-                                <input type="date" style={fieldStyle} value={data.expires_at}
-                                    onChange={e => setData('expires_at', e.target.value)}
-                                    onFocus={onFocus} onBlur={onBlur} />
-                                <InputError message={errors.expires_at} className="mt-1" />
-                            </div>
+                            <FieldLabel>Tgl. Penandatanganan</FieldLabel>
+                            <input type="date" style={fieldBase} value={data.signed_at}
+                                onChange={e => setData('signed_at', e.target.value)} onFocus={onFocus} onBlur={onBlur} />
+                            <InputError message={errors.signed_at} className="mt-1.5" />
                         </div>
                         <div>
-                            <FieldLabel>File Dokumen (PDF, Maks 5MB)</FieldLabel>
-                            <div
-                                className="rounded-lg px-4 py-3 flex items-center gap-3"
-                                style={{ border: '1.5px dashed #e2e8f0', background: '#f8fafc', cursor: 'pointer' }}
-                            >
-                                <svg className="w-5 h-5 flex-shrink-0" style={{ color: '#a0aec0' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m6.75 12l-3-3m0 0l-3 3m3-3v6m-1.5-15H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-                                </svg>
-                                <div className="flex-1">
-                                    <div className="text-xs font-semibold" style={{ color: '#4a5568' }}>
-                                        {data.file ? data.file.name : 'Klik untuk memilih file PDF'}
-                                    </div>
-                                    <div className="text-xs" style={{ color: '#a0aec0' }}>Maksimal ukuran 5MB</div>
+                            <FieldLabel>Berlaku Sampai</FieldLabel>
+                            <input type="date" style={fieldBase} value={data.expires_at}
+                                onChange={e => setData('expires_at', e.target.value)} onFocus={onFocus} onBlur={onBlur} />
+                            <InputError message={errors.expires_at} className="mt-1.5" />
+                        </div>
+                    </div>
+                    <div>
+                        <FieldLabel>File Dokumen (PDF, maks 5MB)</FieldLabel>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderRadius: 9, border: `1.5px dashed ${data.file ? T.navyMid : T.border}`, background: data.file ? T.navyLight : T.bg, cursor: 'pointer', transition: 'all 0.18s' }}
+                            onMouseEnter={e => e.currentTarget.style.borderColor = T.navyMid}
+                            onMouseLeave={e => e.currentTarget.style.borderColor = data.file ? T.navyMid : T.border}>
+                            <div style={{ width: 36, height: 36, borderRadius: 8, background: data.file ? T.navyMid : '#e2e8f0', color: data.file ? '#fff' : T.muted, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.18s' }}>
+                                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m6.75 12l-3-3m0 0l-3 3m3-3v6m-1.5-15H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: 13, fontWeight: 600, color: data.file ? T.navyMid : T.mutedDark, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {data.file ? data.file.name : 'Klik untuk memilih file PDF'}
                                 </div>
-                                <input type="file" accept=".pdf" className="absolute inset-0 opacity-0 cursor-pointer w-full"
-                                    style={{ position: 'absolute', opacity: 0 }}
-                                    onChange={e => setData('file', e.target.files[0])} />
+                                <div style={{ fontSize: 11, color: T.muted, marginTop: 2 }}>Maksimal ukuran 5MB</div>
                             </div>
-                            <InputError message={errors.file} className="mt-1" />
+                            <input type="file" accept=".pdf" style={{ display: 'none' }} onChange={e => setData('file', e.target.files[0])} />
+                        </label>
+                        <InputError message={errors.file} className="mt-1.5" />
+                    </div>
+                </form>
+            </Modal>
+
+            {/* Terminate Confirm Modal */}
+            <Modal open={!!terminateTarget} onClose={() => setTerminateTarget(null)} title="Konfirmasi Akhiri MoU"
+                footer={<>
+                    <BtnGhost onClick={() => setTerminateTarget(null)}>Batal</BtnGhost>
+                    <button onClick={handleTerminate} disabled={terminating} style={{
+                        height: 36, padding: '0 18px', borderRadius: 8, border: 'none',
+                        background: terminating ? T.muted : T.red, color: '#fff',
+                        fontSize: 13, fontWeight: 700, cursor: terminating ? 'not-allowed' : 'pointer',
+                        fontFamily: 'inherit', transition: 'all 0.15s',
+                        boxShadow: terminating ? 'none' : '0 2px 8px rgba(220,38,38,0.28)',
+                    }}
+                        onMouseEnter={e => { if (!terminating) { e.currentTarget.style.background = '#b91c1c'; e.currentTarget.style.transform = 'translateY(-1px)'; } }}
+                        onMouseLeave={e => { e.currentTarget.style.background = terminating ? T.muted : T.red; e.currentTarget.style.transform = 'none'; }}
+                    >
+                        {terminating ? 'Mengakhiri...' : 'Ya, Akhiri MoU'}
+                    </button>
+                </>}
+            >
+                {terminateTarget && (
+                    <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                        <div style={{ width: 38, height: 38, borderRadius: '50%', background: T.redLight, color: T.red, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <svg width="17" height="17" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>
                         </div>
-                        <DialogFooter>
-                            <button type="button" onClick={() => setIsModalOpen(false)}
-                                className="px-4 text-sm rounded-lg"
-                                style={{ height: '38px', color: '#718096', cursor: 'pointer', background: 'transparent', border: '1px solid #e2e8f0' }}>
-                                Batal
-                            </button>
-                            <button type="submit" disabled={processing}
-                                className="px-5 text-sm font-semibold rounded-lg"
-                                style={{ height: '38px', background: '#f97316', color: '#fff', border: 'none', cursor: 'pointer', opacity: processing ? 0.6 : 1 }}>
-                                {processing ? 'Mengunggah...' : 'Unggah & Simpan'}
-                            </button>
-                        </DialogFooter>
-                    </form>
-                </DialogContent>
-            </Dialog>
+                        <div>
+                            <p style={{ fontSize: 14, fontWeight: 600, color: T.navy, margin: '0 0 5px' }}>
+                                Akhiri MoU dengan <em style={{ fontStyle: 'normal', color: T.red }}>{terminateTarget.company?.name}</em>?
+                            </p>
+                            <p style={{ fontSize: 13, color: T.mutedDark, margin: 0, lineHeight: 1.55 }}>
+                                Status MoU akan berubah menjadi <strong>Diakhiri</strong> dan tidak dapat diaktifkan kembali secara otomatis.
+                            </p>
+                        </div>
+                    </div>
+                )}
+            </Modal>
         </AuthenticatedLayout>
     );
 }

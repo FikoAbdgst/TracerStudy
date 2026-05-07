@@ -34,6 +34,14 @@ Route::post('/notifications/{id}/read', function ($id) {
     }
     return back();
 })->name('notifications.read');
+Route::get('/test-notif', function () {
+    auth()->user()->notify(new \App\Notifications\SystemNotification(
+        'Test Notifikasi Berhasil!',
+        'Jika kamu melihat ini, berarti sistem notifikasi berfungsi 100%.',
+        '/dashboard'
+    ));
+    return "Notifikasi berhasil disuntikkan! Silakan kembali ke aplikasi dan cek icon lonceng.";
+});
 
 Route::middleware(['auth', 'verified'])->group(function () {
     // Dashboard Utama (Logic Redirect ada di AuthenticatedSessionController)
@@ -58,6 +66,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('/master-data/prodi/{prodi}', [MasterDataController::class, 'destroyProdi'])->name('master-data.prodi.destroy');
         Route::delete('/master-data/industry/{industry}', [MasterDataController::class, 'destroyIndustry'])->name('master-data.industry.destroy');
         Route::get('/master-data', [MasterDataController::class, 'index'])->name('master-data');
+        Route::put('/master-data/prodi/{prodi}',       [MasterDataController::class, 'updateProdi'])->name('master-data.prodi.update');
+        Route::put('/master-data/industry/{industry}', [MasterDataController::class, 'updateIndustry'])->name('master-data.industry.update');
+
 
         // 3. Rute Mengelola Hak Akses (User Management) yang baru kita buat
         Route::resource('users', UserController::class)->except(['create', 'show', 'edit']);

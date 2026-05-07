@@ -34,28 +34,29 @@ class ApplicantController extends Controller
     }
     public function updateStatus(Request $request, JobApplication $lamaran)
     {
-        // Validasi keamanan: Pastikan lamaran ini benar melamar ke perusahaan yang sedang login
+        // Ensure the application belongs to a job posted by the current company
         $company = Auth::user()->company;
         if ($lamaran->jobPosting->company_id !== $company->id) {
-            abort(403, 'Anda tidak memiliki akses ke lamaran ini.');
+            abort(403, 'Unauthorized action.');
         }
 
         $validated = $request->validate([
             'status' => 'required|in:pending,direview,wawancara,diterima,ditolak',
-            'notes' => 'nullable|string|max:1000',
+            'notes' => 'nullable|string'
         ]);
 
         $lamaran->update($validated);
 
-        // Jika statusnya Diterima atau Ditolak, biasanya ERP akan mengirim notifikasi/email ke pelamar.
-        // Untuk sekarang, kita cukup update statusnya.
-        $alumniUser = $lamaran->alumni->user;
-        $alumniUser->notify(new SystemNotification(
-            'Status Lamaran Diperbarui!',
-            'Status lamaran Anda di ' . $lamaran->jobPosting->company->name . ' berubah menjadi: ' . $validated['status'],
-            route('alumni.lamaran')
-        ));
+        // --- NEW: SEND NOTIFICATION TO ALUMNI ---
+        if ($lamaran->alumni && $lamaran->alumni->user) {
+            $alumniUser = $lamaran->alumni->user;
+            $alumniUser->notify(new SystemNotification(
+                'Status Lamaran Diperbarui!',
+                'Status lamaran Anda untuk posisi ' . $lamaran->jobPosting->title . ' berubah menjadi: ' . strtoupper($validated['status']),
+                route('alumni.lamaran')
+            ));
+        }
 
-        return back()->with('message', 'Status pelamar berhasil diperbarui menjadi: ' . strtoupper($validated['status']));
+        return back()->with('message', 'Status pelamar berhasil diperbarui.');
     }
 }

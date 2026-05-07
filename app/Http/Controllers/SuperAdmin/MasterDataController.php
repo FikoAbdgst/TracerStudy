@@ -13,23 +13,41 @@ class MasterDataController extends Controller
     public function index()
     {
         return Inertia::render('SuperAdmin/MasterData/Index', [
-            'prodis' => ProgramStudi::all(),
-            'industries' => IndustrySektor::all(),
+            'prodis'     => ProgramStudi::orderBy('created_at', 'desc')->get(),
+            'industries' => IndustrySektor::orderBy('created_at', 'desc')->get(),
         ]);
     }
 
-    // Program Studi CRUD
+    // ── Program Studi ──────────────────────────────────────────────────────
+
     public function storeProdi(Request $request)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
+            'name'    => 'required|string|max:255',
             'jenjang' => 'required|string|max:10',
         ]);
         ProgramStudi::create($validated);
         return back()->with('message', 'Program Studi berhasil ditambahkan.');
     }
 
-    // Sektor Industri CRUD
+    public function updateProdi(Request $request, ProgramStudi $prodi)
+    {
+        $validated = $request->validate([
+            'name'    => 'required|string|max:255',
+            'jenjang' => 'required|string|max:10',
+        ]);
+        $prodi->update($validated);
+        return back()->with('message', 'Program Studi berhasil diperbarui.');
+    }
+
+    public function destroyProdi(ProgramStudi $prodi)
+    {
+        $prodi->delete();
+        return back()->with('message', 'Program Studi berhasil dihapus.');
+    }
+
+    // ── Sektor Industri ────────────────────────────────────────────────────
+
     public function storeIndustry(Request $request)
     {
         $validated = $request->validate([
@@ -39,11 +57,13 @@ class MasterDataController extends Controller
         return back()->with('message', 'Sektor Industri berhasil ditambahkan.');
     }
 
-    // Tambahkan method destroyProdi dan destroyIndustry sesuai kebutuhan
-    public function destroyProdi(ProgramStudi $prodi)
+    public function updateIndustry(Request $request, IndustrySektor $industry)
     {
-        $prodi->delete();
-        return back()->with('message', 'Program Studi berhasil dihapus.');
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+        ]);
+        $industry->update($validated);
+        return back()->with('message', 'Sektor Industri berhasil diperbarui.');
     }
 
     public function destroyIndustry(IndustrySektor $industry)

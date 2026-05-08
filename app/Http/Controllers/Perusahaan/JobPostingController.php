@@ -32,7 +32,7 @@ class JobPostingController extends Controller
     {
         $company = $request->user()->company;
 
-        // REVISI: Cek status verifikasi sebelum mengizinkan posting
+        // Cegah perusahaan membuat loker jika izin ditolak/belum diverifikasi
         if ($company->verification_status !== 'verified') {
             return back()->with('error', 'Perusahaan Anda belum terverifikasi. Tidak dapat memposting lowongan.');
         }
@@ -57,7 +57,7 @@ class JobPostingController extends Controller
 
         if ($job->company_id !== $company->id) abort(403);
 
-        // REVISI: Cegah perusahaan mengaktifkan loker jika izin dicabut
+        // Cegah perusahaan mengubah data loker jika izin dicabut
         if ($company->verification_status !== 'verified') {
             return back()->with('error', 'Izin posting dicabut. Anda tidak dapat mengubah status lowongan saat ini.');
         }
@@ -84,7 +84,6 @@ class JobPostingController extends Controller
         return back()->with('message', 'Lowongan berhasil dihapus.');
     }
 
-    // ─── TAMBAHKAN METODE INI UNTUK MENGATASI ERROR TOGGLE ───
     public function toggleStatus(Request $request, JobPosting $job)
     {
         $company = $request->user()->company;
@@ -92,12 +91,11 @@ class JobPostingController extends Controller
         // Pastikan hanya pemilik lowongan yang bisa mengubahnya
         if ($job->company_id !== $company->id) abort(403);
 
-        // Validasi: Jika status perusahaan bukan 'verified', tidak bisa toggle
+        // Validasi ekstra: Jika status perusahaan bukan 'verified', tidak bisa toggle
         if ($company->verification_status !== 'verified') {
             return back()->with('error', 'Izin posting dicabut. Anda tidak dapat mengubah status lowongan saat ini.');
         }
 
-        // Toggle status is_active (jika true jadi false, jika false jadi true)
         $job->update([
             'is_active' => !$job->is_active
         ]);

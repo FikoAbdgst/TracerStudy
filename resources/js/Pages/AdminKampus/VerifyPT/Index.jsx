@@ -28,6 +28,7 @@ function Modal({ open, onClose, title, children, footer }) {
             display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
             opacity: visible ? 1 : 0, transition: 'opacity 0.25s ease',
         }}>
+            {/* Blur backdrop - separate div so it doesn't create stacking context for the flex layer */}
             <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(10,20,40,0.45)', backdropFilter: 'blur(3px)', cursor: 'default' }} />
             <div style={{
                 position: 'relative',
@@ -63,7 +64,7 @@ const BtnGhost = ({ children, onClick }) => (
     >{children}</button>
 );
 
-// PERBAIKAN PENTING: Tambahkan `...props` untuk meneruskan properti seperti `form="status-form"`
+// PERBAIKAN: Menambahkan ...props agar menerima atribut seperti form="status-form"
 const BtnPrimary = ({ children, disabled, color = T.navyMid, ...props }) => (
     <button type="submit" disabled={disabled} style={{ height: 36, padding: '0 18px', borderRadius: 8, border: 'none', background: disabled ? T.muted : color, color: '#fff', fontSize: 13, fontWeight: 700, cursor: disabled ? 'not-allowed' : 'pointer', fontFamily: 'inherit', transition: 'all 0.15s', boxShadow: disabled ? 'none' : `0 2px 8px ${color}44` }}
         onMouseEnter={e => { if (!disabled) { e.currentTarget.style.filter = 'brightness(0.88)'; e.currentTarget.style.transform = 'translateY(-1px)'; } }}
@@ -121,6 +122,7 @@ export default function VerifyPTIndex({ companies }) {
 
             <style>{`
                 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+                /* Radix portal z-index fix - must be above modal overlay */
                 [data-radix-popper-content-wrapper] { z-index: 99999 !important; }
 
                 .ak-root * { font-family:'Plus Jakarta Sans',sans-serif; }
@@ -212,11 +214,12 @@ export default function VerifyPTIndex({ companies }) {
             <Modal open={!!selected} onClose={() => setSelected(null)} title="Tinjau Perusahaan"
                 footer={<>
                     <BtnGhost onClick={() => setSelected(null)}>Batal</BtnGhost>
-                    {/* PERBAIKAN: Ikat tombol ini dengan ID form agar bisa di-submit */}
+                    {/* PERBAIKAN 1: Tambahkan form="status-form" pada BtnPrimary */}
                     <BtnPrimary form="status-form" disabled={processing}>{processing ? 'Menyimpan...' : 'Simpan Status'}</BtnPrimary>
                 </>}
             >
                 {selected && (
+                    /* PERBAIKAN 2: Tambahkan id="status-form" pada form */
                     <form id="status-form" onSubmit={submitStatus} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                         {/* Company info card */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderRadius: 10, background: T.bg, border: `1px solid ${T.borderSoft}` }}>
@@ -242,19 +245,37 @@ export default function VerifyPTIndex({ companies }) {
                         )}
 
                         <div>
-                            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#374151', marginBottom: 6 }}>Status Verifikasi</label>
+                            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#374151', marginBottom: 6 }}>
+                                Status Verifikasi
+                            </label>
                             <Select value={data.verification_status} onValueChange={v => setData('verification_status', v)}>
                                 <SelectTrigger className="focus:ring-0 focus:ring-offset-0" style={{ height: 42, borderRadius: 9, border: `1.5px solid ${T.border}`, background: T.bg, fontSize: 13.5 }}>
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent position="popper" sideOffset={4} className="z-[500] rounded-xl overflow-hidden border border-gray-200 shadow-xl" style={{ background: "#ffffff", minWidth: "var(--radix-select-trigger-width)" }}>
-                                    <SelectItem className="text-sm cursor-pointer px-3 py-2 outline-none data-[highlighted]:bg-slate-50" style={{ color: "#1e293b", background: "transparent" }} value="pending">Menunggu Peninjauan</SelectItem>
-                                    <SelectItem className="text-sm cursor-pointer px-3 py-2 outline-none data-[highlighted]:bg-slate-50" style={{ color: "#1e293b", background: "transparent" }} value="verified">Terverifikasi — Izinkan Posting</SelectItem>
-                                    <SelectItem className="text-sm cursor-pointer px-3 py-2 outline-none data-[highlighted]:bg-slate-50" style={{ color: "#1e293b", background: "transparent" }} value="rejected">Tolak Perusahaan</SelectItem>
+
+                                    {/* MODIFIKASI DISINI: Tambahkan atribut disabled jika status awal bukan pending */}
+                                    <SelectItem
+                                        className="text-sm cursor-pointer px-3 py-2 outline-none data-[highlighted]:bg-slate-50"
+                                        style={{ color: selected.verification_status !== 'pending' ? T.muted : "#1e293b", background: "transparent" }}
+                                        value="pending"
+                                        disabled={selected.verification_status !== 'pending'}
+                                    >
+                                        Menunggu Peninjauan {selected.verification_status !== 'pending' && '(Sudah Diproses)'}
+                                    </SelectItem>
+
+                                    <SelectItem className="text-sm cursor-pointer px-3 py-2 outline-none data-[highlighted]:bg-slate-50" style={{ color: "#1e293b", background: "transparent" }} value="verified">
+                                        Terverifikasi — Izinkan Posting
+                                    </SelectItem>
+
+                                    <SelectItem className="text-sm cursor-pointer px-3 py-2 outline-none data-[highlighted]:bg-slate-50" style={{ color: "#1e293b", background: "transparent" }} value="rejected">
+                                        Tolak Perusahaan
+                                    </SelectItem>
+
                                 </SelectContent>
                             </Select>
                         </div>
-                        {/* Tombol submit tak terlihat agar user bisa menekan Enter */}
+                        {/* Tombol submit tak terlihat agar user bisa submit via "Enter" */}
                         <button type="submit" style={{ display: 'none' }} />
                     </form>
                 )}

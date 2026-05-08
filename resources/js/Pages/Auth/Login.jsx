@@ -249,7 +249,7 @@ export default function Login({ status, canResetPassword }) {
                         <div className="login-logo-mark">M</div>
                         <div className="login-divider" />
                         <div className="login-logo-text">
-                            <span className="login-logo-name">SITAMI</span>
+                            <span className="login-logo-name">Tracer Study</span>
                             <span className="login-logo-sub">STMIK Mardira Indonesia</span>
                         </div>
                     </div>
@@ -311,7 +311,7 @@ export default function Login({ status, canResetPassword }) {
                         </div>
 
                         <button type="submit" className="btn-submit" disabled={processing}>
-                            {processing ? 'Memproses...' : 'Masuk ke SITAMI'}
+                            {processing ? 'Memproses...' : 'Masuk ke Tracer Study'}
                         </button>
                     </form>
 

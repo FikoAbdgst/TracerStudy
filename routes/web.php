@@ -109,10 +109,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // --- HAPUS ROUTE DUMMY LAMA, GANTI DENGAN INI ---
         Route::get('/lowongan', [JobPostingController::class, 'index'])->name('lowongan');
         Route::post('/lowongan', [JobPostingController::class, 'store'])->name('lowongan.store');
-        Route::put('/lowongan/{lowongan}', [JobPostingController::class, 'update'])->name('lowongan.update');
-        Route::delete('/lowongan/{lowongan}', [JobPostingController::class, 'destroy'])->name('lowongan.destroy');
+        Route::put('/lowongan/{job}', [JobPostingController::class, 'update'])->name('lowongan.update');
+        Route::delete('/lowongan/{job}', [JobPostingController::class, 'destroy'])->name('lowongan.destroy');
         // Rute Toggle Switch
-        Route::patch('/lowongan/{lowongan}/toggle', [JobPostingController::class, 'toggleStatus'])->name('lowongan.toggle');
+        Route::patch('/lowongan/{job}/toggle', [JobPostingController::class, 'toggleStatus'])->name('lowongan.toggle');
 
         Route::get('/pelamar', [ApplicantController::class, 'index'])->name('pelamar');
 

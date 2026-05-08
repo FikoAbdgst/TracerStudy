@@ -16,9 +16,13 @@ class JobPortalController extends Controller
     // Fitur 3: Melihat Lowongan (Bursa Kerja)
     public function index()
     {
-        // PERBAIKAN: Menghapus aturan query whereHas verification_status
-        // Agar lowongan tetap muncul selama perusahaan mengaturnya sebagai aktif (is_active = true)
+        // REVISI TERBARU: 
+        // Pastikan job posting TIDAK AKAN AKTIF/TAMPIL jika status perusahaan bukan 'verified'.
+        // Walaupun dari data perusahaannya loker tersebut statusnya dibuka (is_active = true).
         $jobs = JobPosting::with('company')
+            ->whereHas('company', function ($query) {
+                $query->where('verification_status', 'verified');
+            })
             ->where('is_active', true)
             ->latest()
             ->get();
@@ -76,7 +80,7 @@ class JobPortalController extends Controller
 
         return back()->with('message', 'Lamaran dan CV Anda berhasil dikirim!');
     }
-    // TAMBAHKAN METODE INI
+
     public function updateCv(Request $request, JobPosting $job)
     {
         $alumniProfile = Auth::user()->alumniProfile;

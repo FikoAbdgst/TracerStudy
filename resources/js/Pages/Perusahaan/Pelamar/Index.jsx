@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Head, useForm } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/Components/ui/select';
@@ -14,56 +14,6 @@ const T = {
     purple: '#7c3aed', purpleLight: '#f5f3ff',
 };
 
-/* ─── Modal ──────────────────────────────────────────────────────────────── */
-function Modal({ open, onClose, title, children, footer, wide = false }) {
-    const [visible, setVisible] = React.useState(false);
-    const [render, setRender] = React.useState(false);
-    React.useEffect(() => {
-        if (open) { setRender(true); requestAnimationFrame(() => requestAnimationFrame(() => setVisible(true))); }
-        else { setVisible(false); const t = setTimeout(() => setRender(false), 260); return () => clearTimeout(t); }
-    }, [open]);
-    if (!render) return null;
-    return (
-        <div style={{
-            position: 'fixed', inset: 0, zIndex: 9000,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
-            opacity: visible ? 1 : 0, transition: 'opacity 0.25s ease',
-        }}>
-            <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(10,20,40,0.45)', backdropFilter: 'blur(3px)', cursor: 'default' }} />
-            <div style={{
-                background: '#fff', borderRadius: 16, position: 'relative',
-                width: '100%', maxWidth: wide ? 600 : 480,
-                boxShadow: '0 24px 60px rgba(10,20,40,0.2)',
-                display: 'flex', flexDirection: 'column', maxHeight: '90vh',
-                opacity: visible ? 1 : 0,
-                transform: visible ? 'translateY(0) scale(1)' : 'translateY(10px) scale(0.97)',
-                transition: 'opacity 0.25s ease, transform 0.25s cubic-bezier(0.22,1,0.36,1)',
-            }}>
-                <div style={{ padding: '20px 22px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${T.borderSoft}`, flexShrink: 0 }}>
-                    <span style={{ fontSize: 15, fontWeight: 800, color: T.navy }}>{title}</span>
-                    <button onClick={onClose} style={{ width: 28, height: 28, borderRadius: 7, border: 'none', background: T.bg, color: T.mutedDark, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                        onMouseEnter={e => e.currentTarget.style.background = T.border}
-                        onMouseLeave={e => e.currentTarget.style.background = T.bg}>
-                        <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                    </button>
-                </div>
-                <div style={{ padding: '18px 22px', overflowY: 'auto', flex: 1 }}>{children}</div>
-                {footer && <>
-                    <div style={{ height: 1, background: T.borderSoft, flexShrink: 0 }} />
-                    <div style={{ padding: '14px 22px', display: 'flex', justifyContent: 'flex-end', gap: 8, flexShrink: 0 }}>{footer}</div>
-                </>}
-            </div>
-        </div>
-    );
-}
-
-const BtnGhost = ({ children, onClick }) => (
-    <button type="button" onClick={onClick} style={{ height: 36, padding: '0 14px', borderRadius: 8, border: `1.5px solid ${T.border}`, background: 'transparent', color: T.mutedDark, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}
-        onMouseEnter={e => e.currentTarget.style.background = T.bg}
-        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-    >{children}</button>
-);
-
 const fieldBase = { height: 42, padding: '0 13px', border: `1.5px solid ${T.border}`, borderRadius: 9, background: T.bg, color: T.navy, fontSize: 13.5, outline: 'none', width: '100%', transition: 'all 0.18s', fontFamily: 'inherit', boxSizing: 'border-box' };
 const onFocus = e => { e.target.style.borderColor = T.navyMid; e.target.style.background = '#fff'; e.target.style.boxShadow = '0 0 0 3px rgba(26,53,96,0.09)'; };
 const onBlur = e => { e.target.style.borderColor = T.border; e.target.style.background = T.bg; e.target.style.boxShadow = 'none'; };
@@ -78,7 +28,7 @@ const statusMap = {
 };
 const StatusBadge = ({ status }) => {
     const s = statusMap[status] ?? statusMap.pending;
-    return <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20, background: s.bg, color: s.color }}>{s.label}</span>;
+    return <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20, background: s.bg, color: s.color, whiteSpace: 'nowrap' }}>{s.label}</span>;
 };
 
 /* ─── Info Row helper ────────────────────────────────────────────────────── */
@@ -89,45 +39,62 @@ const InfoRow = ({ label, value }) => (
     </div>
 );
 
-/* ─── Main ───────────────────────────────────────────────────────────────── */
+/* ─── Main Component ─────────────────────────────────────────────────────── */
 export default function PelamarIndex({ applications }) {
-    const [searchName, setSearchName] = useState('');
-    const [filterJob, setFilterJob] = useState('all');
-    const [filterStatus, setFilterStatus] = useState('all');
-    const [modalOpen, setModalOpen] = useState(false);
-    const [selectedApp, setSelectedApp] = useState(null);
+    // State untuk mode tampilan
+    const [activeJobId, setActiveJobId] = useState(null);
+    const [activeAppId, setActiveAppId] = useState(null);
 
     const { data, setData, patch, processing } = useForm({ status: '', notes: '' });
 
-    const uniqueJobs = useMemo(() => [...new Set(applications.map(a => a.job_posting.title))], [applications]);
+    // Grouping aplikasi berdasarkan Job Posting
+    const groupedJobs = useMemo(() => {
+        const groups = {};
+        applications.forEach(app => {
+            const jobId = app.job_posting.id;
+            if (!groups[jobId]) {
+                groups[jobId] = {
+                    id: jobId,
+                    title: app.job_posting.title,
+                    location: app.job_posting.location,
+                    salary_range: app.job_posting.salary_range,
+                    applications: []
+                };
+            }
+            groups[jobId].applications.push(app);
+        });
+        return Object.values(groups);
+    }, [applications]);
 
-    const filtered = applications.filter(app => {
-        const matchName = app.alumni?.user?.name.toLowerCase().includes(searchName.toLowerCase());
-        const matchJob = filterJob === 'all' || app.job_posting.title === filterJob;
-        const matchStatus = filterStatus === 'all' || app.status === filterStatus;
-        return matchName && matchJob && matchStatus;
-    });
+    // Mendapatkan data job & app yang sedang aktif
+    const activeJob = groupedJobs.find(j => j.id === activeJobId);
+    const activeApp = activeJob?.applications.find(a => a.id === activeAppId);
 
-    const openModal = app => {
-        setSelectedApp(app);
-        setData({ status: app.status || 'pending', notes: app.notes || '' });
-        setModalOpen(true);
-    };
+    // Sync data form ketika activeApp berubah (karena klik list atau update server)
+    useEffect(() => {
+        if (activeApp) {
+            setData({ status: activeApp.status || 'pending', notes: activeApp.notes || '' });
+        }
+    }, [activeAppId, applications]);
+
     const submitStatus = e => {
         e.preventDefault();
-        patch(route('perusahaan.pelamar.status', selectedApp.id), { onSuccess: () => setModalOpen(false) });
+        if (!activeApp) return;
+        patch(route('perusahaan.pelamar.status', activeApp.id), { preserveScroll: true });
     };
-    const formatDate = d => new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(d));
 
-    // Summary counts
-    const counts = Object.keys(statusMap).reduce((acc, k) => ({ ...acc, [k]: applications.filter(a => a.status === k).length }), {});
+    const formatDate = d => new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(d));
 
     return (
         <AuthenticatedLayout
             header={
                 <div>
-                    <h2 style={{ fontSize: 17, fontWeight: 800, color: T.navy, margin: 0, letterSpacing: '-0.01em' }}>Daftar Pelamar</h2>
-                    <p style={{ fontSize: 12, color: T.muted, margin: '3px 0 0' }}>Kelola dan proses lamaran masuk dari alumni</p>
+                    <h2 style={{ fontSize: 17, fontWeight: 800, color: T.navy, margin: 0, letterSpacing: '-0.01em' }}>
+                        {activeJob ? `Pelamar: ${activeJob.title}` : 'Daftar Pelamar'}
+                    </h2>
+                    <p style={{ fontSize: 12, color: T.muted, margin: '3px 0 0' }}>
+                        {activeJob ? 'Tinjau profil dan tentukan status pelamar' : 'Kelola dan proses lamaran masuk berdasarkan posisi'}
+                    </p>
                 </div>
             }
         >
@@ -137,164 +104,195 @@ export default function PelamarIndex({ applications }) {
                 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
                 [data-radix-popper-content-wrapper] { z-index: 99999 !important; }
                 .ak-root * { font-family:'Plus Jakarta Sans',sans-serif; }
-                @keyframes cardIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
-                @keyframes rowIn  { from{opacity:0;transform:translateX(-4px)} to{opacity:1;transform:translateX(0)} }
-                .tbl-row:hover td { background:#fafbfc; }
+                @keyframes fadeCard { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
             `}</style>
 
             <div className="ak-root">
-                <div style={{ background: '#fff', borderRadius: 14, border: `1px solid ${T.borderSoft}`, padding: 20, animation: 'cardIn 0.38s cubic-bezier(0.22,1,0.36,1) both' }}>
 
-                    {/* Status Summary Pills */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 18 }}>
-                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                            {Object.entries(statusMap).map(([key, s]) => counts[key] > 0 && (
-                                <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 8, background: s.bg, border: `1px solid ${s.color}22`, cursor: 'pointer', transition: 'all 0.14s' }}
-                                    onClick={() => setFilterStatus(filterStatus === key ? 'all' : key)}
-                                    onMouseEnter={e => e.currentTarget.style.opacity = '0.8'}
-                                    onMouseLeave={e => e.currentTarget.style.opacity = '1'}
-                                >
-                                    <span style={{ fontSize: 11, fontWeight: 700, color: s.color }}>{counts[key]} {s.label}</span>
-                                </div>
-                            ))}
-                        </div>
-
-                        {/* Filters */}
-                        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                            <div style={{ position: 'relative' }}>
-                                <svg style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: '#b0bec5' }} width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
-                                </svg>
-                                <input style={{ ...fieldBase, paddingLeft: 33, width: 200 }} placeholder="Cari nama pelamar..."
-                                    value={searchName} onChange={e => setSearchName(e.target.value)} onFocus={onFocus} onBlur={onBlur} />
+                {/* ─── TAMPILAN 1: GRID KARTU LOWONGAN ─── */}
+                {!activeJob && (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16 }}>
+                        {groupedJobs.length === 0 ? (
+                            <div style={{ gridColumn: '1 / -1', background: '#fff', padding: 40, textAlign: 'center', borderRadius: 14, border: `1px solid ${T.borderSoft}` }}>
+                                <p style={{ fontSize: 14, color: T.mutedDark, fontWeight: 600 }}>Belum ada pelamar yang masuk ke lowongan Anda.</p>
                             </div>
-                            <Select value={filterJob} onValueChange={setFilterJob}>
-                                <SelectTrigger className="focus:ring-0 focus:ring-offset-0" style={{ height: 42, width: 180, borderRadius: 9, border: `1.5px solid ${T.border}`, background: T.bg, fontSize: 13 }}>
-                                    <SelectValue placeholder="Semua Posisi" />
-                                </SelectTrigger>
-                                <SelectContent position="popper" sideOffset={4} className="z-[500] rounded-xl overflow-hidden border border-gray-200 shadow-xl" style={{ background: '#ffffff' }}>
-                                    <SelectItem value="all">Semua Posisi</SelectItem>
-                                    {uniqueJobs.map((j, i) => <SelectItem key={i} value={j}>{j}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </div>
+                        ) : (
+                            groupedJobs.map((job, idx) => (
+                                <div key={job.id} style={{ background: '#fff', borderRadius: 14, border: `1px solid ${T.borderSoft}`, padding: 20, animation: `fadeCard 0.3s ${idx * 0.05}s both`, display: 'flex', flexDirection: 'column' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+                                        <div style={{ flex: 1 }}>
+                                            <h3 style={{ fontSize: 16, fontWeight: 800, color: T.navy, margin: '0 0 4px', lineHeight: 1.3 }}>{job.title}</h3>
+                                            <div style={{ fontSize: 12, color: T.mutedDark }}>{job.location || 'Lokasi tidak spesifik'}</div>
+                                        </div>
+                                        <div style={{ background: T.orangeLight, color: T.orange, padding: '4px 10px', borderRadius: 8, fontSize: 12, fontWeight: 800 }}>
+                                            {job.applications.length} Pelamar
+                                        </div>
+                                    </div>
 
-                    {/* Table */}
-                    <div style={{ borderRadius: 10, overflow: 'hidden', border: `1px solid ${T.borderSoft}` }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                            <thead>
-                                <tr style={{ background: T.bg, borderBottom: `1px solid ${T.border}` }}>
-                                    {['Pelamar', 'Posisi Dilamar', 'Tanggal', 'Status', 'Aksi'].map((h, i) => (
-                                        <th key={i} style={{ padding: '10px 14px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#374151', textAlign: i === 4 ? 'right' : 'left' }}>{h}</th>
-                                    ))}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filtered.map((app, i) => (
-                                    <tr key={app.id} className="tbl-row" style={{ borderBottom: `1px solid ${T.borderSoft}`, animation: `rowIn 0.26s ${i * 0.04}s both` }}>
-                                        <td style={{ padding: '13px 14px' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                                <div style={{ width: 34, height: 34, borderRadius: 10, background: T.orangeLight, color: T.orange, fontSize: 13, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                                    {app.alumni?.user?.name?.charAt(0)?.toUpperCase() ?? '?'}
+                                    <div style={{ flex: 1 }}>
+                                        {/* Tampilkan preview 3 pelamar terakhir */}
+                                        <div style={{ display: 'flex', gap: -8, marginTop: 10, marginBottom: 20, paddingLeft: 8 }}>
+                                            {job.applications.slice(0, 5).map((app, i) => (
+                                                <div key={app.id} style={{ width: 30, height: 30, borderRadius: '50%', background: T.navyLight, color: T.navyMid, border: '2px solid #fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, marginLeft: -8, zIndex: 10 - i }}>
+                                                    {app.alumni?.user?.name?.charAt(0)?.toUpperCase()}
                                                 </div>
-                                                <div>
-                                                    <div style={{ fontSize: 13.5, fontWeight: 700, color: T.navy }}>{app.alumni?.user?.name ?? '—'}</div>
-                                                    <div style={{ fontSize: 11.5, color: T.muted }}>{app.alumni?.user?.email}</div>
+                                            ))}
+                                            {job.applications.length > 5 && (
+                                                <div style={{ width: 30, height: 30, borderRadius: '50%', background: T.borderSoft, color: T.mutedDark, border: '2px solid #fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, marginLeft: -8 }}>
+                                                    +{job.applications.length - 5}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <button onClick={() => setActiveJobId(job.id)} style={{ width: '100%', height: 38, borderRadius: 8, border: `1.5px solid ${T.orange}`, background: '#fff', color: T.orange, fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}
+                                        onMouseEnter={e => { e.currentTarget.style.background = T.orangeLight; }}
+                                        onMouseLeave={e => { e.currentTarget.style.background = '#fff'; }}
+                                    >
+                                        Detail Pelamar
+                                    </button>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                )}
+
+                {/* ─── TAMPILAN 2: SPLIT SCREEN MASTER-DETAIL ─── */}
+                {activeJob && (
+                    <div style={{ animation: 'fadeCard 0.3s both' }}>
+                        {/* Tombol Kembali */}
+                        <button onClick={() => { setActiveJobId(null); setActiveAppId(null); }} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'transparent', border: 'none', color: T.mutedDark, fontSize: 13, fontWeight: 700, cursor: 'pointer', padding: 0, marginBottom: 16 }}>
+                            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+                            Kembali ke Daftar Lowongan
+                        </button>
+
+                        <div style={{ display: 'flex', gap: 20, background: '#fff', border: `1px solid ${T.borderSoft}`, borderRadius: 14, minHeight: '65vh', overflow: 'hidden' }}>
+
+                            {/* BAGIAN KIRI: List Pelamar (sekitar 30%) */}
+                            <div style={{ width: '320px', borderRight: `1px solid ${T.borderSoft}`, display: 'flex', flexDirection: 'column', background: T.bg }}>
+                                <div style={{ padding: '16px 20px', borderBottom: `1px solid ${T.borderSoft}`, background: '#fff' }}>
+                                    <h4 style={{ margin: 0, fontSize: 13, fontWeight: 800, color: T.navy, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Daftar Pelamar</h4>
+                                    <p style={{ margin: '2px 0 0', fontSize: 12, color: T.mutedDark }}>{activeJob.applications.length} orang melamar</p>
+                                </div>
+                                <div style={{ overflowY: 'auto', flex: 1 }}>
+                                    {activeJob.applications.map(app => {
+                                        const isActive = activeAppId === app.id;
+                                        return (
+                                            <div key={app.id} onClick={() => setActiveAppId(app.id)} style={{
+                                                padding: '16px 20px', borderBottom: `1px solid ${T.borderSoft}`, cursor: 'pointer', transition: 'all 0.15s',
+                                                background: isActive ? '#fff' : 'transparent',
+                                                borderLeft: `3px solid ${isActive ? T.orange : 'transparent'}`
+                                            }}
+                                                onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = '#f1f5f9'; }}
+                                                onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
+                                            >
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+                                                    <div style={{ fontSize: 13.5, fontWeight: 700, color: T.navy }}>{app.alumni?.user?.name}</div>
+                                                    <div style={{ fontSize: 11, color: T.muted }}>{formatDate(app.created_at)}</div>
+                                                </div>
+                                                <StatusBadge status={app.status} />
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* BAGIAN KANAN: Profil & Proses (sekitar 70%) */}
+                            <div style={{ flex: 1, padding: 24, background: '#fff' }}>
+                                {!activeApp ? (
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: T.muted, textAlign: 'center' }}>
+                                        <svg width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5" style={{ marginBottom: 12, opacity: 0.5 }}>
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
+                                        </svg>
+                                        <p style={{ fontSize: 14, fontWeight: 600 }}>Pilih salah satu pelamar di panel kiri<br />untuk melihat detail dan memproses lamaran.</p>
+                                    </div>
+                                ) : (
+                                    <div style={{ animation: 'fadeCard 0.25s both' }}>
+                                        {/* Header Profil */}
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
+                                            <div style={{ width: 64, height: 64, borderRadius: 16, background: T.orangeLight, color: T.orange, fontSize: 24, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                                {activeApp.alumni?.user?.name?.charAt(0)?.toUpperCase()}
+                                            </div>
+                                            <div style={{ flex: 1 }}>
+                                                <h3 style={{ fontSize: 20, fontWeight: 800, color: T.navy, margin: '0 0 4px' }}>{activeApp.alumni?.user?.name}</h3>
+                                                <div style={{ fontSize: 13, color: T.mutedDark, display: 'flex', gap: 12 }}>
+                                                    <span>✉️ {activeApp.alumni?.user?.email}</span>
+                                                    {/* Jika ada field telepon di alumni profile, bisa ditambahkan di sini */}
                                                 </div>
                                             </div>
-                                        </td>
-                                        <td style={{ padding: '13px 14px', fontSize: 13, color: T.mutedDark }}>{app.job_posting?.title}</td>
-                                        <td style={{ padding: '13px 14px', fontSize: 12.5, color: T.muted }}>{formatDate(app.created_at)}</td>
-                                        <td style={{ padding: '13px 14px' }}><StatusBadge status={app.status} /></td>
-                                        <td style={{ padding: '13px 14px', textAlign: 'right' }}>
-                                            <button onClick={() => openModal(app)} style={{
-                                                height: 30, padding: '0 13px', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.14s',
-                                                border: `1.5px solid ${T.orange}`, background: T.orangeLight, color: T.orange,
-                                            }}
-                                                onMouseEnter={e => e.currentTarget.style.background = '#ffedd5'}
-                                                onMouseLeave={e => e.currentTarget.style.background = T.orangeLight}
-                                            >Proses</button>
-                                        </td>
-                                    </tr>
-                                ))}
-                                {filtered.length === 0 && (
-                                    <tr><td colSpan={5} style={{ padding: '48px 16px', textAlign: 'center', fontSize: 13, color: T.muted }}>
-                                        Tidak ada pelamar yang cocok dengan filter.
-                                    </td></tr>
+                                            <div style={{ textAlign: 'right' }}>
+                                                <div style={{ fontSize: 11, color: T.mutedDark, marginBottom: 4 }}>Tanggal Melamar</div>
+                                                <div style={{ fontSize: 13, fontWeight: 600, color: T.navy }}>{formatDate(activeApp.created_at)}</div>
+                                            </div>
+                                        </div>
+
+                                        <hr style={{ border: 'none', borderTop: `1px solid ${T.borderSoft}`, margin: '0 0 24px' }} />
+
+                                        {/* Dokumen & Info */}
+                                        <h4 style={{ fontSize: 13, fontWeight: 800, color: T.navy, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>Dokumen & Kualifikasi</h4>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 30 }}>
+                                            <div style={{ padding: 16, borderRadius: 10, background: T.bg, border: `1px solid ${T.borderSoft}` }}>
+                                                <InfoRow label="Curriculum Vitae (CV)" value={
+                                                    activeApp.cv_path
+                                                        ? <a href={`/storage/${activeApp.cv_path}`} target="_blank" style={{ color: T.orange, textDecoration: 'underline', textUnderlineOffset: 2 }}>Lihat Dokumen PDF ↗</a>
+                                                        : <span style={{ color: T.muted, fontStyle: 'italic' }}>Tidak ada CV terlampir</span>
+                                                } />
+                                            </div>
+                                            <div style={{ padding: 16, borderRadius: 10, background: T.bg, border: `1px solid ${T.borderSoft}` }}>
+                                                <InfoRow label="Status Saat Ini" value={<div style={{ marginTop: 4 }}><StatusBadge status={activeApp.status} /></div>} />
+                                            </div>
+                                        </div>
+
+                                        {/* Form Tindakan */}
+                                        <h4 style={{ fontSize: 13, fontWeight: 800, color: T.navy, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>Tindakan & Proses</h4>
+                                        <form onSubmit={submitStatus} style={{ background: T.bg, padding: 20, borderRadius: 12, border: `1px solid ${T.borderSoft}` }}>
+                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+                                                <div>
+                                                    <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#374151', marginBottom: 6 }}>UBAH STATUS</label>
+                                                    <Select value={data.status} onValueChange={v => setData('status', v)}>
+                                                        <SelectTrigger className="focus:ring-0 focus:ring-offset-0" style={{ height: 42, borderRadius: 9, border: `1.5px solid ${T.border}`, background: '#fff', fontSize: 13.5 }}>
+                                                            <SelectValue />
+                                                        </SelectTrigger>
+                                                        <SelectContent position="popper" sideOffset={4} className="z-[500] rounded-xl overflow-hidden border border-gray-200 shadow-xl" style={{ background: '#ffffff' }}>
+                                                            <SelectItem className="text-sm cursor-pointer px-3 py-2" value="pending">Pending — Menunggu</SelectItem>
+                                                            <SelectItem className="text-sm cursor-pointer px-3 py-2" value="direview">Sedang Direview</SelectItem>
+                                                            <SelectItem className="text-sm cursor-pointer px-3 py-2" value="wawancara">Panggil Wawancara</SelectItem>
+                                                            <SelectItem className="text-sm cursor-pointer px-3 py-2" value="diterima">Diterima (Hired)</SelectItem>
+                                                            <SelectItem className="text-sm cursor-pointer px-3 py-2" value="ditolak">Ditolak (Rejected)</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                            </div>
+
+                                            <div style={{ marginBottom: 16 }}>
+                                                <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#374151', marginBottom: 6 }}>CATATAN INTERNAL (OPSIONAL)</label>
+                                                <textarea style={{ ...fieldBase, background: '#fff', height: 'auto', padding: '10px 13px', resize: 'vertical' }} rows={3}
+                                                    placeholder="Contoh: Jadwal wawancara, catatan interview, alasan penolakan..."
+                                                    value={data.notes} onChange={e => setData('notes', e.target.value)}
+                                                    onFocus={onFocus} onBlur={onBlur} />
+                                            </div>
+
+                                            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                                                <button type="submit" disabled={processing} style={{
+                                                    height: 40, padding: '0 24px', borderRadius: 9, border: 'none',
+                                                    background: processing ? T.muted : T.orange, color: '#fff',
+                                                    fontSize: 13.5, fontWeight: 700, cursor: processing ? 'not-allowed' : 'pointer',
+                                                    fontFamily: 'inherit', boxShadow: processing ? 'none' : '0 2px 10px rgba(249,115,22,0.3)',
+                                                    transition: 'all 0.15s',
+                                                }}>
+                                                    {processing ? 'Menyimpan...' : 'Simpan Pembaruan'}
+                                                </button>
+                                            </div>
+                                        </form>
+
+                                    </div>
                                 )}
-                            </tbody>
-                        </table>
+                            </div>
+                        </div>
                     </div>
-                </div>
-            </div>
-
-            {/* Modal Proses Lamaran */}
-            <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Detail & Proses Lamaran" wide
-                footer={<>
-                    <BtnGhost onClick={() => setModalOpen(false)}>Batal</BtnGhost>
-                    <button type="submit" form="proses-form" disabled={processing} style={{
-                        height: 36, padding: '0 18px', borderRadius: 8, border: 'none',
-                        background: processing ? T.muted : T.orange, color: '#fff',
-                        fontSize: 13, fontWeight: 700, cursor: processing ? 'not-allowed' : 'pointer',
-                        fontFamily: 'inherit', boxShadow: processing ? 'none' : '0 2px 8px rgba(249,115,22,0.3)',
-                    }}>
-                        {processing ? 'Menyimpan...' : 'Simpan Keputusan'}
-                    </button>
-                </>}
-            >
-                {selectedApp && (
-                    <form id="proses-form" onSubmit={submitStatus} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                        {/* Pelamar card */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderRadius: 10, background: T.bg, border: `1px solid ${T.borderSoft}` }}>
-                            <div style={{ width: 44, height: 44, borderRadius: 12, background: T.orangeLight, color: T.orange, fontSize: 18, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                {selectedApp.alumni?.user?.name?.charAt(0)?.toUpperCase() ?? '?'}
-                            </div>
-                            <div style={{ flex: 1 }}>
-                                <div style={{ fontSize: 14, fontWeight: 800, color: T.navy }}>{selectedApp.alumni?.user?.name}</div>
-                                <div style={{ fontSize: 12, color: T.muted, marginTop: 2 }}>{selectedApp.alumni?.user?.email}</div>
-                            </div>
-                            <StatusBadge status={selectedApp.status} />
-                        </div>
-
-                        {/* Info Grid */}
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, padding: '12px 14px', borderRadius: 10, background: T.bg, border: `1px solid ${T.borderSoft}` }}>
-                            <InfoRow label="Posisi Dilamar" value={selectedApp.job_posting?.title} />
-                            <InfoRow label="Lampiran CV" value={
-                                selectedApp.cv_path
-                                    ? <a href={`/storage/${selectedApp.cv_path}`} target="_blank" style={{ color: T.orange, textDecoration: 'underline', textUnderlineOffset: 2 }}>Lihat Dokumen CV</a>
-                                    : <span style={{ color: T.muted, fontStyle: 'italic' }}>Tidak ada CV</span>
-                            } />
-                        </div>
-
-                        {/* Status */}
-                        <div>
-                            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#374151', marginBottom: 6 }}>Status Lamaran</label>
-                            <Select value={data.status} onValueChange={v => setData('status', v)}>
-                                <SelectTrigger className="focus:ring-0 focus:ring-offset-0" style={{ height: 42, borderRadius: 9, border: `1.5px solid ${T.border}`, background: T.bg, fontSize: 13.5 }}>
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent position="popper" sideOffset={4} className="z-[500] rounded-xl overflow-hidden border border-gray-200 shadow-xl" style={{ background: '#ffffff' }}>
-                                    <SelectItem className="text-sm cursor-pointer px-3 py-2 outline-none data-[highlighted]:bg-slate-50" value="pending">Pending — Menunggu</SelectItem>
-                                    <SelectItem className="text-sm cursor-pointer px-3 py-2 outline-none data-[highlighted]:bg-slate-50" value="direview">Sedang Direview</SelectItem>
-                                    <SelectItem className="text-sm cursor-pointer px-3 py-2 outline-none data-[highlighted]:bg-slate-50" value="wawancara">Panggil Wawancara</SelectItem>
-                                    <SelectItem className="text-sm cursor-pointer px-3 py-2 outline-none data-[highlighted]:bg-slate-50" value="diterima">Diterima (Hired)</SelectItem>
-                                    <SelectItem className="text-sm cursor-pointer px-3 py-2 outline-none data-[highlighted]:bg-slate-50" value="ditolak">Ditolak (Rejected)</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        {/* Notes */}
-                        <div>
-                            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#374151', marginBottom: 6 }}>Catatan Internal</label>
-                            <textarea style={{ ...fieldBase, height: 'auto', padding: '10px 13px', resize: 'vertical' }} rows={3}
-                                placeholder="Jadwal wawancara atau catatan lainnya..."
-                                value={data.notes} onChange={e => setData('notes', e.target.value)}
-                                onFocus={onFocus} onBlur={onBlur} />
-                        </div>
-                    </form>
                 )}
-            </Modal>
+
+            </div>
         </AuthenticatedLayout>
     );
 }

@@ -43,6 +43,9 @@ Route::get('/test-notif', function () {
     return "Notifikasi berhasil disuntikkan! Silakan kembali ke aplikasi dan cek icon lonceng.";
 });
 
+// Rute Global untuk Menambah Master Data Item (Keahlian) secara dinamis
+Route::post('/api/master-data/keahlian/quick-add', [MasterDataController::class, 'quickAddKeahlian'])->name('master-data.keahlian.quick-add');
+
 Route::middleware(['auth', 'verified'])->group(function () {
     // Dashboard Utama (Logic Redirect ada di AuthenticatedSessionController)
     Route::get('/dashboard', function () {

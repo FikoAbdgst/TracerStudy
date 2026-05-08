@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Head, useForm, usePage } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/Components/ui/select';
 import InputError from '@/Components/InputError';
+import axios from 'axios';
 
 const T = {
     navy: '#0f1f3d', navyMid: '#1a3560', navyLight: '#e8f0fb',
@@ -47,8 +48,12 @@ const Section = ({ title, icon, children, delay = 0 }) => (
 );
 
 export default function EditProfile({ profile, programStudis = [], keahlianMaster = [] }) {
-    // TAMBAHKAN 'auth' DISINI UNTUK MENGAMBIL DATA GLOBAL USER YANG SEDANG LOGIN
     const { auth, flash } = usePage().props;
+
+    const [masterSkills, setMasterSkills] = useState(keahlianMaster);
+    const [searchSkill, setSearchSkill] = useState('');
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const searchRef = useRef(null);
 
     const { data, setData, post, processing, errors } = useForm({
         nim: profile?.nim || '',
@@ -60,8 +65,46 @@ export default function EditProfile({ profile, programStudis = [], keahlianMaste
     });
 
     const submit = e => { e.preventDefault(); post(route('alumni.profile.update')); };
-
     const isComplete = profile?.nim && profile?.major && profile?.graduation_year;
+
+    // REVISI: Filter sekarang hanya berdasarkan kata kunci pencarian, tidak lagi membuang yang sudah dipilih
+    const availableSkills = masterSkills.filter(s =>
+        s.name.toLowerCase().includes(searchSkill.toLowerCase())
+    );
+
+    const addSkill = (skillName) => {
+        if (!data.skills.includes(skillName)) {
+            setData('skills', [...data.skills, skillName]);
+        }
+        setSearchSkill('');
+        setIsDropdownOpen(false);
+    };
+
+    const removeSkill = (skillName) => {
+        setData('skills', data.skills.filter(s => s !== skillName));
+    };
+
+    const createNewSkill = async () => {
+        if (!searchSkill.trim()) return;
+        try {
+            const res = await axios.post(route('master-data.keahlian.quick-add'), { name: searchSkill.trim() });
+            setMasterSkills([...masterSkills, res.data]);
+            addSkill(res.data.name);
+        } catch (error) {
+            console.error("Gagal menambah keahlian baru", error);
+            alert("Terjadi kesalahan saat menambahkan keahlian baru.");
+        }
+    };
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (searchRef.current && !searchRef.current.contains(event.target)) {
+                setIsDropdownOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
 
     return (
         <AuthenticatedLayout
@@ -80,11 +123,14 @@ export default function EditProfile({ profile, programStudis = [], keahlianMaste
                 @keyframes cardIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
                 @keyframes fadeIn { from{opacity:0} to{opacity:1} }
                 @keyframes spin   { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+                .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+                .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+                .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+                .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
             `}</style>
 
             <div className="al-root" style={{ maxWidth: 720, margin: '0 auto' }}>
 
-                {/* Flash success */}
                 {flash?.message && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', borderRadius: 10, marginBottom: 18, background: T.greenLight, border: '1px solid #bbf7d0', animation: 'fadeIn 0.3s both' }}>
                         <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke={T.green} strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -92,7 +138,6 @@ export default function EditProfile({ profile, programStudis = [], keahlianMaste
                     </div>
                 )}
 
-                {/* Profile incomplete warning */}
                 {!isComplete && (
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 18px', borderRadius: 12, marginBottom: 20, background: '#fffbeb', border: '1px solid #fed7aa', animation: 'fadeIn 0.3s both' }}>
                         <div style={{ width: 30, height: 30, borderRadius: '50%', background: T.orangeLight, color: T.orange, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
@@ -105,7 +150,6 @@ export default function EditProfile({ profile, programStudis = [], keahlianMaste
                     </div>
                 )}
 
-                {/* Identity banner */}
                 <div style={{
                     background: `linear-gradient(135deg, ${T.navyMid} 0%, ${T.navy} 100%)`,
                     borderRadius: 14, padding: '20px 24px', marginBottom: 16,
@@ -116,11 +160,9 @@ export default function EditProfile({ profile, programStudis = [], keahlianMaste
                 }}>
                     <div style={{ position: 'absolute', right: -20, top: -20, width: 120, height: 120, borderRadius: '50%', background: 'rgba(249,115,22,0.1)' }} />
                     <div style={{ width: 54, height: 54, borderRadius: 14, background: T.orange, color: '#fff', fontSize: 22, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 4px 16px rgba(249,115,22,0.35)' }}>
-                        {/* PERBAIKAN: Menampilkan Huruf Pertama Nama User (Bukan NIM) */}
                         {(auth?.user?.name || '?').charAt(0).toUpperCase()}
                     </div>
                     <div style={{ flex: 1, position: 'relative' }}>
-                        {/* PERBAIKAN: Memanggil nama langsung dari auth.user */}
                         <div style={{ fontSize: 16, fontWeight: 800, color: '#fff' }}>{auth?.user?.name}</div>
                         <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', marginTop: 3 }}>
                             {data.major || 'Program Studi belum dipilih'} {data.graduation_year ? `· Lulus ${data.graduation_year}` : ''}
@@ -135,7 +177,6 @@ export default function EditProfile({ profile, programStudis = [], keahlianMaste
 
                 <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
-                    {/* Data Akademik */}
                     <Section title="Data Akademik" icon="🎓" delay={0.06}>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                             <div>
@@ -171,7 +212,6 @@ export default function EditProfile({ profile, programStudis = [], keahlianMaste
                         </div>
                     </Section>
 
-                    {/* Kontak */}
                     <Section title="Informasi Kontak" icon="📱" delay={0.09}>
                         <div>
                             <FieldLabel>Nomor WhatsApp / HP</FieldLabel>
@@ -191,42 +231,99 @@ export default function EditProfile({ profile, programStudis = [], keahlianMaste
                         </div>
                     </Section>
 
-                    {/* Skills Selection (Master Data Based) */}
                     <Section title="Keahlian & Skills" icon="⚡" delay={0.12}>
-                        <FieldLabel>Pilih Keahlian Utama (Klik untuk memilih)</FieldLabel>
+                        <div style={{ marginBottom: 12 }}>
+                            <FieldLabel>Cari atau Tambah Keahlian</FieldLabel>
+                            <div style={{ position: 'relative' }} ref={searchRef}>
+                                <div style={{ position: 'relative' }}>
+                                    <svg style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#b0bec5' }} width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+                                    </svg>
+                                    <input
+                                        style={{ ...fieldBase, paddingLeft: 36 }}
+                                        placeholder="Ketik keahlian (Misal: Laravel, Figma...)"
+                                        value={searchSkill}
+                                        onChange={e => {
+                                            setSearchSkill(e.target.value);
+                                            setIsDropdownOpen(true);
+                                        }}
+                                        onFocus={(e) => { onFocus(e); setIsDropdownOpen(true); }}
+                                        onBlur={onBlur}
+                                    />
+                                </div>
 
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, padding: '14px', background: T.bg, border: `1px solid ${T.borderSoft}`, borderRadius: 10 }}>
-                            {(!keahlianMaster || keahlianMaster.length === 0) ? (
-                                <span style={{ fontSize: 13, color: T.muted }}>Belum ada pilihan keahlian dari sistem kampus.</span>
+                                {isDropdownOpen && searchSkill && (
+                                    <div className="custom-scrollbar" style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, background: '#fff', borderRadius: 10, border: `1px solid ${T.borderSoft}`, boxShadow: '0 10px 25px rgba(0,0,0,0.1)', zIndex: 100, maxHeight: 200, overflowY: 'auto', padding: '6px' }}>
+                                        {availableSkills.length > 0 ? (
+                                            availableSkills.map(skill => {
+                                                // REVISI: Cek apakah skill ini sudah ada di dalam array data.skills
+                                                const isSelected = data.skills.includes(skill.name);
+
+                                                return (
+                                                    <div
+                                                        key={skill.id}
+                                                        onClick={() => !isSelected && addSkill(skill.name)}
+                                                        style={{
+                                                            padding: '8px 12px',
+                                                            borderRadius: 6,
+                                                            fontSize: 13,
+                                                            display: 'flex',
+                                                            justifyContent: 'space-between',
+                                                            alignItems: 'center',
+                                                            color: isSelected ? T.muted : T.navy,
+                                                            cursor: isSelected ? 'not-allowed' : 'pointer',
+                                                            background: isSelected ? T.borderSoft : 'transparent',
+                                                            transition: 'background 0.1s'
+                                                        }}
+                                                        onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = T.navyLight; }}
+                                                        onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = 'transparent'; }}
+                                                    >
+                                                        <span>{skill.name}</span>
+                                                        {isSelected && <span style={{ fontSize: 11, color: T.mutedDark, fontStyle: 'italic' }}>Sudah dipilih</span>}
+                                                    </div>
+                                                );
+                                            })
+                                        ) : (
+                                            <div style={{ padding: '8px 12px', fontSize: 13, color: T.mutedDark, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <span>"{searchSkill}" belum ada di sistem.</span>
+                                                <button type="button" onClick={createNewSkill} style={{ background: T.orangeLight, color: T.orange, border: 'none', padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
+                                                    + Tambahkan Baru
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Kotak Keahlian yang Terpilih */}
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, padding: '14px', background: T.bg, border: `1px solid ${T.borderSoft}`, borderRadius: 10, minHeight: 64 }}>
+                            {data.skills.length === 0 ? (
+                                <div style={{ fontSize: 13, color: T.muted, width: '100%', textAlign: 'center', padding: '6px 0' }}>Belum ada keahlian yang dipilih.</div>
                             ) : (
-                                keahlianMaster?.map(skill => {
-                                    const skillsArray = Array.isArray(data.skills) ? data.skills : [];
-                                    const isSelected = skillsArray.includes(skill.name);
-
-                                    return (
-                                        <button
-                                            key={skill.id} type="button"
-                                            onClick={() => {
-                                                if (isSelected) setData('skills', skillsArray.filter(s => s !== skill.name));
-                                                else setData('skills', [...skillsArray, skill.name]);
-                                            }}
-                                            style={{
-                                                padding: '6px 14px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s',
-                                                border: `1.5px solid ${isSelected ? T.orange : T.border}`,
-                                                background: isSelected ? T.orangeLight : '#fff',
-                                                color: isSelected ? T.orange : T.mutedDark,
-                                            }}
-                                        >
-                                            {isSelected ? '✓ ' : '+ '}{skill.name}
-                                        </button>
-                                    )
-                                })
+                                data.skills.map(skillName => (
+                                    <button
+                                        key={skillName} type="button"
+                                        title="Klik dua kali untuk menghapus"
+                                        onDoubleClick={() => removeSkill(skillName)}
+                                        style={{
+                                            padding: '5px 12px 5px 14px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s',
+                                            border: `1.5px solid ${T.orange}`, background: T.orangeLight, color: T.orange,
+                                            display: 'flex', alignItems: 'center', gap: 6
+                                        }}
+                                        onMouseEnter={e => { e.currentTarget.style.background = '#fecaca'; e.currentTarget.style.borderColor = '#ef4444'; e.currentTarget.style.color = '#dc2626'; }}
+                                        onMouseLeave={e => { e.currentTarget.style.background = T.orangeLight; e.currentTarget.style.borderColor = T.orange; e.currentTarget.style.color = T.orange; }}
+                                    >
+                                        {skillName}
+                                        <span style={{ fontSize: 14, fontWeight: 800, marginTop: '-2px' }}>&times;</span>
+                                    </button>
+                                ))
                             )}
                         </div>
+                        <div style={{ fontSize: 11, color: T.muted, marginTop: 6 }}>*Klik dua kali (Double-click) pada keahlian untuk menghapusnya.</div>
                         <InputError className="mt-2" message={errors.skills} />
                     </Section>
 
-                    {/* Submit */}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', background: '#fff', borderRadius: 14, border: `1px solid ${T.borderSoft}`, animation: `cardIn 0.38s 0.15s cubic-bezier(0.22,1,0.36,1) both` }}>
                         <p style={{ fontSize: 12, color: T.muted, margin: 0 }}>Data profil Anda akan ditampilkan kepada HRD perusahaan saat melamar pekerjaan.</p>
                         <button type="submit" disabled={processing} style={{

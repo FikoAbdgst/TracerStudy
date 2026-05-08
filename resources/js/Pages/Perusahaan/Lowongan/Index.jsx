@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Head, useForm, router, usePage } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Switch } from '@/Components/ui/switch';
 import InputError from '@/Components/InputError';
+import axios from 'axios';
 
-/* ─── Tokens ─────────────────────────────────────────────────────────────── */
 const T = {
     navy: '#0f1f3d', navyMid: '#1a3560', navyLight: '#e8f0fb',
     orange: '#f97316', orangeLight: '#fff3eb',
@@ -14,7 +14,6 @@ const T = {
     red: '#dc2626', redLight: '#fff1f2',
 };
 
-/* ─── Modal ──────────────────────────────────────────────────────────────── */
 function Modal({ open, onClose, title, children, footer, wide = false }) {
     const [visible, setVisible] = React.useState(false);
     const [render, setRender] = React.useState(false);
@@ -74,13 +73,17 @@ const FieldLabel = ({ children, required }) => (
     </label>
 );
 
-/* ─── Main ───────────────────────────────────────────────────────────────── */
 export default function LowonganIndex({ jobs, isVerified, verificationStatus, keahlianMaster = [] }) {
     const { flash } = usePage().props;
     const [modalOpen, setModalOpen] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [selectedJob, setSelectedJob] = useState(null);
     const [q, setQ] = useState('');
+
+    const [masterSkills, setMasterSkills] = useState(keahlianMaster);
+    const [searchSkill, setSearchSkill] = useState('');
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const searchRef = useRef(null);
 
     const { data, setData, post, put, delete: destroy, processing, errors, reset, clearErrors } = useForm({
         title: '', location: '', salary_range: '', description: '', requirements: [],
@@ -94,7 +97,7 @@ export default function LowonganIndex({ jobs, isVerified, verificationStatus, ke
     const openCreate = () => {
         reset();
         clearErrors();
-        setData('requirements', []); // Pastikan selalu array kosong saat create
+        setData('requirements', []);
         setIsEditing(false);
         setModalOpen(true);
     };
@@ -106,7 +109,6 @@ export default function LowonganIndex({ jobs, isVerified, verificationStatus, ke
             location: job.location || '',
             salary_range: job.salary_range || '',
             description: job.description,
-            // Ambil array requirement dari DB, jika null berikan array kosong
             requirements: Array.isArray(job.requirements) ? job.requirements : (job.requirements ? [job.requirements] : [])
         });
         setIsEditing(true); setModalOpen(true);
@@ -124,6 +126,44 @@ export default function LowonganIndex({ jobs, isVerified, verificationStatus, ke
         if (!isVerified) return;
         router.patch(route('perusahaan.lowongan.toggle', id), {}, { preserveScroll: true });
     };
+
+    // REVISI: Filter sekarang hanya berdasarkan kata kunci pencarian, tidak lagi membuang yang sudah dipilih
+    const availableSkills = masterSkills.filter(s =>
+        s.name.toLowerCase().includes(searchSkill.toLowerCase())
+    );
+
+    const addSkill = (skillName) => {
+        if (!data.requirements.includes(skillName)) {
+            setData('requirements', [...data.requirements, skillName]);
+        }
+        setSearchSkill('');
+        setIsDropdownOpen(false);
+    };
+
+    const removeSkill = (skillName) => {
+        setData('requirements', data.requirements.filter(s => s !== skillName));
+    };
+
+    const createNewSkill = async () => {
+        if (!searchSkill.trim()) return;
+        try {
+            const res = await axios.post(route('master-data.keahlian.quick-add'), { name: searchSkill.trim() });
+            setMasterSkills([...masterSkills, res.data]);
+            addSkill(res.data.name);
+        } catch (error) {
+            console.error("Gagal menambah keahlian baru", error);
+        }
+    };
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (searchRef.current && !searchRef.current.contains(event.target)) {
+                setIsDropdownOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
 
     const activeCount = jobs.filter(j => j.is_active).length;
 
@@ -144,10 +184,12 @@ export default function LowonganIndex({ jobs, isVerified, verificationStatus, ke
                 @keyframes cardIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
                 @keyframes rowIn  { from{opacity:0;transform:translateX(-4px)} to{opacity:1;transform:translateX(0)} }
                 .tbl-row:hover td { background:#fafbfc; }
+                .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+                .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+                .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
             `}</style>
 
             <div className="ak-root">
-                {/* ── Flash Notifikasi ── */}
                 {(flash?.message || flash?.error) && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 18px', borderRadius: 12, marginBottom: 16, background: flash.error ? T.redLight : T.greenLight, border: `1px solid ${flash.error ? '#fecaca' : '#bbf7d0'}` }}>
                         <div style={{ fontSize: 16 }}>{flash.error ? '⚠️' : '✅'}</div>
@@ -155,7 +197,6 @@ export default function LowonganIndex({ jobs, isVerified, verificationStatus, ke
                     </div>
                 )}
 
-                {/* ── BANNER PERINGATAN JIKA BELUM TERVERIFIKASI ── */}
                 {!isVerified && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 18px', borderRadius: 12, marginBottom: 20, background: verificationStatus === 'rejected' ? T.redLight : T.orangeLight, border: `1px solid ${verificationStatus === 'rejected' ? '#fecaca' : '#fed7aa'}` }}>
                         <div style={{ fontSize: 24 }}>{verificationStatus === 'rejected' ? '❌' : '⏳'}</div>
@@ -174,7 +215,6 @@ export default function LowonganIndex({ jobs, isVerified, verificationStatus, ke
 
                 <div style={{ background: '#fff', borderRadius: 14, border: `1px solid ${T.borderSoft}`, padding: 20, animation: 'cardIn 0.38s cubic-bezier(0.22,1,0.36,1) both' }}>
 
-                    {/* Header Bar */}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 18 }}>
                         <div style={{ display: 'flex', gap: 8 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 8, background: T.navyLight, border: `1px solid ${T.navyMid}22` }}>
@@ -196,7 +236,6 @@ export default function LowonganIndex({ jobs, isVerified, verificationStatus, ke
                                     value={q} onChange={e => setQ(e.target.value)} onFocus={onFocus} onBlur={onBlur} />
                             </div>
 
-                            {/* ── TOMBOL POSTING ── */}
                             <button
                                 onClick={() => isVerified && openCreate()}
                                 disabled={!isVerified}
@@ -216,7 +255,6 @@ export default function LowonganIndex({ jobs, isVerified, verificationStatus, ke
                         </div>
                     </div>
 
-                    {/* Table */}
                     <div style={{ borderRadius: 10, overflow: 'hidden', border: `1px solid ${T.borderSoft}` }}>
                         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                             <thead>
@@ -294,7 +332,6 @@ export default function LowonganIndex({ jobs, isVerified, verificationStatus, ke
                 </div>
             </div>
 
-            {/* Modal Tambah / Edit */}
             <Modal open={modalOpen} onClose={() => setModalOpen(false)}
                 title={isEditing ? 'Edit Lowongan' : 'Posting Lowongan Baru'}
                 wide
@@ -340,41 +377,95 @@ export default function LowonganIndex({ jobs, isVerified, verificationStatus, ke
                         <InputError message={errors.description} className="mt-1" />
                     </div>
 
-                    {/* Master Data KEAHLIAN Selection */}
                     <div>
-                        <FieldLabel>Keahlian yang Dibutuhkan</FieldLabel>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, padding: '10px 14px', background: T.bg, border: `1px solid ${T.borderSoft}`, borderRadius: 10 }}>
-                            {(!keahlianMaster || keahlianMaster.length === 0) ? (
-                                <span style={{ fontSize: 12, color: T.mutedDark }}>Admin kampus belum mengatur Master Data Keahlian.</span>
-                            ) : (
-                                keahlianMaster?.map(skill => {
-                                    const reqArray = Array.isArray(data.requirements) ? data.requirements : [];
-                                    const isSelected = reqArray.includes(skill.name);
+                        <FieldLabel>Cari atau Tambah Keahlian yang Dibutuhkan</FieldLabel>
+                        <div style={{ position: 'relative' }} ref={searchRef}>
+                            <div style={{ position: 'relative' }}>
+                                <svg style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#b0bec5' }} width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+                                </svg>
+                                <input
+                                    style={{ ...fieldBase, paddingLeft: 36 }}
+                                    placeholder="Ketik keahlian (Misal: PHP, MySQL...)"
+                                    value={searchSkill}
+                                    onChange={e => {
+                                        setSearchSkill(e.target.value);
+                                        setIsDropdownOpen(true);
+                                    }}
+                                    onFocus={(e) => { onFocus(e); setIsDropdownOpen(true); }}
+                                    onBlur={onBlur}
+                                />
+                            </div>
 
-                                    return (
-                                        <button
-                                            key={skill.id} type="button"
-                                            onClick={() => {
-                                                if (isSelected) {
-                                                    setData('requirements', reqArray.filter(s => s !== skill.name));
-                                                } else {
-                                                    setData('requirements', [...reqArray, skill.name]);
-                                                }
-                                            }}
-                                            style={{
-                                                padding: '6px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s',
-                                                border: `1.5px solid ${isSelected ? T.orange : T.border}`,
-                                                background: isSelected ? T.orangeLight : '#fff',
-                                                color: isSelected ? T.orange : T.mutedDark,
-                                            }}
-                                        >
-                                            {isSelected ? '✓ ' : '+ '} {skill.name}
-                                        </button>
-                                    )
-                                })
+                            {isDropdownOpen && searchSkill && (
+                                <div className="custom-scrollbar" style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, background: '#fff', borderRadius: 10, border: `1px solid ${T.borderSoft}`, boxShadow: '0 10px 25px rgba(0,0,0,0.1)', zIndex: 100, maxHeight: 200, overflowY: 'auto', padding: '6px' }}>
+                                    {availableSkills.length > 0 ? (
+                                        availableSkills.map(skill => {
+                                            // REVISI: Cek apakah skill ini sudah ada di dalam array data.requirements
+                                            const isSelected = data.requirements.includes(skill.name);
+
+                                            return (
+                                                <div
+                                                    key={skill.id}
+                                                    onClick={() => !isSelected && addSkill(skill.name)}
+                                                    style={{
+                                                        padding: '8px 12px',
+                                                        borderRadius: 6,
+                                                        fontSize: 13,
+                                                        display: 'flex',
+                                                        justifyContent: 'space-between',
+                                                        alignItems: 'center',
+                                                        color: isSelected ? T.muted : T.navy,
+                                                        cursor: isSelected ? 'not-allowed' : 'pointer',
+                                                        background: isSelected ? T.borderSoft : 'transparent',
+                                                        transition: 'background 0.1s'
+                                                    }}
+                                                    onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = T.navyLight; }}
+                                                    onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = 'transparent'; }}
+                                                >
+                                                    <span>{skill.name}</span>
+                                                    {isSelected && <span style={{ fontSize: 11, color: T.mutedDark, fontStyle: 'italic' }}>Sudah dipilih</span>}
+                                                </div>
+                                            );
+                                        })
+                                    ) : (
+                                        <div style={{ padding: '8px 12px', fontSize: 13, color: T.mutedDark, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <span>"{searchSkill}" belum ada di sistem.</span>
+                                            <button type="button" onClick={createNewSkill} style={{ background: T.orangeLight, color: T.orange, border: 'none', padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
+                                                + Tambahkan Baru
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
                             )}
                         </div>
                     </div>
+
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, padding: '14px', background: T.bg, border: `1px solid ${T.borderSoft}`, borderRadius: 10, minHeight: 64 }}>
+                        {data.requirements.length === 0 ? (
+                            <div style={{ fontSize: 13, color: T.muted, width: '100%', textAlign: 'center', padding: '6px 0' }}>Belum ada requirement keahlian yang dipilih.</div>
+                        ) : (
+                            data.requirements.map(skillName => (
+                                <button
+                                    key={skillName} type="button"
+                                    title="Klik dua kali untuk menghapus"
+                                    onDoubleClick={() => removeSkill(skillName)}
+                                    style={{
+                                        padding: '5px 12px 5px 14px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s',
+                                        border: `1.5px solid ${T.orange}`, background: T.orangeLight, color: T.orange,
+                                        display: 'flex', alignItems: 'center', gap: 6
+                                    }}
+                                    onMouseEnter={e => { e.currentTarget.style.background = '#fecaca'; e.currentTarget.style.borderColor = '#ef4444'; e.currentTarget.style.color = '#dc2626'; }}
+                                    onMouseLeave={e => { e.currentTarget.style.background = T.orangeLight; e.currentTarget.style.borderColor = T.orange; e.currentTarget.style.color = T.orange; }}
+                                >
+                                    {skillName}
+                                    <span style={{ fontSize: 14, fontWeight: 800, marginTop: '-2px' }}>&times;</span>
+                                </button>
+                            ))
+                        )}
+                    </div>
+                    <div style={{ fontSize: 11, color: T.muted, marginTop: -8 }}>*Klik dua kali (Double-click) pada keahlian untuk menghapusnya.</div>
+
                 </form>
             </Modal>
         </AuthenticatedLayout>

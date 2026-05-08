@@ -73,4 +73,33 @@ class MasterDataController extends Controller
         $item->delete();
         return back()->with('message', 'Data berhasil dihapus.');
     }
+    public function quickAddKeahlian(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+        ]);
+
+        $category = MasterCategory::where('slug', 'keahlian')->first();
+
+        if (!$category) {
+            return response()->json(['error' => 'Kategori Keahlian tidak ditemukan di Master Data.'], 404);
+        }
+
+        // Cek apakah sudah ada untuk menghindari duplikat
+        $existing = MasterItem::where('master_category_id', $category->id)
+            ->where('name', 'like', $validated['name'])
+            ->first();
+
+        if ($existing) {
+            return response()->json($existing);
+        }
+
+        $newItem = MasterItem::create([
+            'master_category_id' => $category->id,
+            'name' => $validated['name'],
+            'is_active' => true,
+        ]);
+
+        return response()->json($newItem);
+    }
 }

@@ -1,136 +1,274 @@
 import React, { useState } from 'react';
 import { Head, useForm, usePage } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/Components/ui/card';
-import { Button } from '@/Components/ui/button';
-import { Input } from '@/Components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/Components/ui/dialog';
-import { Label } from '@/Components/ui/label';
-import { Badge } from '@/Components/ui/badge';
 import InputError from '@/Components/InputError';
+
+const T = {
+    navy: '#0f1f3d', navyMid: '#1a3560', navyLight: '#e8f0fb',
+    orange: '#f97316', orangeLight: '#fff3eb',
+    border: '#e2e8f0', borderSoft: '#f1f5f9', bg: '#f8fafc',
+    muted: '#94a3b8', mutedDark: '#64748b',
+    green: '#16a34a', greenLight: '#f0fdf4',
+    red: '#dc2626', redLight: '#fff1f2',
+};
+
+/* ─── Modal ──────────────────────────────────────────────────────────────── */
+function Modal({ open, onClose, title, subtitle, children, footer }) {
+    const [visible, setVisible] = React.useState(false);
+    const [render, setRender] = React.useState(false);
+    React.useEffect(() => {
+        if (open) { setRender(true); requestAnimationFrame(() => requestAnimationFrame(() => setVisible(true))); }
+        else { setVisible(false); const t = setTimeout(() => setRender(false), 260); return () => clearTimeout(t); }
+    }, [open]);
+    if (!render) return null;
+    return (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, opacity: visible ? 1 : 0, transition: 'opacity 0.25s ease' }}>
+            <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(10,20,40,0.45)', backdropFilter: 'blur(3px)', cursor: 'default' }} />
+            <div style={{
+                background: '#fff', borderRadius: 16, position: 'relative', width: '100%', maxWidth: 480,
+                boxShadow: '0 24px 60px rgba(10,20,40,0.2)',
+                opacity: visible ? 1 : 0,
+                transform: visible ? 'translateY(0) scale(1)' : 'translateY(10px) scale(0.97)',
+                transition: 'opacity 0.25s ease, transform 0.25s cubic-bezier(0.22,1,0.36,1)',
+            }}>
+                <div style={{ padding: '20px 22px 14px', borderBottom: `1px solid ${T.borderSoft}` }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: subtitle ? 4 : 0 }}>
+                        <span style={{ fontSize: 15, fontWeight: 800, color: T.navy }}>{title}</span>
+                        <button onClick={onClose} style={{ width: 28, height: 28, borderRadius: 7, border: 'none', background: T.bg, color: T.mutedDark, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            onMouseEnter={e => e.currentTarget.style.background = T.border}
+                            onMouseLeave={e => e.currentTarget.style.background = T.bg}>
+                            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                    </div>
+                    {subtitle && <div style={{ fontSize: 12.5, color: T.muted }}>{subtitle}</div>}
+                </div>
+                <div style={{ padding: '18px 22px' }}>{children}</div>
+                {footer && <>
+                    <div style={{ height: 1, background: T.borderSoft }} />
+                    <div style={{ padding: '14px 22px', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>{footer}</div>
+                </>}
+            </div>
+        </div>
+    );
+}
+
+const BtnGhost = ({ children, onClick }) => (
+    <button type="button" onClick={onClick} style={{ height: 36, padding: '0 14px', borderRadius: 8, border: `1.5px solid ${T.border}`, background: 'transparent', color: T.mutedDark, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}
+        onMouseEnter={e => e.currentTarget.style.background = T.bg}
+        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+    >{children}</button>
+);
+
+const fieldBase = { height: 42, padding: '0 13px', border: `1.5px solid ${T.border}`, borderRadius: 9, background: T.bg, color: T.navy, fontSize: 13.5, outline: 'none', width: '100%', transition: 'all 0.18s', fontFamily: 'inherit', boxSizing: 'border-box' };
+const onFocus = e => { e.target.style.borderColor = T.navyMid; e.target.style.background = '#fff'; e.target.style.boxShadow = '0 0 0 3px rgba(26,53,96,0.09)'; };
+const onBlur = e => { e.target.style.borderColor = T.border; e.target.style.background = T.bg; e.target.style.boxShadow = 'none'; };
 
 export default function LokerIndex({ jobs, appliedJobIds }) {
     const { flash } = usePage().props;
     const [searchQuery, setSearchQuery] = useState('');
-    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [modalOpen, setModalOpen] = useState(false);
     const [selectedJob, setSelectedJob] = useState(null);
 
-    const { data, setData, post, processing, errors, reset, clearErrors } = useForm({
-        cv_file: null,
-    });
+    const { data, setData, post, processing, errors, reset, clearErrors } = useForm({ cv_file: null });
 
-    const filteredJobs = jobs.filter(job =>
+    const filtered = jobs.filter(job =>
         job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         job.company?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (job.location && job.location.toLowerCase().includes(searchQuery.toLowerCase()))
     );
 
-    const openApplyModal = (job) => {
-        reset(); clearErrors();
-        setSelectedJob(job);
-        setIsModalOpen(true);
-    };
-
-    const handleApply = (e) => {
+    const openApply = job => { reset(); clearErrors(); setSelectedJob(job); setModalOpen(true); };
+    const handleApply = e => {
         e.preventDefault();
-        post(route('alumni.loker.apply', selectedJob.id), {
-            onSuccess: () => setIsModalOpen(false)
-        });
+        post(route('alumni.loker.apply', selectedJob.id), { onSuccess: () => setModalOpen(false) });
     };
 
     return (
-        <AuthenticatedLayout header={<h2 className="font-semibold text-xl text-gray-800">Bursa Kerja (Job Portal)</h2>}>
-            <Head title="Bursa Kerja" />
+        <AuthenticatedLayout
+            header={
+                <div>
+                    <h2 style={{ fontSize: 17, fontWeight: 800, color: T.navy, margin: 0, letterSpacing: '-0.01em' }}>Bursa Kerja</h2>
+                    <p style={{ fontSize: 12, color: T.muted, margin: '3px 0 0' }}>Temukan karir impian Anda dari perusahaan mitra SITAMI</p>
+                </div>
+            }
+        >
+            <Head title="Bursa Kerja — SITAMI" />
 
-            <div className="max-w-6xl mx-auto mt-6">
+            <style>{`
+                @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+                .ak-root * { font-family:'Plus Jakarta Sans',sans-serif; }
+                @keyframes cardIn { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+                @keyframes slideDown { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:translateY(0)} }
+                .job-card { transition: all 0.2s ease; }
+                .job-card:hover { transform: translateY(-3px); box-shadow: 0 12px 32px rgba(15,31,61,0.1); }
+            `}</style>
+
+            <div className="ak-root">
+                {/* Flash */}
                 {(flash?.message || flash?.error) && (
-                    <div className={`mb-4 p-4 text-sm rounded-lg border ${flash.error ? 'text-red-800 bg-red-50 border-red-200' : 'text-green-800 bg-green-50 border-green-200'}`}>
-                        {flash.message || flash.error}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 18px', borderRadius: 12, marginBottom: 16, background: flash.error ? T.redLight : T.greenLight, border: `1px solid ${flash.error ? '#fecaca' : '#bbf7d0'}`, animation: 'slideDown 0.3s ease both' }}>
+                        <div style={{ fontSize: 16 }}>{flash.error ? '⚠️' : '✅'}</div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: flash.error ? T.red : T.green }}>{flash.message || flash.error}</div>
                     </div>
                 )}
 
-                <div className="flex flex-col md:flex-row justify-between items-end gap-4 mb-6">
-                    <p className="text-gray-600">Temukan karir impian Anda dari berbagai perusahaan mitra kami.</p>
-                    <Input
-                        placeholder="Cari posisi, nama perusahaan, atau lokasi..."
-                        className="w-full md:w-80"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                    />
+                {/* Toolbar */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                        <div style={{ padding: '4px 10px', borderRadius: 8, background: T.navyLight, border: `1px solid ${T.navyMid}22` }}>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: T.navyMid }}>{filtered.length} Lowongan Tersedia</span>
+                        </div>
+                        {appliedJobIds.length > 0 && (
+                            <div style={{ padding: '4px 10px', borderRadius: 8, background: T.greenLight, border: `1px solid ${T.green}22` }}>
+                                <span style={{ fontSize: 11, fontWeight: 700, color: T.green }}>{appliedJobIds.length} Telah Dilamar</span>
+                            </div>
+                        )}
+                    </div>
+                    <div style={{ position: 'relative' }}>
+                        <svg style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: '#b0bec5' }} width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+                        </svg>
+                        <input style={{ ...fieldBase, paddingLeft: 33, width: 280 }} placeholder="Cari posisi, perusahaan, atau lokasi..."
+                            value={searchQuery} onChange={e => setSearchQuery(e.target.value)} onFocus={onFocus} onBlur={onBlur} />
+                    </div>
                 </div>
 
-                {/* Grid Lowongan */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {filteredJobs.map(job => {
+                {/* Cards Grid */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
+                    {filtered.map((job, i) => {
                         const isApplied = appliedJobIds.includes(job.id);
                         return (
-                            <Card key={job.id} className="flex flex-col h-full hover:shadow-md transition-shadow">
-                                <CardHeader className="pb-4">
-                                    <div className="flex justify-between items-start mb-1">
-                                        <CardTitle className="text-lg text-blue-700">{job.title}</CardTitle>
-                                        {isApplied && <Badge className="bg-green-500">Telah Dilamar</Badge>}
+                            <div key={job.id} className="job-card" style={{
+                                background: '#fff', borderRadius: 14,
+                                border: `1px solid ${isApplied ? T.greenLight : T.borderSoft}`,
+                                padding: '20px', display: 'flex', flexDirection: 'column',
+                                animation: `cardIn 0.38s ${i * 0.05}s cubic-bezier(0.22,1,0.36,1) both`,
+                                boxShadow: '0 2px 8px rgba(15,31,61,0.05)',
+                            }}>
+                                {/* Header */}
+                                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, marginBottom: 14 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
+                                        <div style={{ width: 40, height: 40, borderRadius: 10, background: T.navyLight, color: T.navyMid, fontSize: 16, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                            {job.company?.name?.charAt(0)?.toUpperCase() ?? '?'}
+                                        </div>
+                                        <div style={{ minWidth: 0 }}>
+                                            <div style={{ fontSize: 14, fontWeight: 800, color: T.navy, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{job.title}</div>
+                                            <div style={{ fontSize: 12, color: T.muted, marginTop: 1 }}>{job.company?.name}</div>
+                                        </div>
                                     </div>
-                                    <div className="text-sm font-medium text-gray-900">{job.company?.name}</div>
-                                </CardHeader>
-                                <CardContent className="flex-1 text-sm text-gray-600 space-y-2">
-                                    <div className="flex items-center gap-2">📍 {job.location || 'Tidak disebutkan'}</div>
-                                    <div className="flex items-center gap-2">💰 {job.salary_range || 'Gaji dirahasiakan'}</div>
-                                    <p className="line-clamp-3 mt-3">{job.description}</p>
-                                </CardContent>
-                                <CardFooter className="pt-4 border-t border-gray-100">
-                                    <Button
-                                        className="w-full"
-                                        disabled={isApplied}
-                                        onClick={() => openApplyModal(job)}
-                                        variant={isApplied ? 'secondary' : 'default'}
-                                    >
-                                        {isApplied ? 'Menunggu Review HRD' : 'Lamar Pekerjaan'}
-                                    </Button>
-                                </CardFooter>
-                            </Card>
+                                    {isApplied && (
+                                        <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 20, background: T.greenLight, color: T.green, flexShrink: 0, whiteSpace: 'nowrap' }}>✓ Dilamar</span>
+                                    )}
+                                </div>
+
+                                {/* Details */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14, flex: 1 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, color: T.mutedDark }}>
+                                        <span>📍</span> {job.location || 'Lokasi tidak disebutkan'}
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, color: T.mutedDark }}>
+                                        <span>💰</span> {job.salary_range || 'Gaji dirahasiakan'}
+                                    </div>
+                                    {job.description && (
+                                        <p style={{ fontSize: 12.5, color: T.muted, marginTop: 4, lineHeight: 1.6, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                            {job.description}
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Footer */}
+                                <button
+                                    disabled={isApplied}
+                                    onClick={() => !isApplied && openApply(job)}
+                                    style={{
+                                        height: 38, borderRadius: 9, border: 'none', width: '100%',
+                                        fontSize: 13, fontWeight: 700, cursor: isApplied ? 'default' : 'pointer',
+                                        fontFamily: 'inherit', transition: 'all 0.15s',
+                                        background: isApplied ? T.greenLight : T.orange,
+                                        color: isApplied ? T.green : '#fff',
+                                        boxShadow: isApplied ? 'none' : '0 2px 8px rgba(249,115,22,0.25)',
+                                    }}
+                                    onMouseEnter={e => { if (!isApplied) { e.currentTarget.style.background = '#ea6c0a'; e.currentTarget.style.transform = 'translateY(-1px)'; } }}
+                                    onMouseLeave={e => { e.currentTarget.style.background = isApplied ? T.greenLight : T.orange; e.currentTarget.style.transform = 'none'; }}
+                                >
+                                    {isApplied ? '✓ Menunggu Review HRD' : 'Lamar Pekerjaan'}
+                                </button>
+                            </div>
                         );
                     })}
                 </div>
 
-                {filteredJobs.length === 0 && (
-                    <div className="p-12 text-center text-gray-500 bg-white border border-dashed rounded-lg">
-                        Tidak ada lowongan pekerjaan yang ditemukan.
+                {filtered.length === 0 && (
+                    <div style={{ padding: '64px 20px', textAlign: 'center', background: '#fff', borderRadius: 14, border: `2px dashed ${T.borderSoft}` }}>
+                        <div style={{ fontSize: 40, marginBottom: 12 }}>🔍</div>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: T.navy, marginBottom: 4 }}>Tidak ada lowongan ditemukan</div>
+                        <div style={{ fontSize: 13, color: T.muted }}>Coba gunakan kata kunci pencarian yang berbeda.</div>
                     </div>
                 )}
             </div>
 
-            {/* MODAL MELAMAR KERJA */}
-            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Lamar Posisi: {selectedJob?.title}</DialogTitle>
-                        <DialogDescription>
-                            Perusahaan {selectedJob?.company?.name} akan meninjau dokumen yang Anda lampirkan.
-                        </DialogDescription>
-                    </DialogHeader>
-
-                    <form onSubmit={handleApply} className="space-y-6 mt-2">
-                        <div className="space-y-2">
-                            <Label>Unggah Curriculum Vitae (CV) <span className="text-red-500">*</span></Label>
-                            <Input
-                                type="file"
-                                accept=".pdf"
-                                onChange={e => setData('cv_file', e.target.files[0])}
-                            />
-                            <p className="text-xs text-gray-500">Format wajib PDF, maksimal ukuran 5MB.</p>
-                            <InputError message={errors.cv_file} />
+            {/* Modal Lamar */}
+            <Modal open={modalOpen} onClose={() => setModalOpen(false)}
+                title={`Lamar: ${selectedJob?.title}`}
+                subtitle={`${selectedJob?.company?.name} akan meninjau dokumen yang Anda lampirkan.`}
+                footer={<>
+                    <BtnGhost onClick={() => setModalOpen(false)}>Batal</BtnGhost>
+                    <button type="submit" form="apply-form" disabled={processing || !data.cv_file} style={{
+                        height: 36, padding: '0 18px', borderRadius: 8, border: 'none',
+                        background: (processing || !data.cv_file) ? T.muted : T.orange,
+                        color: '#fff', fontSize: 13, fontWeight: 700,
+                        cursor: (processing || !data.cv_file) ? 'not-allowed' : 'pointer',
+                        fontFamily: 'inherit', boxShadow: (processing || !data.cv_file) ? 'none' : '0 2px 8px rgba(249,115,22,0.3)',
+                        transition: 'all 0.15s',
+                    }}>
+                        {processing ? 'Mengirim...' : 'Kirim Lamaran'}
+                    </button>
+                </>}
+            >
+                <form id="apply-form" onSubmit={handleApply}>
+                    {/* Job info card */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', borderRadius: 10, background: T.bg, border: `1px solid ${T.borderSoft}`, marginBottom: 16 }}>
+                        <div style={{ width: 38, height: 38, borderRadius: 9, background: T.navyLight, color: T.navyMid, fontSize: 15, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            {selectedJob?.company?.name?.charAt(0)?.toUpperCase() ?? '?'}
                         </div>
+                        <div>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: T.navy }}>{selectedJob?.title}</div>
+                            <div style={{ fontSize: 11.5, color: T.muted }}>{selectedJob?.company?.name}</div>
+                        </div>
+                    </div>
 
-                        <DialogFooter>
-                            <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)}>Batal</Button>
-                            <Button type="submit" disabled={processing || !data.cv_file}>
-                                {processing ? 'Mengirim...' : 'Kirim Lamaran'}
-                            </Button>
-                        </DialogFooter>
-                    </form>
-                </DialogContent>
-            </Dialog>
-
+                    <div>
+                        <label style={{ display: 'block', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#374151', marginBottom: 6 }}>
+                            Curriculum Vitae (CV) <span style={{ color: T.red }}>*</span>
+                        </label>
+                        {/* Custom file input */}
+                        <label style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 8,
+                            height: 100, borderRadius: 10, border: `2px dashed ${data.cv_file ? T.orange : T.border}`,
+                            background: data.cv_file ? T.orangeLight : T.bg, cursor: 'pointer', transition: 'all 0.18s',
+                        }}
+                            onMouseEnter={e => e.currentTarget.style.borderColor = T.orange}
+                            onMouseLeave={e => e.currentTarget.style.borderColor = data.cv_file ? T.orange : T.border}
+                        >
+                            <input type="file" accept=".pdf" onChange={e => setData('cv_file', e.target.files[0])} style={{ display: 'none' }} />
+                            {data.cv_file ? (
+                                <>
+                                    <div style={{ fontSize: 22 }}>📄</div>
+                                    <div style={{ fontSize: 12.5, fontWeight: 700, color: T.orange }}>{data.cv_file.name}</div>
+                                    <div style={{ fontSize: 11, color: T.muted }}>Klik untuk ganti file</div>
+                                </>
+                            ) : (
+                                <>
+                                    <div style={{ fontSize: 22 }}>📎</div>
+                                    <div style={{ fontSize: 12.5, fontWeight: 600, color: T.mutedDark }}>Klik untuk upload CV</div>
+                                    <div style={{ fontSize: 11, color: T.muted }}>Format PDF, maks. 5MB</div>
+                                </>
+                            )}
+                        </label>
+                        <InputError message={errors.cv_file} className="mt-1" />
+                    </div>
+                </form>
+            </Modal>
         </AuthenticatedLayout>
     );
 }

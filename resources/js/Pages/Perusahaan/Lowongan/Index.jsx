@@ -1,214 +1,289 @@
 import React, { useState } from 'react';
 import { Head, useForm, router } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/Components/ui/dialog';
 import { Switch } from '@/Components/ui/switch';
 import InputError from '@/Components/InputError';
 
-const fieldStyle = {
-    height: '40px', padding: '0 12px', border: '1.5px solid #e2e8f0',
-    borderRadius: '8px', background: '#f8fafc', color: '#1a3560',
-    fontSize: '14px', outline: 'none', width: '100%', transition: 'all 0.15s',
+/* ─── Tokens ─────────────────────────────────────────────────────────────── */
+const T = {
+    navy: '#0f1f3d', navyMid: '#1a3560', navyLight: '#e8f0fb',
+    orange: '#f97316', orangeLight: '#fff3eb',
+    border: '#e2e8f0', borderSoft: '#f1f5f9', bg: '#f8fafc',
+    muted: '#94a3b8', mutedDark: '#64748b',
+    green: '#16a34a', greenLight: '#f0fdf4',
+    red: '#dc2626', redLight: '#fff1f2',
 };
-const textareaStyle = {
-    padding: '10px 12px', border: '1.5px solid #e2e8f0',
-    borderRadius: '8px', background: '#f8fafc', color: '#1a3560',
-    fontSize: '14px', outline: 'none', width: '100%', transition: 'all 0.15s',
-    resize: 'vertical', minHeight: '90px',
-};
-const onFocus = (e) => { e.target.style.borderColor = '#1a3560'; e.target.style.background = '#fff'; e.target.style.boxShadow = '0 0 0 3px rgba(26,53,96,0.08)'; };
-const onBlur = (e) => { e.target.style.borderColor = '#e2e8f0'; e.target.style.background = '#f8fafc'; e.target.style.boxShadow = 'none'; };
+
+/* ─── Modal (sama persis dengan admin kampus) ────────────────────────────── */
+function Modal({ open, onClose, title, children, footer, wide = false }) {
+    const [visible, setVisible] = React.useState(false);
+    const [render, setRender] = React.useState(false);
+    React.useEffect(() => {
+        if (open) { setRender(true); requestAnimationFrame(() => requestAnimationFrame(() => setVisible(true))); }
+        else { setVisible(false); const t = setTimeout(() => setRender(false), 260); return () => clearTimeout(t); }
+    }, [open]);
+    if (!render) return null;
+    return (
+        <div style={{
+            position: 'fixed', inset: 0, zIndex: 9000,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
+            opacity: visible ? 1 : 0, transition: 'opacity 0.25s ease',
+        }}>
+            <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(10,20,40,0.45)', backdropFilter: 'blur(3px)', cursor: 'default' }} />
+            <div style={{
+                background: '#fff', borderRadius: 16, position: 'relative',
+                width: '100%', maxWidth: wide ? 680 : 520,
+                boxShadow: '0 24px 60px rgba(10,20,40,0.2)',
+                display: 'flex', flexDirection: 'column', maxHeight: '90vh',
+                opacity: visible ? 1 : 0,
+                transform: visible ? 'translateY(0) scale(1)' : 'translateY(10px) scale(0.97)',
+                transition: 'opacity 0.25s ease, transform 0.25s cubic-bezier(0.22,1,0.36,1)',
+            }}>
+                <div style={{ padding: '20px 22px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${T.borderSoft}`, flexShrink: 0 }}>
+                    <span style={{ fontSize: 15, fontWeight: 800, color: T.navy }}>{title}</span>
+                    <button onClick={onClose} style={{ width: 28, height: 28, borderRadius: 7, border: 'none', background: T.bg, color: T.mutedDark, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        onMouseEnter={e => e.currentTarget.style.background = T.border}
+                        onMouseLeave={e => e.currentTarget.style.background = T.bg}>
+                        <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
+                <div style={{ padding: '18px 22px', overflowY: 'auto', flex: 1 }}>{children}</div>
+                {footer && <>
+                    <div style={{ height: 1, background: T.borderSoft, flexShrink: 0 }} />
+                    <div style={{ padding: '14px 22px', display: 'flex', justifyContent: 'flex-end', gap: 8, flexShrink: 0 }}>{footer}</div>
+                </>}
+            </div>
+        </div>
+    );
+}
+
+/* ─── Buttons ────────────────────────────────────────────────────────────── */
+const BtnGhost = ({ children, onClick }) => (
+    <button type="button" onClick={onClick} style={{ height: 36, padding: '0 14px', borderRadius: 8, border: `1.5px solid ${T.border}`, background: 'transparent', color: T.mutedDark, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}
+        onMouseEnter={e => e.currentTarget.style.background = T.bg}
+        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+    >{children}</button>
+);
+
+const fieldBase = { height: 42, padding: '0 13px', border: `1.5px solid ${T.border}`, borderRadius: 9, background: T.bg, color: T.navy, fontSize: 13.5, outline: 'none', width: '100%', transition: 'all 0.18s', fontFamily: 'inherit', boxSizing: 'border-box' };
+const onFocus = e => { e.target.style.borderColor = T.navyMid; e.target.style.background = '#fff'; e.target.style.boxShadow = '0 0 0 3px rgba(26,53,96,0.09)'; };
+const onBlur = e => { e.target.style.borderColor = T.border; e.target.style.background = T.bg; e.target.style.boxShadow = 'none'; };
 
 const FieldLabel = ({ children, required }) => (
-    <label className="block text-xs font-bold uppercase mb-1.5" style={{ color: '#4a5568', letterSpacing: '0.08em' }}>
-        {children} {required && <span style={{ color: '#e53e3e' }}>*</span>}
+    <label style={{ display: 'block', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#374151', marginBottom: 5 }}>
+        {children}{required && <span style={{ color: T.red, marginLeft: 3 }}>*</span>}
     </label>
 );
 
+/* ─── Main ───────────────────────────────────────────────────────────────── */
 export default function LowonganIndex({ jobs }) {
-    const [isCreateOpen, setIsCreateOpen] = useState(false);
-    const [isEditOpen, setIsEditOpen] = useState(false);
+    const [modalOpen, setModalOpen] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
     const [selectedJob, setSelectedJob] = useState(null);
+    const [q, setQ] = useState('');
 
     const { data, setData, post, put, delete: destroy, processing, errors, reset, clearErrors } = useForm({
         title: '', location: '', salary_range: '', description: '', requirements: '',
     });
 
-    const openCreateModal = () => { reset(); clearErrors(); setIsCreateOpen(true); };
-    const openEditModal = (job) => {
+    const filtered = jobs.filter(j =>
+        j.title.toLowerCase().includes(q.toLowerCase()) ||
+        (j.location && j.location.toLowerCase().includes(q.toLowerCase()))
+    );
+
+    const openCreate = () => { reset(); clearErrors(); setIsEditing(false); setModalOpen(true); };
+    const openEdit = job => {
         reset(); clearErrors(); setSelectedJob(job);
         setData({ title: job.title, location: job.location || '', salary_range: job.salary_range || '', description: job.description, requirements: job.requirements || '' });
-        setIsEditOpen(true);
+        setIsEditing(true); setModalOpen(true);
     };
-    const handleCreate = (e) => { e.preventDefault(); post(route('perusahaan.lowongan.store'), { onSuccess: () => setIsCreateOpen(false) }); };
-    const handleEdit = (e) => { e.preventDefault(); put(route('perusahaan.lowongan.update', selectedJob.id), { onSuccess: () => setIsEditOpen(false) }); };
-    const handleDelete = (id) => { if (confirm('Yakin ingin menghapus lowongan ini?')) destroy(route('perusahaan.lowongan.destroy', id)); };
-    const toggleActive = (id) => router.patch(route('perusahaan.lowongan.toggle', id), {}, { preserveScroll: true });
+    const handleSubmit = e => {
+        e.preventDefault();
+        if (isEditing) put(route('perusahaan.lowongan.update', selectedJob.id), { onSuccess: () => setModalOpen(false) });
+        else post(route('perusahaan.lowongan.store'), { onSuccess: () => setModalOpen(false) });
+    };
+    const handleDelete = id => { if (confirm('Yakin ingin menghapus lowongan ini?')) destroy(route('perusahaan.lowongan.destroy', id)); };
+    const toggleActive = id => router.patch(route('perusahaan.lowongan.toggle', id), {}, { preserveScroll: true });
 
-    const modalOpen = isCreateOpen || isEditOpen;
+    const activeCount = jobs.filter(j => j.is_active).length;
 
     return (
         <AuthenticatedLayout
             header={
                 <div>
-                    <h2 className="text-lg font-bold" style={{ color: '#1a3560' }}>Kelola Lowongan Kerja</h2>
-                    <p className="text-xs mt-0.5" style={{ color: '#a0aec0' }}>Posting dan kelola posisi pekerjaan perusahaan Anda</p>
+                    <h2 style={{ fontSize: 17, fontWeight: 800, color: T.navy, margin: 0, letterSpacing: '-0.01em' }}>Kelola Lowongan Kerja</h2>
+                    <p style={{ fontSize: 12, color: T.muted, margin: '3px 0 0' }}>Posting dan kelola posisi pekerjaan perusahaan Anda</p>
                 </div>
             }
         >
-            <Head title="Manajemen Lowongan — SITAMI" />
+            <Head title="Lowongan Kerja — SITAMI" />
 
-            <div className="rounded-xl p-5" style={{ background: '#fff', border: '1px solid #e8edf5' }}>
-                <div className="flex items-center justify-between mb-5">
-                    <p className="text-sm" style={{ color: '#a0aec0' }}>
-                        Total <span className="font-semibold" style={{ color: '#1a3560' }}>{jobs.length}</span> lowongan terdaftar
-                    </p>
-                    <button
-                        onClick={openCreateModal}
-                        className="flex items-center gap-2 px-4 text-sm font-semibold rounded-lg"
-                        style={{ height: '40px', background: '#f97316', color: '#fff', border: 'none', cursor: 'pointer' }}
-                        onMouseEnter={e => e.target.style.background = '#ea6c0a'}
-                        onMouseLeave={e => e.target.style.background = '#f97316'}
-                    >
-                        + Posting Lowongan
-                    </button>
-                </div>
+            <style>{`
+                @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+                .ak-root * { font-family:'Plus Jakarta Sans',sans-serif; }
+                @keyframes cardIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+                @keyframes rowIn  { from{opacity:0;transform:translateX(-4px)} to{opacity:1;transform:translateX(0)} }
+                .tbl-row:hover td { background:#fafbfc; }
+            `}</style>
 
-                <div className="rounded-xl overflow-hidden" style={{ border: '1px solid #e8edf5' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                        <thead>
-                            <tr style={{ background: '#f4f6fa', borderBottom: '1px solid #e8edf5' }}>
-                                {['Posisi & Gaji', 'Lokasi', 'Status', 'Aksi'].map((h, i) => (
-                                    <th key={i} className="text-xs font-bold uppercase"
-                                        style={{ padding: '10px 16px', color: '#1a3560', letterSpacing: '0.1em', textAlign: i === 3 ? 'right' : 'left' }}>
-                                        {h}
-                                    </th>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {jobs.map(job => (
-                                <tr key={job.id} style={{ borderBottom: '1px solid #f4f6fa' }}
-                                    onMouseEnter={e => e.currentTarget.style.background = '#fafbfc'}
-                                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                                    <td style={{ padding: '13px 16px' }}>
-                                        <div className="font-semibold text-sm" style={{ color: '#1a3560' }}>{job.title}</div>
-                                        {job.salary_range && (
-                                            <div className="text-xs mt-0.5" style={{ color: '#a0aec0' }}>{job.salary_range}</div>
-                                        )}
-                                    </td>
-                                    <td style={{ padding: '13px 16px', fontSize: '13px', color: '#718096' }}>
-                                        {job.location || '—'}
-                                    </td>
-                                    <td style={{ padding: '13px 16px' }}>
-                                        <div className="flex items-center gap-2">
-                                            <Switch checked={job.is_active} onCheckedChange={() => toggleActive(job.id)} />
-                                            <span
-                                                className="text-xs font-bold px-2.5 py-1 rounded-full"
-                                                style={{
-                                                    background: job.is_active ? '#f0fdf4' : '#f4f6fa',
-                                                    color: job.is_active ? '#166534' : '#718096',
-                                                }}
-                                            >
-                                                {job.is_active ? 'Dibuka' : 'Ditutup'}
-                                            </span>
-                                        </div>
-                                    </td>
-                                    <td style={{ padding: '13px 16px', textAlign: 'right' }}>
-                                        <div className="flex items-center justify-end gap-2">
-                                            <button onClick={() => openEditModal(job)}
-                                                className="text-xs font-semibold px-3 rounded-lg"
-                                                style={{ height: '32px', border: '1px solid #e2e8f0', background: '#f8fafc', color: '#1a3560', cursor: 'pointer' }}
-                                                onMouseEnter={e => { e.target.style.borderColor = '#1a3560'; e.target.style.background = '#e8f0fb'; }}
-                                                onMouseLeave={e => { e.target.style.borderColor = '#e2e8f0'; e.target.style.background = '#f8fafc'; }}>
-                                                Edit
-                                            </button>
-                                            <button onClick={() => handleDelete(job.id)}
-                                                className="text-xs font-semibold px-3 rounded-lg"
-                                                style={{ height: '32px', border: '1px solid #fecaca', background: '#fff5f5', color: '#e53e3e', cursor: 'pointer' }}
-                                                onMouseEnter={e => e.target.style.background = '#fee2e2'}
-                                                onMouseLeave={e => e.target.style.background = '#fff5f5'}>
-                                                Hapus
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
-                            {jobs.length === 0 && (
-                                <tr>
-                                    <td colSpan={4} className="text-center py-12 text-sm" style={{ color: '#a0aec0' }}>
-                                        Belum ada lowongan yang diposting.
-                                    </td>
-                                </tr>
+            <div className="ak-root">
+                <div style={{ background: '#fff', borderRadius: 14, border: `1px solid ${T.borderSoft}`, padding: 20, animation: 'cardIn 0.38s cubic-bezier(0.22,1,0.36,1) both' }}>
+
+                    {/* Header Bar */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 18 }}>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 8, background: T.navyLight, border: `1px solid ${T.navyMid}22` }}>
+                                <span style={{ fontSize: 11, fontWeight: 700, color: T.navyMid }}>{jobs.length} Total</span>
+                            </div>
+                            {activeCount > 0 && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 8, background: T.greenLight, border: `1px solid ${T.green}22` }}>
+                                    <span style={{ fontSize: 11, fontWeight: 700, color: T.green }}>{activeCount} Aktif</span>
+                                </div>
                             )}
-                        </tbody>
-                    </table>
+                        </div>
+                        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                            <div style={{ position: 'relative' }}>
+                                <svg style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: '#b0bec5' }} width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+                                </svg>
+                                <input style={{ ...fieldBase, paddingLeft: 33, width: 220 }} placeholder="Cari posisi atau lokasi..."
+                                    value={q} onChange={e => setQ(e.target.value)} onFocus={onFocus} onBlur={onBlur} />
+                            </div>
+                            <button onClick={openCreate} style={{
+                                height: 42, padding: '0 16px', borderRadius: 9, border: 'none',
+                                background: T.orange, color: '#fff', fontSize: 13, fontWeight: 700,
+                                cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s',
+                                display: 'flex', alignItems: 'center', gap: 6,
+                                boxShadow: '0 2px 10px rgba(249,115,22,0.28)', whiteSpace: 'nowrap',
+                            }}
+                                onMouseEnter={e => { e.currentTarget.style.background = '#ea6c0a'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                                onMouseLeave={e => { e.currentTarget.style.background = T.orange; e.currentTarget.style.transform = 'none'; }}
+                            >
+                                <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                                Posting Lowongan
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Table */}
+                    <div style={{ borderRadius: 10, overflow: 'hidden', border: `1px solid ${T.borderSoft}` }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                            <thead>
+                                <tr style={{ background: T.bg, borderBottom: `1px solid ${T.border}` }}>
+                                    {['Posisi & Lokasi', 'Rentang Gaji', 'Status', 'Aksi'].map((h, i) => (
+                                        <th key={i} style={{ padding: '10px 14px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#374151', textAlign: i === 3 ? 'right' : 'left' }}>{h}</th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filtered.map((job, i) => (
+                                    <tr key={job.id} className="tbl-row" style={{ borderBottom: `1px solid ${T.borderSoft}`, animation: `rowIn 0.26s ${i * 0.04}s both` }}>
+                                        <td style={{ padding: '13px 14px' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                                <div style={{ width: 34, height: 34, borderRadius: 8, background: T.navyLight, color: T.navyMid, fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                                    {job.title.charAt(0).toUpperCase()}
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontSize: 13.5, fontWeight: 700, color: T.navy }}>{job.title}</div>
+                                                    <div style={{ fontSize: 11.5, color: T.muted }}>{job.location || '—'}</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td style={{ padding: '13px 14px', fontSize: 13, color: T.mutedDark }}>{job.salary_range || '—'}</td>
+                                        <td style={{ padding: '13px 14px' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                                <Switch checked={job.is_active} onCheckedChange={() => toggleActive(job.id)} />
+                                                <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20, background: job.is_active ? T.greenLight : T.borderSoft, color: job.is_active ? T.green : T.mutedDark }}>
+                                                    {job.is_active ? 'Dibuka' : 'Ditutup'}
+                                                </span>
+                                            </div>
+                                        </td>
+                                        <td style={{ padding: '13px 14px', textAlign: 'right' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
+                                                <button onClick={() => openEdit(job)} style={{
+                                                    height: 30, padding: '0 12px', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.14s',
+                                                    border: `1.5px solid ${T.border}`, background: T.bg, color: T.navyMid,
+                                                }}
+                                                    onMouseEnter={e => { e.currentTarget.style.borderColor = T.navyMid; e.currentTarget.style.background = T.navyLight; }}
+                                                    onMouseLeave={e => { e.currentTarget.style.borderColor = T.border; e.currentTarget.style.background = T.bg; }}
+                                                >Edit</button>
+                                                <button onClick={() => handleDelete(job.id)} style={{
+                                                    height: 30, padding: '0 12px', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.14s',
+                                                    border: `1.5px solid #fecaca`, background: T.redLight, color: T.red,
+                                                }}
+                                                    onMouseEnter={e => e.currentTarget.style.background = '#fee2e2'}
+                                                    onMouseLeave={e => e.currentTarget.style.background = T.redLight}
+                                                >Hapus</button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                                {filtered.length === 0 && (
+                                    <tr><td colSpan={4} style={{ padding: '48px 16px', textAlign: 'center', fontSize: 13, color: T.muted }}>
+                                        {q ? 'Tidak ada lowongan yang cocok dengan pencarian.' : 'Belum ada lowongan yang diposting.'}
+                                    </td></tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
             {/* Modal Tambah / Edit */}
-            <Dialog open={modalOpen} onOpenChange={(open) => { if (!open) { setIsCreateOpen(false); setIsEditOpen(false); } }}>
-                <DialogContent className="max-w-2xl">
-                    <DialogHeader>
-                        <DialogTitle style={{ color: '#1a3560' }}>
-                            {isEditOpen ? 'Edit Lowongan' : 'Posting Lowongan Baru'}
-                        </DialogTitle>
-                    </DialogHeader>
-                    <form onSubmit={isEditOpen ? handleEdit : handleCreate} className="space-y-4 pt-1">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <FieldLabel required>Posisi Pekerjaan</FieldLabel>
-                                <input style={fieldStyle} value={data.title}
-                                    onChange={e => setData('title', e.target.value)}
-                                    placeholder="Contoh: Frontend Developer"
-                                    onFocus={onFocus} onBlur={onBlur} />
-                                <InputError message={errors.title} className="mt-1" />
-                            </div>
-                            <div>
-                                <FieldLabel>Rentang Gaji</FieldLabel>
-                                <input style={fieldStyle} value={data.salary_range}
-                                    onChange={e => setData('salary_range', e.target.value)}
-                                    placeholder="Rp 5.000.000 – Rp 7.000.000"
-                                    onFocus={onFocus} onBlur={onBlur} />
-                            </div>
+            <Modal open={modalOpen} onClose={() => setModalOpen(false)}
+                title={isEditing ? 'Edit Lowongan' : 'Posting Lowongan Baru'}
+                wide
+                footer={<>
+                    <BtnGhost onClick={() => setModalOpen(false)}>Batal</BtnGhost>
+                    <button type="submit" form="lowongan-form" disabled={processing} style={{
+                        height: 36, padding: '0 18px', borderRadius: 8, border: 'none',
+                        background: processing ? T.muted : T.orange, color: '#fff',
+                        fontSize: 13, fontWeight: 700, cursor: processing ? 'not-allowed' : 'pointer',
+                        fontFamily: 'inherit', boxShadow: processing ? 'none' : '0 2px 8px rgba(249,115,22,0.3)',
+                        transition: 'all 0.15s',
+                    }}>
+                        {processing ? 'Menyimpan...' : 'Simpan Lowongan'}
+                    </button>
+                </>}
+            >
+                <form id="lowongan-form" onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    {/* Info dasar */}
+                    <div style={{ padding: '14px 16px', borderRadius: 10, background: T.bg, border: `1px solid ${T.borderSoft}`, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                        <div>
+                            <FieldLabel required>Posisi Pekerjaan</FieldLabel>
+                            <input style={fieldBase} value={data.title} onChange={e => setData('title', e.target.value)}
+                                placeholder="Contoh: Frontend Developer" onFocus={onFocus} onBlur={onBlur} required />
+                            <InputError message={errors.title} className="mt-1" />
                         </div>
                         <div>
-                            <FieldLabel>Lokasi Penempatan</FieldLabel>
-                            <input style={fieldStyle} value={data.location}
-                                onChange={e => setData('location', e.target.value)}
-                                placeholder="Contoh: Bandung, Jawa Barat (WFO/Remote)"
-                                onFocus={onFocus} onBlur={onBlur} />
+                            <FieldLabel>Rentang Gaji</FieldLabel>
+                            <input style={fieldBase} value={data.salary_range} onChange={e => setData('salary_range', e.target.value)}
+                                placeholder="Rp 5.000.000 – Rp 7.000.000" onFocus={onFocus} onBlur={onBlur} />
                         </div>
-                        <div>
-                            <FieldLabel required>Deskripsi Pekerjaan</FieldLabel>
-                            <textarea style={textareaStyle} rows={4} value={data.description}
-                                onChange={e => setData('description', e.target.value)}
-                                placeholder="Tanggung jawab utama posisi ini..."
-                                onFocus={onFocus} onBlur={onBlur} />
-                            <InputError message={errors.description} className="mt-1" />
-                        </div>
-                        <div>
-                            <FieldLabel>Persyaratan</FieldLabel>
-                            <textarea style={textareaStyle} rows={4} value={data.requirements}
-                                onChange={e => setData('requirements', e.target.value)}
-                                placeholder="Kualifikasi yang dibutuhkan..."
-                                onFocus={onFocus} onBlur={onBlur} />
-                        </div>
-                        <DialogFooter>
-                            <button type="button" onClick={() => { setIsCreateOpen(false); setIsEditOpen(false); }}
-                                className="px-4 text-sm rounded-lg"
-                                style={{ height: '38px', color: '#718096', cursor: 'pointer', background: 'transparent', border: '1px solid #e2e8f0' }}>
-                                Batal
-                            </button>
-                            <button type="submit" disabled={processing}
-                                className="px-5 text-sm font-semibold rounded-lg"
-                                style={{ height: '38px', background: '#f97316', color: '#fff', border: 'none', cursor: 'pointer', opacity: processing ? 0.6 : 1 }}>
-                                {processing ? 'Menyimpan...' : 'Simpan Lowongan'}
-                            </button>
-                        </DialogFooter>
-                    </form>
-                </DialogContent>
-            </Dialog>
+                    </div>
+
+                    <div>
+                        <FieldLabel>Lokasi Penempatan</FieldLabel>
+                        <input style={fieldBase} value={data.location} onChange={e => setData('location', e.target.value)}
+                            placeholder="Contoh: Bandung, Jawa Barat (WFO/Remote)" onFocus={onFocus} onBlur={onBlur} />
+                    </div>
+
+                    <div>
+                        <FieldLabel required>Deskripsi Pekerjaan</FieldLabel>
+                        <textarea style={{ ...fieldBase, height: 'auto', padding: '10px 13px', resize: 'vertical' }} rows={4}
+                            value={data.description} onChange={e => setData('description', e.target.value)}
+                            placeholder="Tanggung jawab utama posisi ini..." onFocus={onFocus} onBlur={onBlur} required />
+                        <InputError message={errors.description} className="mt-1" />
+                    </div>
+
+                    <div>
+                        <FieldLabel>Persyaratan</FieldLabel>
+                        <textarea style={{ ...fieldBase, height: 'auto', padding: '10px 13px', resize: 'vertical' }} rows={4}
+                            value={data.requirements} onChange={e => setData('requirements', e.target.value)}
+                            placeholder="Kualifikasi yang dibutuhkan..." onFocus={onFocus} onBlur={onBlur} />
+                    </div>
+                </form>
+            </Modal>
         </AuthenticatedLayout>
     );
 }

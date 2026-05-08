@@ -23,15 +23,16 @@ function Modal({ open, onClose, title, children, footer }) {
     }, [open]);
     if (!render) return null;
     return (
-        <div onClick={e => { if (e.target === e.currentTarget) onClose(); }} style={{
-            position: 'fixed', inset: 0, zIndex: 300,
-            background: 'rgba(10,20,40,0.45)', backdropFilter: 'blur(3px)',
+        <div style={{
+            position: 'fixed', inset: 0, zIndex: 9000,
             display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
             opacity: visible ? 1 : 0, transition: 'opacity 0.25s ease',
         }}>
+            {/* Blur backdrop - separate div so it doesn't create stacking context for the flex layer */}
+            <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(10,20,40,0.45)', backdropFilter: 'blur(3px)', cursor: 'default' }} />
             <div style={{
-                background: '#fff', borderRadius: 16, width: '100%', maxWidth: 500,
-                boxShadow: '0 24px 60px rgba(10,20,40,0.2)', overflow: 'hidden',
+                position: 'relative', background: '#fff', borderRadius: 16, width: '100%', maxWidth: 500,
+                boxShadow: '0 24px 60px rgba(10,20,40,0.2)',
                 opacity: visible ? 1 : 0,
                 transform: visible ? 'translateY(0) scale(1)' : 'translateY(10px) scale(0.97)',
                 transition: 'opacity 0.25s ease, transform 0.25s cubic-bezier(0.22,1,0.36,1)',
@@ -129,6 +130,9 @@ export default function MoUIndex({ mous, companies }) {
 
             <style>{`
                 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+                /* Radix portal z-index fix - must be above modal overlay */
+                [data-radix-popper-content-wrapper] { z-index: 99999 !important; }
+
                 .ak-root * { font-family:'Plus Jakarta Sans',sans-serif; }
                 @keyframes cardIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
                 @keyframes rowIn  { from{opacity:0;transform:translateX(-4px)} to{opacity:1;transform:translateX(0)} }
@@ -230,11 +234,11 @@ export default function MoUIndex({ mous, companies }) {
                     <div>
                         <FieldLabel>Perusahaan Mitra</FieldLabel>
                         <Select value={data.company_id} onValueChange={v => setData('company_id', v)}>
-                            <SelectTrigger style={{ height: 42, borderRadius: 9, border: `1.5px solid ${T.border}`, background: T.bg, fontSize: 13.5 }}>
+                            <SelectTrigger className="focus:ring-0 focus:ring-offset-0" style={{ height: 42, borderRadius: 9, border: `1.5px solid ${T.border}`, background: T.bg, fontSize: 13.5 }}>
                                 <SelectValue placeholder="Pilih perusahaan..." />
                             </SelectTrigger>
-                            <SelectContent>
-                                {companies.map(c => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}
+                            <SelectContent position="popper" sideOffset={4} className="z-[500] rounded-xl overflow-hidden border border-gray-200 shadow-xl" style={{ background: "#ffffff", minWidth: "var(--radix-select-trigger-width)" }}>
+                                {companies.map(c => <SelectItem className="text-sm cursor-pointer px-3 py-2 outline-none data-[highlighted]:bg-slate-50" style={{ color: "#1e293b", background: "transparent" }} key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}
                             </SelectContent>
                         </Select>
                         <InputError message={errors.company_id} className="mt-1.5" />

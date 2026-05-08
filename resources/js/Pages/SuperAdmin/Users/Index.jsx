@@ -25,10 +25,13 @@ function Modal({ open, onClose, title, children, footer }) {
     return (
         <>
             <style>{`
+                /* Radix portal must always be above everything */
+                [data-radix-popper-content-wrapper] { z-index: 99999 !important; }
+
                 .modal-backdrop {
-                    position: fixed; inset: 0; z-index: 200;
-                    background: rgba(10, 20, 40, 0.45);
-                    backdrop-filter: blur(3px);
+                    position: fixed; inset: 0;
+                    /* z-index high but NOT creating stacking context via backdrop-filter */
+                    z-index: 9000;
                     display: flex; align-items: center; justify-content: center;
                     padding: 20px;
                     transition: opacity 0.25s ease;
@@ -36,13 +39,22 @@ function Modal({ open, onClose, title, children, footer }) {
                 .modal-backdrop.in  { opacity: 1; }
                 .modal-backdrop.out { opacity: 0; }
 
+                /* Blur lives in a SEPARATE absolute div - does NOT trap Radix portal */
+                .modal-backdrop::before {
+                    content: '';
+                    position: absolute; inset: 0;
+                    background: rgba(10, 20, 40, 0.45);
+                    backdrop-filter: blur(3px);
+                    pointer-events: none;
+                }
+
                 .modal-box {
+                    position: relative;
                     background: #ffffff;
                     border-radius: 16px;
                     width: 100%;
                     max-width: 480px;
                     box-shadow: 0 24px 60px rgba(10,20,40,0.2), 0 4px 12px rgba(10,20,40,0.08);
-                    overflow: hidden;
                     transition: opacity 0.25s ease, transform 0.25s cubic-bezier(0.22,1,0.36,1);
                 }
                 .modal-box.in  { opacity: 1; transform: translateY(0) scale(1); }
@@ -408,11 +420,11 @@ export default function UserIndex({ users, roles, filters }) {
                     <div>
                         <FieldLabel>Role / Hak Akses</FieldLabel>
                         <Select value={data.role} onValueChange={(v) => setData('role', v)}>
-                            <SelectTrigger style={{ height: '42px', borderRadius: '9px', border: '1.5px solid #e2e8f0', background: '#f8fafc', fontSize: '13.5px' }}>
+                            <SelectTrigger className="focus:ring-0 focus:ring-offset-0" style={{ height: '42px', borderRadius: '9px', border: '1.5px solid #e2e8f0', background: '#f8fafc', fontSize: '13.5px' }}>
                                 <SelectValue placeholder="Pilih Role" />
                             </SelectTrigger>
-                            <SelectContent>
-                                {roles.map(r => <SelectItem key={r.id} value={r.name}>{r.name}</SelectItem>)}
+                            <SelectContent position="popper" sideOffset={4} className="z-[500] rounded-xl overflow-hidden border border-gray-200 shadow-xl" style={{ background: "#ffffff", minWidth: "var(--radix-select-trigger-width)" }}>
+                                {roles.map(r => <SelectItem className="text-sm cursor-pointer px-3 py-2 outline-none data-[highlighted]:bg-slate-50" style={{ color: "#1e293b", background: "transparent" }} key={r.id} value={r.name}>{r.name}</SelectItem>)}
                             </SelectContent>
                         </Select>
                         <InputError message={errors.role} className="mt-1" />
@@ -450,11 +462,11 @@ export default function UserIndex({ users, roles, filters }) {
                     <div>
                         <FieldLabel>Role / Hak Akses</FieldLabel>
                         <Select value={data.role} onValueChange={(v) => setData('role', v)}>
-                            <SelectTrigger style={{ height: '42px', borderRadius: '9px', border: '1.5px solid #e2e8f0', background: '#f8fafc', fontSize: '13.5px' }}>
+                            <SelectTrigger className="focus:ring-0 focus:ring-offset-0" style={{ height: '42px', borderRadius: '9px', border: '1.5px solid #e2e8f0', background: '#f8fafc', fontSize: '13.5px' }}>
                                 <SelectValue placeholder="Pilih Role" />
                             </SelectTrigger>
-                            <SelectContent>
-                                {roles.map(r => <SelectItem key={r.id} value={r.name}>{r.name}</SelectItem>)}
+                            <SelectContent position="popper" sideOffset={4} className="z-[500] rounded-xl overflow-hidden border border-gray-200 shadow-xl" style={{ background: "#ffffff", minWidth: "var(--radix-select-trigger-width)" }}>
+                                {roles.map(r => <SelectItem className="text-sm cursor-pointer px-3 py-2 outline-none data-[highlighted]:bg-slate-50" style={{ color: "#1e293b", background: "transparent" }} key={r.id} value={r.name}>{r.name}</SelectItem>)}
                             </SelectContent>
                         </Select>
                         <InputError message={errors.role} className="mt-1" />

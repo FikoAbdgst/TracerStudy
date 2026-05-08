@@ -68,7 +68,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/master-data', [MasterDataController::class, 'index'])->name('master-data');
         Route::put('/master-data/prodi/{prodi}',       [MasterDataController::class, 'updateProdi'])->name('master-data.prodi.update');
         Route::put('/master-data/industry/{industry}', [MasterDataController::class, 'updateIndustry'])->name('master-data.industry.update');
+        Route::get('/master-data', [MasterDataController::class, 'index'])->name('master-data');
 
+        // Rute Kategori (Tabs)
+        Route::post('/master-data/category', [MasterDataController::class, 'storeCategory'])->name('master-data.category.store');
+        Route::delete('/master-data/category/{category}', [MasterDataController::class, 'destroyCategory'])->name('master-data.category.destroy');
+
+        // Rute Item (Isi Tabel)
+        Route::post('/master-data/item', [MasterDataController::class, 'storeItem'])->name('master-data.item.store');
+        Route::put('/master-data/item/{item}', [MasterDataController::class, 'updateItem'])->name('master-data.item.update');
+        Route::delete('/master-data/item/{item}', [MasterDataController::class, 'destroyItem'])->name('master-data.item.destroy');
 
         // 3. Rute Mengelola Hak Akses (User Management) yang baru kita buat
         Route::resource('users', UserController::class)->except(['create', 'show', 'edit']);

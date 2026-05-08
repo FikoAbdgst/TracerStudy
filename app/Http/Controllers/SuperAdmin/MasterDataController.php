@@ -3,72 +3,74 @@
 namespace App\Http\Controllers\SuperAdmin;
 
 use App\Http\Controllers\Controller;
-use App\Models\ProgramStudi;
-use App\Models\IndustrySektor;
+use App\Models\MasterCategory;
+use App\Models\MasterItem;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 
 class MasterDataController extends Controller
 {
     public function index()
     {
+        // Ambil semua kategori beserta item di dalamnya
+        $categories = MasterCategory::with(['items' => function ($query) {
+            $query->latest();
+        }])->latest()->get();
+
         return Inertia::render('SuperAdmin/MasterData/Index', [
-            'prodis'     => ProgramStudi::orderBy('created_at', 'desc')->get(),
-            'industries' => IndustrySektor::orderBy('created_at', 'desc')->get(),
+            'categories' => $categories,
         ]);
     }
 
-    // ── Program Studi ──────────────────────────────────────────────────────
-
-    public function storeProdi(Request $request)
-    {
-        $validated = $request->validate([
-            'name'    => 'required|string|max:255',
-            'jenjang' => 'required|string|max:10',
-        ]);
-        ProgramStudi::create($validated);
-        return back()->with('message', 'Program Studi berhasil ditambahkan.');
-    }
-
-    public function updateProdi(Request $request, ProgramStudi $prodi)
-    {
-        $validated = $request->validate([
-            'name'    => 'required|string|max:255',
-            'jenjang' => 'required|string|max:10',
-        ]);
-        $prodi->update($validated);
-        return back()->with('message', 'Program Studi berhasil diperbarui.');
-    }
-
-    public function destroyProdi(ProgramStudi $prodi)
-    {
-        $prodi->delete();
-        return back()->with('message', 'Program Studi berhasil dihapus.');
-    }
-
-    // ── Sektor Industri ────────────────────────────────────────────────────
-
-    public function storeIndustry(Request $request)
+    // ── KATEGORI (TABS) ────────────────────────────────────────────────────
+    public function storeCategory(Request $request)
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
+            'use_parameter' => 'boolean',
+            'parameter_label' => 'nullable|string|max:255',
         ]);
-        IndustrySektor::create($validated);
-        return back()->with('message', 'Sektor Industri berhasil ditambahkan.');
+
+        $validated['slug'] = Str::slug($validated['name']);
+        MasterCategory::create($validated);
+
+        return back()->with('message', 'Kategori baru berhasil ditambahkan.');
     }
 
-    public function updateIndustry(Request $request, IndustrySektor $industry)
+    public function destroyCategory(MasterCategory $category)
+    {
+        $category->delete();
+        return back()->with('message', 'Kategori beserta isinya berhasil dihapus.');
+    }
+
+    // ── ITEM MASTER DATA ───────────────────────────────────────────────────
+    public function storeItem(Request $request)
+    {
+        $validated = $request->validate([
+            'master_category_id' => 'required|exists:master_categories,id',
+            'name' => 'required|string|max:255',
+            'parameter_value' => 'nullable|string|max:255',
+        ]);
+
+        MasterItem::create($validated);
+        return back()->with('message', 'Data berhasil ditambahkan.');
+    }
+
+    public function updateItem(Request $request, MasterItem $item)
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
+            'parameter_value' => 'nullable|string|max:255',
         ]);
-        $industry->update($validated);
-        return back()->with('message', 'Sektor Industri berhasil diperbarui.');
+
+        $item->update($validated);
+        return back()->with('message', 'Data berhasil diperbarui.');
     }
 
-    public function destroyIndustry(IndustrySektor $industry)
+    public function destroyItem(MasterItem $item)
     {
-        $industry->delete();
-        return back()->with('message', 'Sektor Industri berhasil dihapus.');
+        $item->delete();
+        return back()->with('message', 'Data berhasil dihapus.');
     }
 }

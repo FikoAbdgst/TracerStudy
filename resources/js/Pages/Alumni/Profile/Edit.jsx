@@ -46,13 +46,15 @@ const Section = ({ title, icon, children, delay = 0 }) => (
     </div>
 );
 
-export default function EditProfile({ profile, programStudis }) {
-    const { flash } = usePage().props;
+export default function EditProfile({ profile, programStudis = [], keahlianMaster = [] }) {
+    // TAMBAHKAN 'auth' DISINI UNTUK MENGAMBIL DATA GLOBAL USER YANG SEDANG LOGIN
+    const { auth, flash } = usePage().props;
+
     const { data, setData, post, processing, errors } = useForm({
         nim: profile?.nim || '',
         major: profile?.major || '',
         graduation_year: profile?.graduation_year || '',
-        skills: profile?.skills || '',
+        skills: Array.isArray(profile?.skills) ? profile.skills : (profile?.skills ? [profile.skills] : []),
         phone_number: profile?.phone_number || '',
         address: profile?.address || '',
     });
@@ -114,10 +116,12 @@ export default function EditProfile({ profile, programStudis }) {
                 }}>
                     <div style={{ position: 'absolute', right: -20, top: -20, width: 120, height: 120, borderRadius: '50%', background: 'rgba(249,115,22,0.1)' }} />
                     <div style={{ width: 54, height: 54, borderRadius: 14, background: T.orange, color: '#fff', fontSize: 22, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 4px 16px rgba(249,115,22,0.35)' }}>
-                        {(data.nim || '?').charAt(0)}
+                        {/* PERBAIKAN: Menampilkan Huruf Pertama Nama User (Bukan NIM) */}
+                        {(auth?.user?.name || '?').charAt(0).toUpperCase()}
                     </div>
                     <div style={{ flex: 1, position: 'relative' }}>
-                        <div style={{ fontSize: 16, fontWeight: 800, color: '#fff' }}>{profile?.user?.name ?? 'Nama Belum Tersedia'}</div>
+                        {/* PERBAIKAN: Memanggil nama langsung dari auth.user */}
+                        <div style={{ fontSize: 16, fontWeight: 800, color: '#fff' }}>{auth?.user?.name}</div>
                         <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', marginTop: 3 }}>
                             {data.major || 'Program Studi belum dipilih'} {data.graduation_year ? `· Lulus ${data.graduation_year}` : ''}
                         </div>
@@ -154,11 +158,11 @@ export default function EditProfile({ profile, programStudis }) {
                                     <SelectValue placeholder="Pilih Program Studi..." />
                                 </SelectTrigger>
                                 <SelectContent position="popper" sideOffset={4} className="z-[500] rounded-xl overflow-hidden border border-gray-200 shadow-xl" style={{ background: '#ffffff', minWidth: 'var(--radix-select-trigger-width)' }}>
-                                    {programStudis.map(prodi => (
+                                    {programStudis?.map(prodi => (
                                         <SelectItem key={prodi.id} value={prodi.name}
                                             className="text-sm cursor-pointer px-3 py-2 outline-none data-[highlighted]:bg-slate-50"
                                             style={{ color: '#1e293b', background: 'transparent' }}>
-                                            {prodi.name} ({prodi.jenjang})
+                                            {prodi.name} {prodi.parameter_value ? `(${prodi.parameter_value})` : ''}
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
@@ -187,20 +191,39 @@ export default function EditProfile({ profile, programStudis }) {
                         </div>
                     </Section>
 
-                    {/* Skills */}
+                    {/* Skills Selection (Master Data Based) */}
                     <Section title="Keahlian & Skills" icon="⚡" delay={0.12}>
-                        <FieldLabel>Keahlian Utama</FieldLabel>
-                        <textarea style={{ ...textareaBase, minHeight: 88 }} rows={3}
-                            placeholder="Misal: Laravel, React, Kotlin, Android Studio, Figma..." value={data.skills}
-                            onChange={e => setData('skills', e.target.value)} onFocus={onFocus} onBlur={onBlur} />
-                        <InputError message={errors.skills} className="mt-1.5" />
-                        {data.skills && (
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
-                                {data.skills.split(',').map((s, i) => s.trim() && (
-                                    <span key={i} style={{ fontSize: 11.5, fontWeight: 600, padding: '3px 10px', borderRadius: 20, background: T.navyLight, color: T.navyMid }}>{s.trim()}</span>
-                                ))}
-                            </div>
-                        )}
+                        <FieldLabel>Pilih Keahlian Utama (Klik untuk memilih)</FieldLabel>
+
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, padding: '14px', background: T.bg, border: `1px solid ${T.borderSoft}`, borderRadius: 10 }}>
+                            {(!keahlianMaster || keahlianMaster.length === 0) ? (
+                                <span style={{ fontSize: 13, color: T.muted }}>Belum ada pilihan keahlian dari sistem kampus.</span>
+                            ) : (
+                                keahlianMaster?.map(skill => {
+                                    const skillsArray = Array.isArray(data.skills) ? data.skills : [];
+                                    const isSelected = skillsArray.includes(skill.name);
+
+                                    return (
+                                        <button
+                                            key={skill.id} type="button"
+                                            onClick={() => {
+                                                if (isSelected) setData('skills', skillsArray.filter(s => s !== skill.name));
+                                                else setData('skills', [...skillsArray, skill.name]);
+                                            }}
+                                            style={{
+                                                padding: '6px 14px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s',
+                                                border: `1.5px solid ${isSelected ? T.orange : T.border}`,
+                                                background: isSelected ? T.orangeLight : '#fff',
+                                                color: isSelected ? T.orange : T.mutedDark,
+                                            }}
+                                        >
+                                            {isSelected ? '✓ ' : '+ '}{skill.name}
+                                        </button>
+                                    )
+                                })
+                            )}
+                        </div>
+                        <InputError className="mt-2" message={errors.skills} />
                     </Section>
 
                     {/* Submit */}

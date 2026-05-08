@@ -2,10 +2,17 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class AlumniProfile extends Model
 {
+    use HasFactory;
+    protected $guarded = [];
+    protected $casts = [
+        'graduation_year' => 'integer',
+        'skills' => 'array', // Ubah menjadi array
+    ];
     // Pastikan semua kolom form ada di sini
     protected $fillable = [
         'user_id',

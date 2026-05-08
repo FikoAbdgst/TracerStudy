@@ -12,19 +12,21 @@ class JobPostingController extends Controller
     public function index(Request $request)
     {
         $company = $request->user()->company;
-
         if (!$company) {
-            return redirect()->route('perusahaan.profile.edit')
-                ->with('message', 'Silakan lengkapi profil perusahaan Anda terlebih dahulu.');
+            return redirect()->route('perusahaan.profile.edit')->with('message', 'Silakan lengkapi profil perusahaan Anda terlebih dahulu.');
         }
 
         $jobs = JobPosting::where('company_id', $company->id)->latest()->get();
 
+        // 1. Ambil Master Data Keahlian
+        $keahlianCat = \App\Models\MasterCategory::with('items')->where('slug', 'keahlian')->first();
+        $keahlianMaster = $keahlianCat ? $keahlianCat->items : [];
+
         return Inertia::render('Perusahaan/Lowongan/Index', [
             'jobs' => $jobs,
-            // Kirim status verifikasi ke React agar bisa di-block di Frontend
             'isVerified' => $company->verification_status === 'verified',
             'verificationStatus' => $company->verification_status,
+            'keahlianMaster' => $keahlianMaster, // 2. Kirim ke React
         ]);
     }
 
@@ -32,7 +34,6 @@ class JobPostingController extends Controller
     {
         $company = $request->user()->company;
 
-        // Cegah perusahaan membuat loker jika izin ditolak/belum diverifikasi
         if ($company->verification_status !== 'verified') {
             return back()->with('error', 'Perusahaan Anda belum terverifikasi. Tidak dapat memposting lowongan.');
         }
@@ -40,6 +41,7 @@ class JobPostingController extends Controller
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'required|string',
+            'requirements' => 'nullable|array', // UBAH JADI ARRAY
             'location' => 'nullable|string|max:255',
             'salary_range' => 'nullable|string|max:255',
             'is_active' => 'boolean',
@@ -57,7 +59,6 @@ class JobPostingController extends Controller
 
         if ($job->company_id !== $company->id) abort(403);
 
-        // Cegah perusahaan mengubah data loker jika izin dicabut
         if ($company->verification_status !== 'verified') {
             return back()->with('error', 'Izin posting dicabut. Anda tidak dapat mengubah status lowongan saat ini.');
         }
@@ -65,6 +66,7 @@ class JobPostingController extends Controller
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'required|string',
+            'requirements' => 'nullable|array', // <- PASTIKAN INI ARRAY
             'location' => 'nullable|string|max:255',
             'salary_range' => 'nullable|string|max:255',
             'is_active' => 'boolean',
@@ -88,10 +90,8 @@ class JobPostingController extends Controller
     {
         $company = $request->user()->company;
 
-        // Pastikan hanya pemilik lowongan yang bisa mengubahnya
         if ($job->company_id !== $company->id) abort(403);
 
-        // Validasi ekstra: Jika status perusahaan bukan 'verified', tidak bisa toggle
         if ($company->verification_status !== 'verified') {
             return back()->with('error', 'Izin posting dicabut. Anda tidak dapat mengubah status lowongan saat ini.');
         }

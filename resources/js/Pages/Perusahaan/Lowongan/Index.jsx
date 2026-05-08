@@ -41,7 +41,7 @@ function Modal({ open, onClose, title, children, footer, wide = false }) {
             }}>
                 <div style={{ padding: '20px 22px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${T.borderSoft}`, flexShrink: 0 }}>
                     <span style={{ fontSize: 15, fontWeight: 800, color: T.navy }}>{title}</span>
-                    <button onClick={onClose} style={{ width: 28, height: 28, borderRadius: 7, border: 'none', background: T.bg, color: T.mutedDark, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    <button type="button" onClick={onClose} style={{ width: 28, height: 28, borderRadius: 7, border: 'none', background: T.bg, color: T.mutedDark, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                         onMouseEnter={e => e.currentTarget.style.background = T.border}
                         onMouseLeave={e => e.currentTarget.style.background = T.bg}>
                         <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
@@ -57,7 +57,6 @@ function Modal({ open, onClose, title, children, footer, wide = false }) {
     );
 }
 
-/* ─── Buttons ────────────────────────────────────────────────────────────── */
 const BtnGhost = ({ children, onClick }) => (
     <button type="button" onClick={onClick} style={{ height: 36, padding: '0 14px', borderRadius: 8, border: `1.5px solid ${T.border}`, background: 'transparent', color: T.mutedDark, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}
         onMouseEnter={e => e.currentTarget.style.background = T.bg}
@@ -76,7 +75,7 @@ const FieldLabel = ({ children, required }) => (
 );
 
 /* ─── Main ───────────────────────────────────────────────────────────────── */
-export default function LowonganIndex({ jobs, isVerified, verificationStatus }) {
+export default function LowonganIndex({ jobs, isVerified, verificationStatus, keahlianMaster = [] }) {
     const { flash } = usePage().props;
     const [modalOpen, setModalOpen] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
@@ -84,7 +83,7 @@ export default function LowonganIndex({ jobs, isVerified, verificationStatus }) 
     const [q, setQ] = useState('');
 
     const { data, setData, post, put, delete: destroy, processing, errors, reset, clearErrors } = useForm({
-        title: '', location: '', salary_range: '', description: '', requirements: '',
+        title: '', location: '', salary_range: '', description: '', requirements: [],
     });
 
     const filtered = jobs.filter(j =>
@@ -92,10 +91,24 @@ export default function LowonganIndex({ jobs, isVerified, verificationStatus }) 
         (j.location && j.location.toLowerCase().includes(q.toLowerCase()))
     );
 
-    const openCreate = () => { reset(); clearErrors(); setIsEditing(false); setModalOpen(true); };
+    const openCreate = () => {
+        reset();
+        clearErrors();
+        setData('requirements', []); // Pastikan selalu array kosong saat create
+        setIsEditing(false);
+        setModalOpen(true);
+    };
+
     const openEdit = job => {
         reset(); clearErrors(); setSelectedJob(job);
-        setData({ title: job.title, location: job.location || '', salary_range: job.salary_range || '', description: job.description, requirements: job.requirements || '' });
+        setData({
+            title: job.title,
+            location: job.location || '',
+            salary_range: job.salary_range || '',
+            description: job.description,
+            // Ambil array requirement dari DB, jika null berikan array kosong
+            requirements: Array.isArray(job.requirements) ? job.requirements : (job.requirements ? [job.requirements] : [])
+        });
         setIsEditing(true); setModalOpen(true);
     };
 
@@ -107,7 +120,6 @@ export default function LowonganIndex({ jobs, isVerified, verificationStatus }) 
 
     const handleDelete = id => { if (confirm('Yakin ingin menghapus lowongan ini?')) destroy(route('perusahaan.lowongan.destroy', id)); };
 
-    // Matikan kemampuan toggle jika akun tidak terverifikasi
     const toggleActive = id => {
         if (!isVerified) return;
         router.patch(route('perusahaan.lowongan.toggle', id), {}, { preserveScroll: true });
@@ -184,7 +196,7 @@ export default function LowonganIndex({ jobs, isVerified, verificationStatus }) 
                                     value={q} onChange={e => setQ(e.target.value)} onFocus={onFocus} onBlur={onBlur} />
                             </div>
 
-                            {/* ── TOMBOL POSTING: DISABLED JIKA BELUM VERIFIED ── */}
+                            {/* ── TOMBOL POSTING ── */}
                             <button
                                 onClick={() => isVerified && openCreate()}
                                 disabled={!isVerified}
@@ -234,7 +246,7 @@ export default function LowonganIndex({ jobs, isVerified, verificationStatus }) 
                                                 <Switch
                                                     checked={job.is_active}
                                                     onCheckedChange={() => toggleActive(job.id)}
-                                                    disabled={!isVerified} // Disable toggle jika izin dicabut
+                                                    disabled={!isVerified}
                                                 />
                                                 <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20, background: job.is_active ? T.greenLight : T.borderSoft, color: job.is_active ? T.green : T.mutedDark }}>
                                                     {job.is_active ? 'Dibuka' : 'Ditutup'}
@@ -243,7 +255,6 @@ export default function LowonganIndex({ jobs, isVerified, verificationStatus }) 
                                         </td>
                                         <td style={{ padding: '13px 14px', textAlign: 'right' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
-                                                {/* Edit Button - Hanya Aktif Jika Terverifikasi */}
                                                 <button
                                                     onClick={() => isVerified && openEdit(job)}
                                                     disabled={!isVerified}
@@ -301,7 +312,6 @@ export default function LowonganIndex({ jobs, isVerified, verificationStatus }) 
                 </>}
             >
                 <form id="lowongan-form" onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                    {/* Info dasar */}
                     <div style={{ padding: '14px 16px', borderRadius: 10, background: T.bg, border: `1px solid ${T.borderSoft}`, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                         <div>
                             <FieldLabel required>Posisi Pekerjaan</FieldLabel>
@@ -330,11 +340,40 @@ export default function LowonganIndex({ jobs, isVerified, verificationStatus }) 
                         <InputError message={errors.description} className="mt-1" />
                     </div>
 
+                    {/* Master Data KEAHLIAN Selection */}
                     <div>
-                        <FieldLabel>Persyaratan</FieldLabel>
-                        <textarea style={{ ...fieldBase, height: 'auto', padding: '10px 13px', resize: 'vertical' }} rows={4}
-                            value={data.requirements} onChange={e => setData('requirements', e.target.value)}
-                            placeholder="Kualifikasi yang dibutuhkan..." onFocus={onFocus} onBlur={onBlur} />
+                        <FieldLabel>Keahlian yang Dibutuhkan</FieldLabel>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, padding: '10px 14px', background: T.bg, border: `1px solid ${T.borderSoft}`, borderRadius: 10 }}>
+                            {(!keahlianMaster || keahlianMaster.length === 0) ? (
+                                <span style={{ fontSize: 12, color: T.mutedDark }}>Admin kampus belum mengatur Master Data Keahlian.</span>
+                            ) : (
+                                keahlianMaster?.map(skill => {
+                                    const reqArray = Array.isArray(data.requirements) ? data.requirements : [];
+                                    const isSelected = reqArray.includes(skill.name);
+
+                                    return (
+                                        <button
+                                            key={skill.id} type="button"
+                                            onClick={() => {
+                                                if (isSelected) {
+                                                    setData('requirements', reqArray.filter(s => s !== skill.name));
+                                                } else {
+                                                    setData('requirements', [...reqArray, skill.name]);
+                                                }
+                                            }}
+                                            style={{
+                                                padding: '6px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s',
+                                                border: `1.5px solid ${isSelected ? T.orange : T.border}`,
+                                                background: isSelected ? T.orangeLight : '#fff',
+                                                color: isSelected ? T.orange : T.mutedDark,
+                                            }}
+                                        >
+                                            {isSelected ? '✓ ' : '+ '} {skill.name}
+                                        </button>
+                                    )
+                                })
+                            )}
+                        </div>
                     </div>
                 </form>
             </Modal>

@@ -10,25 +10,31 @@ use Illuminate\Support\Facades\Auth;
 
 class AlumniProfileController extends Controller
 {
-    public function edit()
+    public function edit(Request $request)
     {
-        $user = Auth::user();
-        // Load relasi alumniProfile jika user sudah pernah mengisinya
-        $user->load('alumniProfile');
+        $profile = $request->user()->alumniProfile;
+
+        // Ambil Data Master Program Studi
+        $programStudiCat = \App\Models\MasterCategory::with('items')->where('slug', 'program-studi')->first();
+        $programStudis = $programStudiCat ? $programStudiCat->items : [];
+
+        // Ambil Data Master Keahlian
+        $keahlianCat = \App\Models\MasterCategory::with('items')->where('slug', 'keahlian')->first();
+        $keahlianMaster = $keahlianCat ? $keahlianCat->items : [];
 
         return Inertia::render('Alumni/Profile/Edit', [
-            'profile' => $user->alumniProfile,
-            'programStudis' => ProgramStudi::all(), // Tarik Master Data Prodi
+            'profile' => $profile,
+            'programStudis' => $programStudis,
+            'keahlianMaster' => $keahlianMaster,
         ]);
     }
-
     public function update(Request $request)
     {
         $validated = $request->validate([
-            'nim' => 'required|string|max:20',
-            'major' => 'required|string|max:255', // Ini akan menyimpan nama prodi
-            'graduation_year' => 'required|integer|min:2000|max:' . (date('Y') + 1),
-            'skills' => 'nullable|string',
+            'nim' => 'required|string|max:50',
+            'major' => 'required|string|max:255',
+            'graduation_year' => 'required|integer',
+            'skills' => 'nullable|array', // UBAH JADI ARRAY
             'phone_number' => 'nullable|string|max:20',
             'address' => 'nullable|string',
         ]);

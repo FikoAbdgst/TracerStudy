@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Head, useForm, router } from '@inertiajs/react';
+import { Head, useForm, router, Link } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/Components/ui/select';
 import { Switch } from '@/Components/ui/switch';
@@ -189,15 +189,28 @@ export default function TracerStudyIndex({ forms }) {
                                             </div>
                                         </td>
                                         <td style={{ padding: '13px 14px', textAlign: 'right' }}>
-                                            <button onClick={() => openEdit(form)} style={{
-                                                height: 30, padding: '0 13px', borderRadius: 7,
-                                                border: `1.5px solid ${T.border}`, background: T.bg,
-                                                color: T.navyMid, fontSize: 12, fontWeight: 600,
-                                                cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.14s',
-                                            }}
-                                                onMouseEnter={e => { e.currentTarget.style.borderColor = T.navyMid; e.currentTarget.style.background = T.navyLight; }}
-                                                onMouseLeave={e => { e.currentTarget.style.borderColor = T.border; e.currentTarget.style.background = T.bg; }}
-                                            >Edit Form</button>
+                                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 6 }}>
+                                                <Link href={route('adminkampus.tracer.responses', form.id)}>
+                                                    <button style={{
+                                                        height: 30, padding: '0 13px', borderRadius: 7,
+                                                        border: `1.5px solid ${T.orangeLight}`, background: T.orangeLight,
+                                                        color: T.orange, fontSize: 12, fontWeight: 700,
+                                                        cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.14s',
+                                                    }}
+                                                        onMouseEnter={e => { e.currentTarget.style.background = '#ffedd5'; }}
+                                                        onMouseLeave={e => { e.currentTarget.style.background = T.orangeLight; }}
+                                                    >Lihat Jawaban</button>
+                                                </Link>
+                                                <button onClick={() => openEdit(form)} style={{
+                                                    height: 30, padding: '0 13px', borderRadius: 7,
+                                                    border: `1.5px solid ${T.border}`, background: T.bg,
+                                                    color: T.navyMid, fontSize: 12, fontWeight: 600,
+                                                    cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.14s',
+                                                }}
+                                                    onMouseEnter={e => { e.currentTarget.style.borderColor = T.navyMid; e.currentTarget.style.background = T.navyLight; }}
+                                                    onMouseLeave={e => { e.currentTarget.style.borderColor = T.border; e.currentTarget.style.background = T.bg; }}
+                                                >Edit Form</button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}

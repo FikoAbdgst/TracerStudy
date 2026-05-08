@@ -30,7 +30,6 @@ function Modal({ open, onClose, title, children, footer }) {
 
                 .modal-backdrop {
                     position: fixed; inset: 0;
-                    /* z-index high but NOT creating stacking context via backdrop-filter */
                     z-index: 9000;
                     display: flex; align-items: center; justify-content: center;
                     padding: 20px;
@@ -39,7 +38,7 @@ function Modal({ open, onClose, title, children, footer }) {
                 .modal-backdrop.in  { opacity: 1; }
                 .modal-backdrop.out { opacity: 0; }
 
-                /* Blur lives in a SEPARATE absolute div - does NOT trap Radix portal */
+                /* Blur lives in a SEPARATE absolute div */
                 .modal-backdrop::before {
                     content: '';
                     position: absolute; inset: 0;
@@ -171,7 +170,8 @@ const FieldLabel = ({ children }) => (
     </label>
 );
 
-const BtnPrimary = ({ children, disabled, style = {} }) => (
+// PERBAIKAN: Menambahkan ...props agar atribut seperti form="create-form" bisa masuk ke tag <button>
+const BtnPrimary = ({ children, disabled, style = {}, ...props }) => (
     <button
         type="submit"
         disabled={disabled}
@@ -186,6 +186,7 @@ const BtnPrimary = ({ children, disabled, style = {} }) => (
         }}
         onMouseEnter={e => { if (!disabled) e.target.style.background = '#0f2444'; }}
         onMouseLeave={e => { if (!disabled) e.target.style.background = style.background || '#1a3560'; }}
+        {...props}
     >
         {children}
     </button>
@@ -380,7 +381,8 @@ export default function UserIndex({ users, roles, filters }) {
                 footer={
                     <>
                         <BtnGhost onClick={() => setIsCreateOpen(false)}>Batal</BtnGhost>
-                        <BtnPrimary disabled={processing} style={{ background: '#f97316' }}
+                        {/* PERBAIKAN: Tambahkan atribut form="create-form" untuk mengikat tombol dengan form */}
+                        <BtnPrimary form="create-form" disabled={processing} style={{ background: '#f97316' }}
                             onMouseEnter={e => { if (!processing) e.target.style.background = '#ea6c0a'; }}
                             onMouseLeave={e => { if (!processing) e.target.style.background = '#f97316'; }}
                         >
@@ -429,7 +431,7 @@ export default function UserIndex({ users, roles, filters }) {
                         </Select>
                         <InputError message={errors.role} className="mt-1" />
                     </div>
-                    {/* invisible submit for modal footer button */}
+                    {/* Invisible submit button (bisa tetap ada agar user bisa menekan Enter) */}
                     <button type="submit" style={{ display: 'none' }} />
                 </form>
             </Modal>
@@ -442,11 +444,15 @@ export default function UserIndex({ users, roles, filters }) {
                 footer={
                     <>
                         <BtnGhost onClick={() => setIsEditOpen(false)}>Batal</BtnGhost>
-                        <BtnPrimary disabled={processing}>{processing ? 'Memperbarui...' : 'Perbarui'}</BtnPrimary>
+                        {/* PERBAIKAN: Menambahkan atribut form="edit-form" */}
+                        <BtnPrimary form="edit-form" disabled={processing}>
+                            {processing ? 'Memperbarui...' : 'Perbarui'}
+                        </BtnPrimary>
                     </>
                 }
             >
-                <form onSubmit={handleEdit} className="space-y-4">
+                {/* PERBAIKAN: Menambahkan id="edit-form" */}
+                <form id="edit-form" onSubmit={handleEdit} className="space-y-4">
                     <div>
                         <FieldLabel>Nama Lengkap</FieldLabel>
                         <input style={fieldBase} placeholder="Nama Lengkap" value={data.name}
@@ -471,9 +477,7 @@ export default function UserIndex({ users, roles, filters }) {
                         </Select>
                         <InputError message={errors.role} className="mt-1" />
                     </div>
-                    <BtnPrimary disabled={processing} style={{ width: '100%', marginTop: '4px' }}>
-                        {processing ? 'Memperbarui...' : 'Simpan Perubahan'}
-                    </BtnPrimary>
+                    <button type="submit" style={{ display: 'none' }} />
                 </form>
             </Modal>
 

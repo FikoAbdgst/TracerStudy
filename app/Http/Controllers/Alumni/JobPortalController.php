@@ -9,22 +9,21 @@ use App\Notifications\SystemNotification;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class JobPortalController extends Controller
 {
     // Fitur 3: Melihat Lowongan (Bursa Kerja)
     public function index()
     {
-        // 1. Tarik lowongan yang aktif DAN perusahaannya sudah diverifikasi kampus
+        // PERBAIKAN: Menghapus aturan query whereHas verification_status
+        // Agar lowongan tetap muncul selama perusahaan mengaturnya sebagai aktif (is_active = true)
         $jobs = JobPosting::with('company')
             ->where('is_active', true)
-            ->whereHas('company', function ($query) {
-                $query->where('verification_status', 'verified');
-            })
             ->latest()
             ->get();
 
-        // 2. Cek lowongan mana saja yang sudah dilamar oleh alumni ini
+        // Cek lowongan mana saja yang sudah dilamar oleh alumni ini
         $alumniProfile = Auth::user()->alumniProfile;
         $appliedJobIds = $alumniProfile
             ? JobApplication::where('alumni_id', $alumniProfile->id)->pluck('job_posting_id')->toArray()
@@ -65,7 +64,7 @@ class JobPortalController extends Controller
             'status' => 'pending',
         ]);
 
-        // --- NEW: SEND NOTIFICATION TO COMPANY HR ---
+        // Kirim Notifikasi
         if ($job->company && $job->company->user) {
             $hrdUser = $job->company->user;
             $hrdUser->notify(new SystemNotification(
@@ -76,6 +75,44 @@ class JobPortalController extends Controller
         }
 
         return back()->with('message', 'Lamaran dan CV Anda berhasil dikirim!');
+    }
+    // TAMBAHKAN METODE INI
+    public function updateCv(Request $request, JobPosting $job)
+    {
+        $alumniProfile = Auth::user()->alumniProfile;
+
+        if (!$alumniProfile) {
+            return back()->with('error', 'Profil alumni tidak ditemukan.');
+        }
+
+        $request->validate([
+            'cv_file' => 'required|file|mimes:pdf|max:5120',
+        ]);
+
+        // Cari lamaran yang sudah ada
+        $application = JobApplication::where('job_posting_id', $job->id)
+            ->where('alumni_id', $alumniProfile->id)
+            ->first();
+
+        if (!$application) {
+            return back()->with('error', 'Anda belum melamar untuk lowongan ini.');
+        }
+
+        // Hapus file CV lama dari storage (agar penyimpanan tidak penuh)
+        if ($application->cv_path && Storage::disk('public')->exists($application->cv_path)) {
+            Storage::disk('public')->delete($application->cv_path);
+        }
+
+        // Simpan file CV baru
+        $path = $request->file('cv_file')->store('cv_documents', 'public');
+
+        // Update database (Opsional: status diubah lagi ke 'pending' jika Anda ingin HRD tahu ada update)
+        $application->update([
+            'cv_path' => $path,
+            'status' => 'pending',
+        ]);
+
+        return back()->with('message', 'File CV Anda berhasil diperbarui!');
     }
 
     // Fitur 5: Melihat Status Lamaran
@@ -88,7 +125,6 @@ class JobPortalController extends Controller
                 ->with('message', 'Silakan lengkapi profil terlebih dahulu.');
         }
 
-        // Tarik riwayat lamaran alumni beserta data lowongan dan perusahaannya
         $applications = JobApplication::with(['jobPosting.company'])
             ->where('alumni_id', $alumniProfile->id)
             ->latest()

@@ -22,8 +22,9 @@ class TracerStudyController extends Controller
                 ->with('message', 'Silakan lengkapi profil Anda terlebih dahulu sebelum mengisi kuesioner.');
         }
 
-        // Ambil semua form kuesioner yang sedang aktif
-        $forms = TracerStudyForm::where('is_active', true)->latest()->get();
+        // PERBAIKAN: Hapus filter where('is_active', true) sementara waktu
+        // Agar form yang baru dibuat admin langsung bisa dites dan muncul di alumni
+        $forms = TracerStudyForm::latest()->get();
 
         // Cek kuesioner mana saja yang sudah pernah diisi oleh alumni ini
         $respondedFormIds = TracerStudyResponse::where('alumni_id', $alumniProfile->id)
@@ -38,16 +39,27 @@ class TracerStudyController extends Controller
 
     public function show(TracerStudyForm $kuesioner)
     {
-        if (!$kuesioner->is_active) {
-            abort(404, 'Kuesioner tidak aktif atau sudah ditutup.');
+        // Ambil ID profil alumni yang sedang login
+        $alumniId = Auth::user()->alumniProfile->id;
+
+        // Cari di database apakah alumni ini sudah pernah men-submit jawaban untuk kuesioner ini
+        $response = TracerStudyResponse::where('tracer_study_form_id', $kuesioner->id)
+            ->where('alumni_id', $alumniId)
+            ->first();
+
+        // Pastikan format jawabannya berupa array agar bisa dibaca React
+        $existingAnswers = null;
+        if ($response) {
+            $existingAnswers = is_string($response->answers) ? json_decode($response->answers, true) : $response->answers;
         }
 
-        // Tarik data Sektor Industri untuk form builder yang butuh opsi dinamis
         $industries = IndustrySektor::select('id', 'name')->get();
 
         return Inertia::render('Alumni/Kuesioner/Show', [
             'tracerForm' => $kuesioner,
             'industries' => $industries,
+            // WAJIB DITAMBAHKAN: Kirim jawaban lama ke Frontend
+            'existingResponse' => $existingAnswers
         ]);
     }
 
@@ -56,15 +68,24 @@ class TracerStudyController extends Controller
         $alumniId = Auth::user()->alumniProfile->id;
 
         $validated = $request->validate([
-            'answers' => 'required|array', // Validasi jawaban dalam bentuk array
+            'answers' => 'required|array',
         ]);
 
-        // Simpan jawaban. updateOrCreate mencegah alumni submit 2 kali untuk form yang sama
         TracerStudyResponse::updateOrCreate(
             ['tracer_study_form_id' => $kuesioner->id, 'alumni_id' => $alumniId],
             ['answers' => $validated['answers']]
         );
 
         return redirect()->route('alumni.kuesioner')->with('message', 'Terima kasih telah berpartisipasi mengisi kuesioner Tracer Study!');
+    }
+    public function destroyResponse(TracerStudyForm $kuesioner)
+    {
+        $alumniId = Auth::user()->alumniProfile->id;
+
+        TracerStudyResponse::where('tracer_study_form_id', $kuesioner->id)
+            ->where('alumni_id', $alumniId)
+            ->delete();
+
+        return redirect()->route('alumni.kuesioner')->with('message', 'Jawaban kuesioner berhasil dihapus.');
     }
 }

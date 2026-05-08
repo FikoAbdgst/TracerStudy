@@ -14,7 +14,18 @@ use Spatie\Permission\Traits\HasRoles;
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable, HasRoles; // Tambahkan HasRoles di sini
+    use HasFactory, Notifiable, HasRoles; // 2. WAJIB TAMBAHKAN 'HasRoles' DI SINI
+
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var array<int, string>
+     */
+    protected $fillable = [
+        'name',
+        'email',
+        'password',
+    ];
 
     protected function casts(): array
     {

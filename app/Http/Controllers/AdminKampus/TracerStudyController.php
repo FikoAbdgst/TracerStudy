@@ -4,6 +4,7 @@ namespace App\Http\Controllers\AdminKampus;
 
 use App\Http\Controllers\Controller;
 use App\Models\TracerStudyForm;
+use App\Models\TracerStudyResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -52,5 +53,18 @@ class TracerStudyController extends Controller
         // Fitur untuk mengaktifkan/menonaktifkan kuesioner
         $tracer->update(['is_active' => !$tracer->is_active]);
         return back()->with('message', 'Status kuesioner diubah.');
+    }
+    public function responses(TracerStudyForm $tracer)
+    {
+        // Ambil semua jawaban untuk form ini, beserta relasi data alumni dan usernya
+        $responses = TracerStudyResponse::with('alumni.user')
+            ->where('tracer_study_form_id', $tracer->id)
+            ->latest()
+            ->get();
+
+        return Inertia::render('AdminKampus/TracerStudy/Responses', [
+            'tracer' => $tracer,
+            'responses' => $responses
+        ]);
     }
 }

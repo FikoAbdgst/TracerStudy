@@ -39,7 +39,7 @@ export default function KuesionerIndex({ forms, respondedFormIds, flash }) {
                 @keyframes cardIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
                 @keyframes fadeIn { from{opacity:0} to{opacity:1} }
                 .ks-card { transition:all 0.2s ease; }
-                .ks-card:hover:not(.done) { transform:translateY(-3px); box-shadow:0 12px 32px rgba(15,31,61,0.1); }
+                .ks-card:hover { transform:translateY(-3px); box-shadow:0 12px 32px rgba(15,31,61,0.1) !important; }
             `}</style>
 
             <div className="al-root">
@@ -77,7 +77,7 @@ export default function KuesionerIndex({ forms, respondedFormIds, flash }) {
                                     background: '#fff', borderRadius: 14,
                                     border: `1px solid ${isDone ? '#bbf7d0' : T.borderSoft}`,
                                     padding: '20px', display: 'flex', flexDirection: 'column',
-                                    opacity: isDone ? 0.8 : 1,
+                                    opacity: isDone ? 0.9 : 1,
                                     boxShadow: isDone ? 'none' : '0 2px 8px rgba(15,31,61,0.05)',
                                     animation: `cardIn 0.38s ${i * 0.07}s cubic-bezier(0.22,1,0.36,1) both`,
                                     position: 'relative', overflow: 'hidden',
@@ -110,10 +110,22 @@ export default function KuesionerIndex({ forms, respondedFormIds, flash }) {
                                         <span style={{ fontSize: 12, color: T.muted }}>
                                             {form.questions?.length || 0} pertanyaan
                                         </span>
+
+                                        {/* PERBAIKAN: Tombol isDone (Sudah Selesai) sekarang bisa diklik untuk edit/lihat */}
                                         {isDone ? (
-                                            <button disabled style={{ height: 36, padding: '0 16px', borderRadius: 8, border: `1.5px solid #bbf7d0`, background: T.greenLight, color: T.green, fontSize: 12, fontWeight: 700, cursor: 'not-allowed', fontFamily: 'inherit' }}>
-                                                Sudah Berpartisipasi
-                                            </button>
+                                            <Link href={route('alumni.kuesioner.show', form.id)}>
+                                                <button style={{
+                                                    height: 36, padding: '0 16px', borderRadius: 8,
+                                                    border: `1.5px solid #bbf7d0`, background: T.greenLight,
+                                                    color: T.green, fontSize: 12, fontWeight: 700,
+                                                    cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s'
+                                                }}
+                                                    onMouseEnter={e => e.currentTarget.style.background = '#dcfce7'}
+                                                    onMouseLeave={e => e.currentTarget.style.background = T.greenLight}
+                                                >
+                                                    Lihat Jawaban
+                                                </button>
+                                            </Link>
                                         ) : (
                                             <Link href={route('alumni.kuesioner.show', form.id)}>
                                                 <button style={{

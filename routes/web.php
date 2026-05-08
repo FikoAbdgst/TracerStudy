@@ -86,6 +86,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('/tracer-study/{tracer}', [TracerStudyController::class, 'update'])->name('tracer.update');
         Route::delete('/tracer-study/{tracer}', [TracerStudyController::class, 'destroy'])->name('tracer.destroy');
         Route::patch('/tracer-study/{tracer}/toggle', [TracerStudyController::class, 'toggleActive'])->name('tracer.toggle');
+        Route::get('/tracer-study/{tracer}/responses', [TracerStudyController::class, 'responses'])->name('tracer.responses');
 
         Route::get('/verifikasi-pt', [VerifyCompanyController::class, 'index'])->name('verify-pt');
         Route::patch('/verifikasi-pt/{company}/status', [VerifyCompanyController::class, 'updateStatus'])->name('verify-pt.status');
@@ -132,10 +133,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/kuesioner', [AlumniTracerController::class, 'index'])->name('kuesioner');
         Route::get('/kuesioner/{kuesioner}', [AlumniTracerController::class, 'show'])->name('kuesioner.show');
         Route::post('/kuesioner/{kuesioner}', [AlumniTracerController::class, 'store'])->name('kuesioner.store');
+        Route::delete('/kuesioner/{kuesioner}/response', [AlumniTracerController::class, 'destroyResponse'])->name('kuesioner.destroy-response');
 
         // 4. Bursa Kerja (Loker) & Lamaran
         Route::get('/loker', [JobPortalController::class, 'index'])->name('loker');
         Route::post('/loker/{job}/apply', [JobPortalController::class, 'apply'])->name('loker.apply');
+        Route::post('/loker/{job}/update-cv', [JobPortalController::class, 'updateCv'])->name('loker.update-cv');
+
         Route::get('/lamaran', [JobPortalController::class, 'applications'])->name('lamaran');
 
         // 5. Forum Diskusi

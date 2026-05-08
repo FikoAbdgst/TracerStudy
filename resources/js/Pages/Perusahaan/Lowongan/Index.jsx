@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Head, useForm, router } from '@inertiajs/react';
+import { Head, useForm, router, usePage } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Switch } from '@/Components/ui/switch';
 import InputError from '@/Components/InputError';
@@ -14,7 +14,7 @@ const T = {
     red: '#dc2626', redLight: '#fff1f2',
 };
 
-/* ─── Modal (sama persis dengan admin kampus) ────────────────────────────── */
+/* ─── Modal ──────────────────────────────────────────────────────────────── */
 function Modal({ open, onClose, title, children, footer, wide = false }) {
     const [visible, setVisible] = React.useState(false);
     const [render, setRender] = React.useState(false);
@@ -76,7 +76,8 @@ const FieldLabel = ({ children, required }) => (
 );
 
 /* ─── Main ───────────────────────────────────────────────────────────────── */
-export default function LowonganIndex({ jobs }) {
+export default function LowonganIndex({ jobs, isVerified, verificationStatus }) {
+    const { flash } = usePage().props;
     const [modalOpen, setModalOpen] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [selectedJob, setSelectedJob] = useState(null);
@@ -97,13 +98,20 @@ export default function LowonganIndex({ jobs }) {
         setData({ title: job.title, location: job.location || '', salary_range: job.salary_range || '', description: job.description, requirements: job.requirements || '' });
         setIsEditing(true); setModalOpen(true);
     };
+
     const handleSubmit = e => {
         e.preventDefault();
         if (isEditing) put(route('perusahaan.lowongan.update', selectedJob.id), { onSuccess: () => setModalOpen(false) });
         else post(route('perusahaan.lowongan.store'), { onSuccess: () => setModalOpen(false) });
     };
+
     const handleDelete = id => { if (confirm('Yakin ingin menghapus lowongan ini?')) destroy(route('perusahaan.lowongan.destroy', id)); };
-    const toggleActive = id => router.patch(route('perusahaan.lowongan.toggle', id), {}, { preserveScroll: true });
+
+    // Matikan kemampuan toggle jika akun tidak terverifikasi
+    const toggleActive = id => {
+        if (!isVerified) return;
+        router.patch(route('perusahaan.lowongan.toggle', id), {}, { preserveScroll: true });
+    };
 
     const activeCount = jobs.filter(j => j.is_active).length;
 
@@ -127,6 +135,31 @@ export default function LowonganIndex({ jobs }) {
             `}</style>
 
             <div className="ak-root">
+                {/* ── Flash Notifikasi ── */}
+                {(flash?.message || flash?.error) && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 18px', borderRadius: 12, marginBottom: 16, background: flash.error ? T.redLight : T.greenLight, border: `1px solid ${flash.error ? '#fecaca' : '#bbf7d0'}` }}>
+                        <div style={{ fontSize: 16 }}>{flash.error ? '⚠️' : '✅'}</div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: flash.error ? T.red : T.green }}>{flash.message || flash.error}</div>
+                    </div>
+                )}
+
+                {/* ── BANNER PERINGATAN JIKA BELUM TERVERIFIKASI ── */}
+                {!isVerified && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 18px', borderRadius: 12, marginBottom: 20, background: verificationStatus === 'rejected' ? T.redLight : T.orangeLight, border: `1px solid ${verificationStatus === 'rejected' ? '#fecaca' : '#fed7aa'}` }}>
+                        <div style={{ fontSize: 24 }}>{verificationStatus === 'rejected' ? '❌' : '⏳'}</div>
+                        <div>
+                            <div style={{ fontSize: 14, fontWeight: 700, color: verificationStatus === 'rejected' ? T.red : '#92400e' }}>
+                                {verificationStatus === 'rejected' ? 'Izin Posting Ditolak/Dicabut' : 'Menunggu Verifikasi Admin Kampus'}
+                            </div>
+                            <div style={{ fontSize: 12.5, color: verificationStatus === 'rejected' ? T.red : '#b45309', marginTop: 2 }}>
+                                {verificationStatus === 'rejected'
+                                    ? 'Admin Kampus mencabut izin akses Anda. Semua lowongan Anda dinonaktifkan dari bursa kerja alumni.'
+                                    : 'Anda belum bisa memposting lowongan kerja sebelum Admin Kampus menyetujui profil dan legalitas perusahaan Anda.'}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 <div style={{ background: '#fff', borderRadius: 14, border: `1px solid ${T.borderSoft}`, padding: 20, animation: 'cardIn 0.38s cubic-bezier(0.22,1,0.36,1) both' }}>
 
                     {/* Header Bar */}
@@ -141,6 +174,7 @@ export default function LowonganIndex({ jobs }) {
                                 </div>
                             )}
                         </div>
+
                         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
                             <div style={{ position: 'relative' }}>
                                 <svg style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: '#b0bec5' }} width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -149,15 +183,20 @@ export default function LowonganIndex({ jobs }) {
                                 <input style={{ ...fieldBase, paddingLeft: 33, width: 220 }} placeholder="Cari posisi atau lokasi..."
                                     value={q} onChange={e => setQ(e.target.value)} onFocus={onFocus} onBlur={onBlur} />
                             </div>
-                            <button onClick={openCreate} style={{
-                                height: 42, padding: '0 16px', borderRadius: 9, border: 'none',
-                                background: T.orange, color: '#fff', fontSize: 13, fontWeight: 700,
-                                cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s',
-                                display: 'flex', alignItems: 'center', gap: 6,
-                                boxShadow: '0 2px 10px rgba(249,115,22,0.28)', whiteSpace: 'nowrap',
-                            }}
-                                onMouseEnter={e => { e.currentTarget.style.background = '#ea6c0a'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
-                                onMouseLeave={e => { e.currentTarget.style.background = T.orange; e.currentTarget.style.transform = 'none'; }}
+
+                            {/* ── TOMBOL POSTING: DISABLED JIKA BELUM VERIFIED ── */}
+                            <button
+                                onClick={() => isVerified && openCreate()}
+                                disabled={!isVerified}
+                                style={{
+                                    height: 42, padding: '0 16px', borderRadius: 9, border: 'none',
+                                    background: isVerified ? T.orange : T.muted, color: '#fff', fontSize: 13, fontWeight: 700,
+                                    cursor: isVerified ? 'pointer' : 'not-allowed', fontFamily: 'inherit', transition: 'all 0.15s',
+                                    display: 'flex', alignItems: 'center', gap: 6,
+                                    boxShadow: isVerified ? '0 2px 10px rgba(249,115,22,0.28)' : 'none', whiteSpace: 'nowrap',
+                                }}
+                                onMouseEnter={e => { if (isVerified) { e.currentTarget.style.background = '#ea6c0a'; e.currentTarget.style.transform = 'translateY(-1px)'; } }}
+                                onMouseLeave={e => { if (isVerified) { e.currentTarget.style.background = T.orange; e.currentTarget.style.transform = 'none'; } }}
                             >
                                 <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
                                 Posting Lowongan
@@ -192,7 +231,11 @@ export default function LowonganIndex({ jobs }) {
                                         <td style={{ padding: '13px 14px', fontSize: 13, color: T.mutedDark }}>{job.salary_range || '—'}</td>
                                         <td style={{ padding: '13px 14px' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                                <Switch checked={job.is_active} onCheckedChange={() => toggleActive(job.id)} />
+                                                <Switch
+                                                    checked={job.is_active}
+                                                    onCheckedChange={() => toggleActive(job.id)}
+                                                    disabled={!isVerified} // Disable toggle jika izin dicabut
+                                                />
                                                 <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20, background: job.is_active ? T.greenLight : T.borderSoft, color: job.is_active ? T.green : T.mutedDark }}>
                                                     {job.is_active ? 'Dibuka' : 'Ditutup'}
                                                 </span>
@@ -200,20 +243,31 @@ export default function LowonganIndex({ jobs }) {
                                         </td>
                                         <td style={{ padding: '13px 14px', textAlign: 'right' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
-                                                <button onClick={() => openEdit(job)} style={{
-                                                    height: 30, padding: '0 12px', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.14s',
-                                                    border: `1.5px solid ${T.border}`, background: T.bg, color: T.navyMid,
-                                                }}
-                                                    onMouseEnter={e => { e.currentTarget.style.borderColor = T.navyMid; e.currentTarget.style.background = T.navyLight; }}
-                                                    onMouseLeave={e => { e.currentTarget.style.borderColor = T.border; e.currentTarget.style.background = T.bg; }}
-                                                >Edit</button>
+                                                {/* Edit Button - Hanya Aktif Jika Terverifikasi */}
+                                                <button
+                                                    onClick={() => isVerified && openEdit(job)}
+                                                    disabled={!isVerified}
+                                                    style={{
+                                                        height: 30, padding: '0 12px', borderRadius: 7, fontSize: 12, fontWeight: 600,
+                                                        cursor: isVerified ? 'pointer' : 'not-allowed', fontFamily: 'inherit', transition: 'all 0.14s',
+                                                        border: `1.5px solid ${isVerified ? T.border : 'transparent'}`,
+                                                        background: isVerified ? T.bg : T.borderSoft,
+                                                        color: isVerified ? T.navyMid : T.muted,
+                                                    }}
+                                                    onMouseEnter={e => { if (isVerified) { e.currentTarget.style.borderColor = T.navyMid; e.currentTarget.style.background = T.navyLight; } }}
+                                                    onMouseLeave={e => { if (isVerified) { e.currentTarget.style.borderColor = T.border; e.currentTarget.style.background = T.bg; } }}
+                                                >
+                                                    Edit
+                                                </button>
                                                 <button onClick={() => handleDelete(job.id)} style={{
                                                     height: 30, padding: '0 12px', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.14s',
                                                     border: `1.5px solid #fecaca`, background: T.redLight, color: T.red,
                                                 }}
                                                     onMouseEnter={e => e.currentTarget.style.background = '#fee2e2'}
                                                     onMouseLeave={e => e.currentTarget.style.background = T.redLight}
-                                                >Hapus</button>
+                                                >
+                                                    Hapus
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>

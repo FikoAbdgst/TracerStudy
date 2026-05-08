@@ -28,7 +28,6 @@ function Modal({ open, onClose, title, children, footer }) {
             display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
             opacity: visible ? 1 : 0, transition: 'opacity 0.25s ease',
         }}>
-            {/* Blur backdrop - separate div so it doesn't create stacking context for the flex layer */}
             <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(10,20,40,0.45)', backdropFilter: 'blur(3px)', cursor: 'default' }} />
             <div style={{
                 position: 'relative',
@@ -64,10 +63,12 @@ const BtnGhost = ({ children, onClick }) => (
     >{children}</button>
 );
 
-const BtnPrimary = ({ children, disabled, color = T.navyMid }) => (
+// PERBAIKAN PENTING: Tambahkan `...props` untuk meneruskan properti seperti `form="status-form"`
+const BtnPrimary = ({ children, disabled, color = T.navyMid, ...props }) => (
     <button type="submit" disabled={disabled} style={{ height: 36, padding: '0 18px', borderRadius: 8, border: 'none', background: disabled ? T.muted : color, color: '#fff', fontSize: 13, fontWeight: 700, cursor: disabled ? 'not-allowed' : 'pointer', fontFamily: 'inherit', transition: 'all 0.15s', boxShadow: disabled ? 'none' : `0 2px 8px ${color}44` }}
         onMouseEnter={e => { if (!disabled) { e.currentTarget.style.filter = 'brightness(0.88)'; e.currentTarget.style.transform = 'translateY(-1px)'; } }}
         onMouseLeave={e => { e.currentTarget.style.filter = 'none'; e.currentTarget.style.transform = 'none'; }}
+        {...props}
     >{children}</button>
 );
 
@@ -120,7 +121,6 @@ export default function VerifyPTIndex({ companies }) {
 
             <style>{`
                 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-                /* Radix portal z-index fix - must be above modal overlay */
                 [data-radix-popper-content-wrapper] { z-index: 99999 !important; }
 
                 .ak-root * { font-family:'Plus Jakarta Sans',sans-serif; }
@@ -212,11 +212,12 @@ export default function VerifyPTIndex({ companies }) {
             <Modal open={!!selected} onClose={() => setSelected(null)} title="Tinjau Perusahaan"
                 footer={<>
                     <BtnGhost onClick={() => setSelected(null)}>Batal</BtnGhost>
-                    <BtnPrimary disabled={processing}>{processing ? 'Menyimpan...' : 'Simpan Status'}</BtnPrimary>
+                    {/* PERBAIKAN: Ikat tombol ini dengan ID form agar bisa di-submit */}
+                    <BtnPrimary form="status-form" disabled={processing}>{processing ? 'Menyimpan...' : 'Simpan Status'}</BtnPrimary>
                 </>}
             >
                 {selected && (
-                    <form onSubmit={submitStatus} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                    <form id="status-form" onSubmit={submitStatus} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                         {/* Company info card */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderRadius: 10, background: T.bg, border: `1px solid ${T.borderSoft}` }}>
                             <div style={{ width: 44, height: 44, borderRadius: 10, background: T.navyLight, color: T.navyMid, fontSize: 18, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -253,6 +254,8 @@ export default function VerifyPTIndex({ companies }) {
                                 </SelectContent>
                             </Select>
                         </div>
+                        {/* Tombol submit tak terlihat agar user bisa menekan Enter */}
+                        <button type="submit" style={{ display: 'none' }} />
                     </form>
                 )}
             </Modal>

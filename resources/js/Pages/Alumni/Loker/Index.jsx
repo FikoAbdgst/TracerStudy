@@ -68,6 +68,7 @@ export default function LokerIndex({ jobs, appliedJobIds }) {
     const [searchQuery, setSearchQuery] = useState('');
     const [modalOpen, setModalOpen] = useState(false);
     const [selectedJob, setSelectedJob] = useState(null);
+    const [isUpdatingCV, setIsUpdatingCV] = useState(false); // State untuk mengecek apakah ini update atau apply baru
 
     const { data, setData, post, processing, errors, reset, clearErrors } = useForm({ cv_file: null });
 
@@ -77,10 +78,20 @@ export default function LokerIndex({ jobs, appliedJobIds }) {
         (job.location && job.location.toLowerCase().includes(searchQuery.toLowerCase()))
     );
 
-    const openApply = job => { reset(); clearErrors(); setSelectedJob(job); setModalOpen(true); };
+    const openApply = (job, isUpdate = false) => {
+        reset();
+        clearErrors();
+        setSelectedJob(job);
+        setIsUpdatingCV(isUpdate);
+        setModalOpen(true);
+    };
+
     const handleApply = e => {
         e.preventDefault();
-        post(route('alumni.loker.apply', selectedJob.id), { onSuccess: () => setModalOpen(false) });
+        // Arahkan rute secara dinamis (Lamar Baru vs Update CV)
+        const routeName = isUpdatingCV ? 'alumni.loker.update-cv' : 'alumni.loker.apply';
+
+        post(route(routeName, selectedJob.id), { onSuccess: () => setModalOpen(false) });
     };
 
     return (
@@ -176,22 +187,26 @@ export default function LokerIndex({ jobs, appliedJobIds }) {
                                     )}
                                 </div>
 
-                                {/* Footer */}
+                                {/* Footer Button (Diubah agar selalu bisa diklik) */}
                                 <button
-                                    disabled={isApplied}
-                                    onClick={() => !isApplied && openApply(job)}
+                                    onClick={() => openApply(job, isApplied)} // <--- Kirim parameter isUpdate = true jika isApplied
                                     style={{
                                         height: 38, borderRadius: 9, border: 'none', width: '100%',
-                                        fontSize: 13, fontWeight: 700, cursor: isApplied ? 'default' : 'pointer',
+                                        fontSize: 13, fontWeight: 700, cursor: 'pointer',
                                         fontFamily: 'inherit', transition: 'all 0.15s',
                                         background: isApplied ? T.greenLight : T.orange,
                                         color: isApplied ? T.green : '#fff',
                                         boxShadow: isApplied ? 'none' : '0 2px 8px rgba(249,115,22,0.25)',
                                     }}
-                                    onMouseEnter={e => { if (!isApplied) { e.currentTarget.style.background = '#ea6c0a'; e.currentTarget.style.transform = 'translateY(-1px)'; } }}
-                                    onMouseLeave={e => { e.currentTarget.style.background = isApplied ? T.greenLight : T.orange; e.currentTarget.style.transform = 'none'; }}
+                                    onMouseEnter={e => {
+                                        if (!isApplied) { e.currentTarget.style.background = '#ea6c0a'; e.currentTarget.style.transform = 'translateY(-1px)'; }
+                                        else { e.currentTarget.style.background = '#dcfce7'; e.currentTarget.style.transform = 'translateY(-1px)'; }
+                                    }}
+                                    onMouseLeave={e => {
+                                        e.currentTarget.style.background = isApplied ? T.greenLight : T.orange; e.currentTarget.style.transform = 'none';
+                                    }}
                                 >
-                                    {isApplied ? '✓ Menunggu Review HRD' : 'Lamar Pekerjaan'}
+                                    {isApplied ? '✓ Terkirim (Ubah CV)' : 'Lamar Pekerjaan'}
                                 </button>
                             </div>
                         );
@@ -207,21 +222,21 @@ export default function LokerIndex({ jobs, appliedJobIds }) {
                 )}
             </div>
 
-            {/* Modal Lamar */}
+            {/* Modal Lamar / Update CV */}
             <Modal open={modalOpen} onClose={() => setModalOpen(false)}
-                title={`Lamar: ${selectedJob?.title}`}
+                title={isUpdatingCV ? `Perbarui CV: ${selectedJob?.title}` : `Lamar: ${selectedJob?.title}`}
                 subtitle={`${selectedJob?.company?.name} akan meninjau dokumen yang Anda lampirkan.`}
                 footer={<>
                     <BtnGhost onClick={() => setModalOpen(false)}>Batal</BtnGhost>
                     <button type="submit" form="apply-form" disabled={processing || !data.cv_file} style={{
                         height: 36, padding: '0 18px', borderRadius: 8, border: 'none',
-                        background: (processing || !data.cv_file) ? T.muted : T.orange,
+                        background: (processing || !data.cv_file) ? T.muted : (isUpdatingCV ? T.green : T.orange),
                         color: '#fff', fontSize: 13, fontWeight: 700,
                         cursor: (processing || !data.cv_file) ? 'not-allowed' : 'pointer',
                         fontFamily: 'inherit', boxShadow: (processing || !data.cv_file) ? 'none' : '0 2px 8px rgba(249,115,22,0.3)',
                         transition: 'all 0.15s',
                     }}>
-                        {processing ? 'Mengirim...' : 'Kirim Lamaran'}
+                        {processing ? 'Mengirim...' : (isUpdatingCV ? 'Perbarui CV' : 'Kirim Lamaran')}
                     </button>
                 </>}
             >
@@ -236,6 +251,12 @@ export default function LokerIndex({ jobs, appliedJobIds }) {
                             <div style={{ fontSize: 11.5, color: T.muted }}>{selectedJob?.company?.name}</div>
                         </div>
                     </div>
+
+                    {isUpdatingCV && (
+                        <div style={{ marginBottom: 16, padding: '10px 12px', background: T.orangeLight, borderRadius: 8, border: '1px solid #fed7aa', fontSize: 12.5, color: '#9a3412', display: 'flex', gap: 8 }}>
+                            <span style={{ fontSize: 16 }}>⚠️</span> File CV Anda sebelumnya akan ditimpa dengan file yang baru Anda unggah.
+                        </div>
+                    )}
 
                     <div>
                         <label style={{ display: 'block', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#374151', marginBottom: 6 }}>
@@ -260,7 +281,7 @@ export default function LokerIndex({ jobs, appliedJobIds }) {
                             ) : (
                                 <>
                                     <div style={{ fontSize: 22 }}>📎</div>
-                                    <div style={{ fontSize: 12.5, fontWeight: 600, color: T.mutedDark }}>Klik untuk upload CV</div>
+                                    <div style={{ fontSize: 12.5, fontWeight: 600, color: T.mutedDark }}>Klik untuk upload CV Baru</div>
                                     <div style={{ fontSize: 11, color: T.muted }}>Format PDF, maks. 5MB</div>
                                 </>
                             )}

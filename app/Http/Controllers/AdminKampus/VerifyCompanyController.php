@@ -4,6 +4,7 @@ namespace App\Http\Controllers\AdminKampus;
 
 use App\Http\Controllers\Controller;
 use App\Models\Company;
+use App\Models\JobPosting; // Pastikan Model JobPosting di-import
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -11,7 +12,6 @@ class VerifyCompanyController extends Controller
 {
     public function index()
     {
-        // Tarik semua data perusahaan, urutkan dari yang pending (belum diverifikasi)
         $companies = Company::with('user')
             ->orderByRaw("CASE WHEN verification_status = 'pending' THEN 1 ELSE 2 END")
             ->latest()
@@ -28,12 +28,16 @@ class VerifyCompanyController extends Controller
             'verification_status' => 'required|in:pending,verified,rejected',
         ]);
 
-        // Jika diverifikasi, catat tanggalnya
         if ($validated['verification_status'] === 'verified' && $company->verification_status !== 'verified') {
             $validated['verified_at'] = now();
         }
 
         $company->update($validated);
+
+        // REVISI LOGIKA: Jika status diubah menjadi Ditolak / Pending, matikan semua lowongannya
+        if ($validated['verification_status'] !== 'verified') {
+            JobPosting::where('company_id', $company->id)->update(['is_active' => false]);
+        }
 
         return back()->with('message', 'Status verifikasi perusahaan berhasil diubah.');
     }

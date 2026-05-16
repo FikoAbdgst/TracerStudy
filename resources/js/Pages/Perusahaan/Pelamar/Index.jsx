@@ -43,11 +43,12 @@ const InfoRow = ({ label, value }) => (
 export default function PelamarIndex({ applications }) {
     const [activeJobId, setActiveJobId] = useState(null);
     const [activeAppId, setActiveAppId] = useState(null);
-    const [searchQuery, setSearchQuery] = useState(''); // State pencarian/filter skill
+    const [searchQuery, setSearchQuery] = useState('');
+    const [selectedSkillFilter, setSelectedSkillFilter] = useState('');
+    const [sortBy, setSortBy] = useState('match_score'); // State baru untuk Sorting ATS
 
     const { data, setData, patch, processing } = useForm({ status: '', notes: '' });
 
-    // Grouping aplikasi berdasarkan Job Posting
     const groupedJobs = useMemo(() => {
         const groups = {};
         applications.forEach(app => {
@@ -58,7 +59,7 @@ export default function PelamarIndex({ applications }) {
                     title: app.job_posting.title,
                     location: app.job_posting.location,
                     salary_range: app.job_posting.salary_range,
-                    requirements: app.job_posting.requirements, // <-- Ambil data requirements
+                    requirements: app.job_posting.requirements || [],
                     applications: []
                 };
             }
@@ -69,22 +70,47 @@ export default function PelamarIndex({ applications }) {
 
     const activeJob = groupedJobs.find(j => j.id === activeJobId);
 
-    // Filter Pelamar Aktif berdasarkan Nama ATAU Skills
+    // Filter & Sort Engine Terintegrasi
     const filteredApps = useMemo(() => {
         if (!activeJob) return [];
-        if (!searchQuery) return activeJob.applications;
+        let result = [...activeJob.applications];
 
-        return activeJob.applications.filter(app => {
+        // 1. Proses Filter (Keahlian)
+        if (selectedSkillFilter && selectedSkillFilter !== 'all') {
+            result = result.filter(app => {
+                const alumniSkills = app.alumni?.skills || [];
+                return alumniSkills.includes(selectedSkillFilter);
+            });
+        }
+
+        // 2. Proses Pencarian (Nama / Skill)
+        if (searchQuery) {
             const q = searchQuery.toLowerCase();
-            const nameMatch = app.alumni?.user?.name?.toLowerCase().includes(q);
-            const skillsMatch = app.alumni?.skills?.toLowerCase().includes(q);
-            return nameMatch || skillsMatch;
-        });
-    }, [activeJob, searchQuery]);
+            result = result.filter(app => {
+                const nameMatch = app.alumni?.user?.name?.toLowerCase().includes(q);
+                const alumniSkills = Array.isArray(app.alumni?.skills) ? app.alumni.skills : (app.alumni?.skills ? [app.alumni.skills] : []);
+                const skillsMatch = alumniSkills.some(skill => skill.toLowerCase().includes(q));
+                return nameMatch || skillsMatch;
+            });
+        }
+
+        // 3. Proses Pengurutan (Sorting)
+        if (sortBy === 'match_score') {
+            // Urutkan dari Skor TF-IDF tertinggi ke terendah
+            result.sort((a, b) => b.match_score - a.match_score);
+        } else if (sortBy === 'newest') {
+            // Urutkan dari tanggal melamar terbaru
+            result.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        } else if (sortBy === 'oldest') {
+            // Urutkan dari tanggal melamar paling lama
+            result.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+        }
+
+        return result;
+    }, [activeJob, searchQuery, selectedSkillFilter, sortBy]);
 
     const activeApp = filteredApps.find(a => a.id === activeAppId);
 
-    // Sync data form
     useEffect(() => {
         if (activeApp) {
             setData({ status: activeApp.status || 'pending', notes: activeApp.notes || '' });
@@ -99,31 +125,41 @@ export default function PelamarIndex({ applications }) {
 
     const formatDate = d => new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(d));
 
+    const handleJobChange = (jobId) => {
+        setActiveJobId(jobId);
+        setActiveAppId(null);
+        setSearchQuery('');
+        setSelectedSkillFilter('');
+        setSortBy('match_score'); // Reset ke algoritma ATS
+    };
+
     return (
         <AuthenticatedLayout
             header={
                 <div>
                     <h2 style={{ fontSize: 17, fontWeight: 800, color: T.navy, margin: 0, letterSpacing: '-0.01em' }}>
-                        {activeJob ? `Pelamar: ${activeJob.title}` : 'Daftar Pelamar'}
+                        {activeJob ? `Pelamar: ${activeJob.title}` : 'Sistem Pelacakan Pelamar (ATS)'}
                     </h2>
                     <p style={{ fontSize: 12, color: T.muted, margin: '3px 0 0' }}>
-                        {activeJob ? 'Tinjau kecocokan profil pelamar dengan kebutuhan posisi' : 'Kelola dan proses lamaran masuk berdasarkan posisi'}
+                        {activeJob ? 'Tinjau kecocokan profil pelamar dengan kebutuhan posisi' : 'Algoritma TF-IDF otomatis mengurutkan pelamar paling relevan'}
                     </p>
                 </div>
             }
         >
-            <Head title="Daftar Pelamar — SITAMI" />
+            <Head title="Sistem ATS Pelamar — SITAMI" />
 
             <style>{`
                 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
                 [data-radix-popper-content-wrapper] { z-index: 99999 !important; }
                 .ak-root * { font-family:'Plus Jakarta Sans',sans-serif; }
                 @keyframes fadeCard { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+                .left-panel-scroll::-webkit-scrollbar { width: 5px; }
+                .left-panel-scroll::-webkit-scrollbar-track { background: transparent; }
+                .left-panel-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+                .left-panel-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
             `}</style>
 
             <div className="ak-root">
-
-                {/* ─── GRID KARTU LOWONGAN ─── */}
                 {!activeJob && (
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16 }}>
                         {groupedJobs.length === 0 ? (
@@ -156,7 +192,7 @@ export default function PelamarIndex({ applications }) {
                                             )}
                                         </div>
                                     </div>
-                                    <button onClick={() => setActiveJobId(job.id)} style={{ width: '100%', height: 38, borderRadius: 8, border: `1.5px solid ${T.orange}`, background: '#fff', color: T.orange, fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}
+                                    <button onClick={() => handleJobChange(job.id)} style={{ width: '100%', height: 38, borderRadius: 8, border: `1.5px solid ${T.orange}`, background: '#fff', color: T.orange, fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}
                                         onMouseEnter={e => e.currentTarget.style.background = T.orangeLight}
                                         onMouseLeave={e => e.currentTarget.style.background = '#fff'}
                                     >Tinjau Pelamar</button>
@@ -166,141 +202,221 @@ export default function PelamarIndex({ applications }) {
                     </div>
                 )}
 
-                {/* ─── SPLIT SCREEN MASTER-DETAIL ─── */}
                 {activeJob && (
                     <div style={{ animation: 'fadeCard 0.3s both' }}>
-                        <button onClick={() => { setActiveJobId(null); setActiveAppId(null); setSearchQuery(''); }} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'transparent', border: 'none', color: T.mutedDark, fontSize: 13, fontWeight: 700, cursor: 'pointer', padding: 0, marginBottom: 16 }}>
+                        <button onClick={() => handleJobChange(null)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'transparent', border: 'none', color: T.mutedDark, fontSize: 13, fontWeight: 700, cursor: 'pointer', padding: 0, marginBottom: 16 }}>
                             <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
                             Kembali ke Daftar Lowongan
                         </button>
 
-                        <div style={{ display: 'flex', gap: 0, background: '#fff', border: `1px solid ${T.borderSoft}`, borderRadius: 14, minHeight: '75vh', overflow: 'hidden' }}>
-
+                        <div style={{ display: 'flex', gap: 0, background: '#fff', border: `1px solid ${T.borderSoft}`, borderRadius: 14, minHeight: '78vh', overflow: 'hidden' }}>
                             {/* KIRI: Daftar Pelamar + Filter */}
-                            <div style={{ width: '340px', borderRight: `1px solid ${T.borderSoft}`, display: 'flex', flexDirection: 'column', background: T.bg }}>
-                                <div style={{ padding: '16px 20px', borderBottom: `1px solid ${T.borderSoft}`, background: '#fff' }}>
-                                    <h4 style={{ margin: 0, fontSize: 13, fontWeight: 800, color: T.navy, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>Daftar Pelamar</h4>
+                            <div style={{ width: '380px', borderRight: `1px solid ${T.borderSoft}`, display: 'flex', flexDirection: 'column', background: T.bg, flexShrink: 0 }}>
+                                <div style={{ padding: '20px', borderBottom: `1px solid ${T.borderSoft}`, background: '#fff' }}>
 
-                                    {/* Kolom Filter Skill / Nama */}
-                                    <div style={{ position: 'relative' }}>
+                                    {/* Kolom Pencarian */}
+                                    <div style={{ position: 'relative', marginBottom: 12 }}>
                                         <svg style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                                             <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
                                         </svg>
                                         <input
-                                            style={{ height: 36, padding: '0 12px 0 32px', borderRadius: 8, border: `1px solid ${T.border}`, fontSize: 12.5, width: '100%', outline: 'none' }}
-                                            placeholder="Filter Nama atau Keahlian (Skill)..."
+                                            style={{ height: 38, padding: '0 12px 0 32px', borderRadius: 8, border: `1.5px solid ${T.border}`, fontSize: 13, width: '100%', outline: 'none', transition: 'border 0.2s' }}
+                                            placeholder="Cari Nama Pelamar..."
                                             value={searchQuery}
                                             onChange={e => setSearchQuery(e.target.value)}
+                                            onFocus={onFocus} onBlur={onBlur}
                                         />
                                     </div>
-                                    <div style={{ fontSize: 11, color: T.mutedDark, marginTop: 8 }}>{filteredApps.length} pelamar ditemukan</div>
+
+                                    {/* Grid Dua Dropdown (Filter & Sorting) */}
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                                        {/* Dropdown 1: Pengurutan */}
+                                        <Select value={sortBy} onValueChange={setSortBy}>
+                                            <SelectTrigger style={{ height: 36, borderRadius: 8, border: `1.5px solid ${T.border}`, background: '#f8fafc', fontSize: 12, boxShadow: 'none' }}>
+                                                <SelectValue placeholder="Urutkan..." />
+                                            </SelectTrigger>
+                                            <SelectContent position="popper" sideOffset={4} className="z-[500] rounded-xl overflow-hidden border border-gray-200 shadow-xl" style={{ background: '#ffffff' }}>
+                                                <SelectItem className="text-sm cursor-pointer px-3 py-2" value="match_score">🌟 Skor Kecocokan</SelectItem>
+                                                <SelectItem className="text-sm cursor-pointer px-3 py-2" value="newest">🕒 Terbaru Melamar</SelectItem>
+                                                <SelectItem className="text-sm cursor-pointer px-3 py-2" value="oldest">⏳ Terlama Melamar</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+
+                                        {/* Dropdown 2: Filter */}
+                                        <Select value={selectedSkillFilter} onValueChange={setSelectedSkillFilter}>
+                                            <SelectTrigger style={{ height: 36, borderRadius: 8, border: `1.5px solid ${T.border}`, background: '#fff', fontSize: 12, boxShadow: 'none' }}>
+                                                <SelectValue placeholder="Filter Keahlian..." />
+                                            </SelectTrigger>
+                                            <SelectContent position="popper" sideOffset={4} className="z-[500] rounded-xl overflow-hidden border border-gray-200 shadow-xl" style={{ background: '#ffffff' }}>
+                                                <SelectItem className="text-sm cursor-pointer px-3 py-2 text-gray-500" value="all">Tanpa Filter</SelectItem>
+                                                {activeJob.requirements?.map((reqSkill, idx) => (
+                                                    <SelectItem key={idx} className="text-sm cursor-pointer px-3 py-2" value={reqSkill}>
+                                                        {reqSkill}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
                                 </div>
 
-                                <div style={{ overflowY: 'auto', flex: 1 }}>
-                                    {filteredApps.map(app => {
-                                        const isActive = activeAppId === app.id;
-                                        return (
-                                            <div key={app.id} onClick={() => setActiveAppId(app.id)} style={{
-                                                padding: '16px 20px', borderBottom: `1px solid ${T.borderSoft}`, cursor: 'pointer', transition: 'all 0.15s',
-                                                background: isActive ? '#fff' : 'transparent',
-                                                borderLeft: `3px solid ${isActive ? T.orange : 'transparent'}`
-                                            }}
-                                                onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = '#f1f5f9'; }}
-                                                onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
-                                            >
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
-                                                    <div style={{ fontSize: 13.5, fontWeight: 700, color: T.navy }}>{app.alumni?.user?.name}</div>
-                                                    <div style={{ fontSize: 11, color: T.muted }}>{formatDate(app.created_at)}</div>
+                                <div className="left-panel-scroll" style={{ overflowY: 'auto', flex: 1 }}>
+                                    {filteredApps.length === 0 ? (
+                                        <div style={{ padding: '40px 20px', textAlign: 'center', color: T.mutedDark, fontSize: 13 }}>
+                                            Tidak ada pelamar yang sesuai kriteria pencarian/filter Anda.
+                                        </div>
+                                    ) : (
+                                        filteredApps.map((app, index) => {
+                                            const isActive = activeAppId === app.id;
+                                            const alumniSkills = Array.isArray(app.alumni?.skills) ? app.alumni.skills : (app.alumni?.skills ? [app.alumni.skills] : []);
+
+                                            // Menentukan warna badge skor TF-IDF
+                                            const scoreColor = app.match_score >= 70 ? T.green : (app.match_score >= 40 ? T.orange : T.red);
+                                            const scoreBg = app.match_score >= 70 ? T.greenLight : (app.match_score >= 40 ? T.orangeLight : T.redLight);
+
+                                            return (
+                                                <div key={app.id} onClick={() => setActiveAppId(app.id)} style={{
+                                                    padding: '16px 20px', borderBottom: `1px solid ${T.borderSoft}`, cursor: 'pointer', transition: 'all 0.15s',
+                                                    background: isActive ? '#fff' : 'transparent',
+                                                    borderLeft: `3px solid ${isActive ? T.orange : 'transparent'}`,
+                                                    position: 'relative'
+                                                }}
+                                                    onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = '#f1f5f9'; }}
+                                                    onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
+                                                >
+                                                    {/* Skor TF-IDF Badge */}
+                                                    <div style={{ position: 'absolute', top: 16, right: 20, background: scoreBg, color: scoreColor, fontSize: 11, fontWeight: 800, padding: '3px 8px', borderRadius: 6, border: `1px solid ${scoreColor}40` }}>
+                                                        {app.match_score}% Cocok
+                                                    </div>
+
+                                                    <div style={{ fontSize: 14, fontWeight: 800, color: T.navy, marginBottom: 4, paddingRight: 70 }}>
+                                                        {index + 1}. {app.alumni?.user?.name}
+                                                    </div>
+
+                                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 12, minHeight: 20 }}>
+                                                        {alumniSkills.length > 0 ? (
+                                                            <>
+                                                                {alumniSkills.slice(0, 2).map((s, idx) => (
+                                                                    <span key={idx} style={{ fontSize: 10, fontWeight: 600, background: T.borderSoft, color: T.mutedDark, padding: '2px 8px', borderRadius: 4 }}>
+                                                                        {s}
+                                                                    </span>
+                                                                ))}
+                                                                {alumniSkills.length > 2 && (
+                                                                    <span style={{ fontSize: 10, fontWeight: 700, color: T.muted }}>+{alumniSkills.length - 2} lagi</span>
+                                                                )}
+                                                            </>
+                                                        ) : (
+                                                            <span style={{ fontSize: 11, color: T.muted, fontStyle: 'italic' }}>Belum mengisi keahlian</span>
+                                                        )}
+                                                    </div>
+
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                                                        <StatusBadge status={app.status} />
+                                                        <span style={{ fontSize: 10, color: T.muted }}>{formatDate(app.created_at)}</span>
+                                                    </div>
                                                 </div>
-                                                {/* Tampilkan sepotong skill-nya sebagai hint */}
-                                                <div style={{ fontSize: 12, color: T.mutedDark, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: 8 }}>
-                                                    {app.alumni?.skills || 'Belum mengisi keahlian'}
-                                                </div>
-                                                <StatusBadge status={app.status} />
-                                            </div>
-                                        );
-                                    })}
+                                            );
+                                        })
+                                    )}
                                 </div>
                             </div>
 
                             {/* KANAN: Detail & Profil & Proses */}
-                            <div style={{ flex: 1, padding: 24, background: '#fff', overflowY: 'auto' }}>
+                            <div style={{ flex: 1, padding: '30px 40px', background: '#fff', overflowY: 'auto' }}>
                                 {!activeApp ? (
-                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: T.muted, textAlign: 'center' }}>
-                                        <svg width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5" style={{ marginBottom: 12, opacity: 0.5 }}>
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
-                                        </svg>
-                                        <p style={{ fontSize: 14, fontWeight: 600 }}>Pilih salah satu pelamar di panel kiri<br />untuk melihat detail dan memproses lamaran.</p>
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyItems: 'center', height: '100%', color: T.muted, textAlign: 'center', paddingTop: '15%' }}>
+                                        <div style={{ fontSize: 48, marginBottom: 16 }}>🤖</div>
+                                        <p style={{ fontSize: 15, fontWeight: 600 }}>Pilih salah satu pelamar di panel kiri.<br />Algoritma kami telah memilah yang terbaik untuk Anda.</p>
                                     </div>
                                 ) : (
                                     <div style={{ animation: 'fadeCard 0.25s both' }}>
-
-                                        {/* --- Header Pelamar --- */}
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
-                                            <div style={{ width: 64, height: 64, borderRadius: 16, background: T.orangeLight, color: T.orange, fontSize: 24, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                                {activeApp.alumni?.user?.name?.charAt(0)?.toUpperCase()}
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 18, marginBottom: 26 }}>
+                                            <div style={{ width: 72, height: 72, borderRadius: 18, background: T.orangeLight, color: T.orange, fontSize: 26, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                                {activeApp.alumni?.user?.name?.charAt(0)?.toUpperCase() ?? '?'}
                                             </div>
                                             <div style={{ flex: 1 }}>
-                                                <h3 style={{ fontSize: 20, fontWeight: 800, color: T.navy, margin: '0 0 4px' }}>{activeApp.alumni?.user?.name}</h3>
+                                                <h3 style={{ fontSize: 22, fontWeight: 800, color: T.navy, margin: '0 0 6px' }}>{activeApp.alumni?.user?.name}</h3>
                                                 <div style={{ fontSize: 13, color: T.mutedDark, display: 'flex', gap: 12 }}>
-                                                    <span>✉️ {activeApp.alumni?.user?.email}</span>
+                                                    <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                                                        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" /></svg>
+                                                        {activeApp.alumni?.user?.email}
+                                                    </span>
                                                 </div>
                                             </div>
                                             <div style={{ textAlign: 'right' }}>
-                                                <div style={{ fontSize: 11, color: T.mutedDark, marginBottom: 4 }}>Dokumen Terlampir</div>
+                                                <div style={{ fontSize: 11, color: T.mutedDark, marginBottom: 6, textTransform: 'uppercase', fontWeight: 700 }}>Dokumen CV</div>
                                                 {activeApp.cv_path ? (
-                                                    <a href={`/storage/${activeApp.cv_path}`} target="_blank" style={{ fontSize: 13, fontWeight: 700, color: T.orange, textDecoration: 'none', background: T.orangeLight, padding: '6px 12px', borderRadius: 8, display: 'inline-block' }}>
-                                                        Unduh / Lihat CV
+                                                    <a href={`/storage/${activeApp.cv_path}`} target="_blank" rel="noreferrer" style={{ fontSize: 13, fontWeight: 700, color: T.orange, textDecoration: 'none', background: T.orangeLight, padding: '8px 14px', borderRadius: 8, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                                                        Lihat Dokumen
+                                                        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
                                                     </a>
                                                 ) : <span style={{ fontSize: 12, color: T.muted, fontStyle: 'italic' }}>Tidak ada CV</span>}
                                             </div>
                                         </div>
 
-                                        <hr style={{ border: 'none', borderTop: `1px dashed ${T.borderSoft}`, margin: '0 0 24px' }} />
+                                        <hr style={{ border: 'none', borderTop: `1px solid ${T.borderSoft}`, margin: '0 0 26px' }} />
 
-                                        {/* --- Data Diri / Profil --- */}
-                                        <h4 style={{ fontSize: 13, fontWeight: 800, color: T.navy, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 14 }}>Profil & Kontak</h4>
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 28 }}>
-                                            <InfoRow label="Program Studi" value={activeApp.alumni?.major || '—'} />
-                                            <InfoRow label="Tahun Lulus" value={activeApp.alumni?.graduation_year || '—'} />
-                                            <InfoRow label="No. Telepon / WhatsApp" value={activeApp.alumni?.phone_number || '—'} />
-                                            <InfoRow label="Alamat / Domisili" value={activeApp.alumni?.address || '—'} />
-                                        </div>
-
-                                        {/* --- Komparasi Skill vs Requirement --- */}
-                                        <h4 style={{ fontSize: 13, fontWeight: 800, color: T.navy, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 14 }}>Kecocokan Keahlian (Skills)</h4>
+                                        <h4 style={{ fontSize: 13, fontWeight: 800, color: T.navy, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 14 }}>Profil Akademik & Kontak</h4>
                                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 30 }}>
-                                            {/* Kotak Skills Pelamar */}
-                                            <div style={{ padding: 16, borderRadius: 10, background: T.bg, border: `1px solid ${T.borderSoft}` }}>
-                                                <div style={{ fontSize: 11, fontWeight: 800, color: T.navyMid, textTransform: 'uppercase', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                                                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                                    Keahlian Kandidat
+                                            <div style={{ background: T.bg, padding: 14, borderRadius: 10, border: `1px solid ${T.borderSoft}` }}><InfoRow label="Program Studi" value={activeApp.alumni?.major || '—'} /></div>
+                                            <div style={{ background: T.bg, padding: 14, borderRadius: 10, border: `1px solid ${T.borderSoft}` }}><InfoRow label="Tahun Lulus" value={activeApp.alumni?.graduation_year || '—'} /></div>
+                                            <div style={{ background: T.bg, padding: 14, borderRadius: 10, border: `1px solid ${T.borderSoft}` }}><InfoRow label="No. Telepon" value={activeApp.alumni?.phone_number || '—'} /></div>
+                                            <div style={{ background: T.bg, padding: 14, borderRadius: 10, border: `1px solid ${T.borderSoft}` }}><InfoRow label="Domisili" value={activeApp.alumni?.address || '—'} /></div>
+                                        </div>
+
+                                        <h4 style={{ fontSize: 13, fontWeight: 800, color: T.navy, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 14 }}>Komparasi Analisis Sistem (ATS)</h4>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 32 }}>
+                                            <div style={{ padding: 18, borderRadius: 12, background: T.orangeLight, border: `1px solid #fed7aa` }}>
+                                                <div style={{ fontSize: 11, fontWeight: 800, color: '#9a3412', textTransform: 'uppercase', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                    Kebutuhan Posisi Anda
                                                 </div>
-                                                <div style={{ fontSize: 13, color: T.navy, lineHeight: 1.6, whiteSpace: 'pre-line' }}>
-                                                    {activeApp.alumni?.skills || <span style={{ color: T.muted }}>Kandidat belum melengkapi kolom keahlian.</span>}
+                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                                                    {(!activeJob.requirements || activeJob.requirements.length === 0) ? (
+                                                        <span style={{ fontSize: 12, color: '#9a3412', fontStyle: 'italic' }}>Tidak ada syarat spesifik.</span>
+                                                    ) : (
+                                                        activeJob.requirements.map((req, idx) => (
+                                                            <span key={idx} style={{ background: '#ffedd5', color: '#c2410c', padding: '4px 10px', borderRadius: 6, fontSize: 12, fontWeight: 700, border: '1px solid #fdba74' }}>{req}</span>
+                                                        ))
+                                                    )}
                                                 </div>
                                             </div>
 
-                                            {/* Kotak Requirement Lowongan */}
-                                            <div style={{ padding: 16, borderRadius: 10, background: T.orangeLight, border: `1px solid #fed7aa` }}>
-                                                <div style={{ fontSize: 11, fontWeight: 800, color: '#9a3412', textTransform: 'uppercase', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                                                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
-                                                    Requirement Lowongan
+                                            <div style={{ padding: 18, borderRadius: 12, background: T.navyLight, border: `1px solid #bfdbfe` }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                                                    <div style={{ fontSize: 11, fontWeight: 800, color: T.navyMid, textTransform: 'uppercase' }}>
+                                                        Keahlian Kandidat
+                                                    </div>
+                                                    <div style={{ fontSize: 12, fontWeight: 800, background: '#fff', padding: '2px 8px', borderRadius: 6, color: activeApp.match_score >= 70 ? T.green : T.navyMid }}>
+                                                        {activeApp.match_score}% Match
+                                                    </div>
                                                 </div>
-                                                <div style={{ fontSize: 13, color: '#7c2d12', lineHeight: 1.6, whiteSpace: 'pre-line' }}>
-                                                    {activeJob.requirements || <span style={{ color: T.muted }}>Anda tidak mengisi requirement spesifik.</span>}
+
+                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                                                    {(!activeApp.alumni?.skills || activeApp.alumni.skills.length === 0) ? (
+                                                        <span style={{ fontSize: 12, color: T.navyMid, fontStyle: 'italic' }}>Belum mengisi keahlian.</span>
+                                                    ) : (
+                                                        (Array.isArray(activeApp.alumni.skills) ? activeApp.alumni.skills : [activeApp.alumni.skills]).map((skill, idx) => {
+                                                            const isMatch = activeJob.requirements?.includes(skill);
+                                                            return (
+                                                                <span key={idx} style={{
+                                                                    background: isMatch ? T.greenLight : '#fff', color: isMatch ? T.green : T.navyMid,
+                                                                    padding: '4px 10px', borderRadius: 6, fontSize: 12, fontWeight: 700, border: `1px solid ${isMatch ? '#86efac' : '#cbd5e1'}`
+                                                                }}>
+                                                                    {isMatch && '★ '} {skill}
+                                                                </span>
+                                                            )
+                                                        })
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
 
-                                        <hr style={{ border: 'none', borderTop: `1px dashed ${T.borderSoft}`, margin: '0 0 24px' }} />
+                                        <hr style={{ border: 'none', borderTop: `1px solid ${T.borderSoft}`, margin: '0 0 26px' }} />
 
-                                        {/* --- Form Proses --- */}
-                                        <h4 style={{ fontSize: 13, fontWeight: 800, color: T.navy, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>Tindakan & Proses</h4>
-                                        <form onSubmit={submitStatus} style={{ background: T.bg, padding: 20, borderRadius: 12, border: `1px solid ${T.borderSoft}` }}>
-                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+                                        <h4 style={{ fontSize: 13, fontWeight: 800, color: T.navy, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>Tindakan Keputusan</h4>
+                                        <form onSubmit={submitStatus} style={{ background: T.bg, padding: 22, borderRadius: 12, border: `1px solid ${T.borderSoft}` }}>
+                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 18 }}>
                                                 <div>
-                                                    <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#374151', marginBottom: 6 }}>UBAH STATUS</label>
+                                                    <label style={{ display: 'block', fontSize: 11, fontWeight: 800, color: '#374151', marginBottom: 6 }}>UBAH STATUS KANDIDAT</label>
                                                     <Select value={data.status} onValueChange={v => setData('status', v)}>
                                                         <SelectTrigger className="focus:ring-0 focus:ring-offset-0" style={{ height: 42, borderRadius: 9, border: `1.5px solid ${T.border}`, background: '#fff', fontSize: 13.5 }}>
                                                             <SelectValue />
@@ -316,27 +432,28 @@ export default function PelamarIndex({ applications }) {
                                                 </div>
                                             </div>
 
-                                            <div style={{ marginBottom: 16 }}>
-                                                <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#374151', marginBottom: 6 }}>CATATAN INTERNAL (OPSIONAL)</label>
-                                                <textarea style={{ ...fieldBase, height: 'auto', padding: '10px 13px', resize: 'vertical' }} rows={3}
-                                                    placeholder="Contoh: Jadwal wawancara, catatan interview, alasan penolakan..."
+                                            <div style={{ marginBottom: 20 }}>
+                                                <label style={{ display: 'block', fontSize: 11, fontWeight: 800, color: '#374151', marginBottom: 6 }}>CATATAN INTERNAL (OPSIONAL)</label>
+                                                <textarea style={{ ...fieldBase, height: 'auto', padding: '12px 14px', resize: 'vertical' }} rows={3}
+                                                    placeholder="Tambahkan catatan jadwal wawancara, hasil interview, atau alasan penolakan..."
                                                     value={data.notes} onChange={e => setData('notes', e.target.value)}
                                                     onFocus={onFocus} onBlur={onBlur} />
                                             </div>
 
-                                            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                                            <div style={{ display: 'flex', justifyItems: 'flex-end' }}>
                                                 <button type="submit" disabled={processing} style={{
-                                                    height: 40, padding: '0 24px', borderRadius: 9, border: 'none',
+                                                    height: 42, padding: '0 28px', borderRadius: 9, border: 'none', marginLeft: 'auto',
                                                     background: processing ? T.muted : T.orange, color: '#fff',
                                                     fontSize: 13.5, fontWeight: 700, cursor: processing ? 'not-allowed' : 'pointer',
-                                                    fontFamily: 'inherit', boxShadow: processing ? 'none' : '0 2px 10px rgba(249,115,22,0.3)',
-                                                    transition: 'all 0.15s',
-                                                }}>
+                                                    boxShadow: processing ? 'none' : '0 4px 12px rgba(249,115,22,0.3)', transition: 'all 0.15s',
+                                                }}
+                                                    onMouseEnter={e => { if (!processing) { e.currentTarget.style.background = '#ea6c0a'; e.currentTarget.style.transform = 'translateY(-1px)'; } }}
+                                                    onMouseLeave={e => { if (!processing) { e.currentTarget.style.background = T.orange; e.currentTarget.style.transform = 'none'; } }}
+                                                >
                                                     {processing ? 'Menyimpan...' : 'Simpan Pembaruan'}
                                                 </button>
                                             </div>
                                         </form>
-
                                     </div>
                                 )}
                             </div>

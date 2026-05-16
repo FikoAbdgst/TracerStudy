@@ -10,19 +10,17 @@ use Illuminate\Support\Facades\Auth;
 
 class CompanyProfileController extends Controller
 {
-    // Menampilkan form edit profil
     public function edit()
     {
-        $user = Auth::user();
-        // Load relasi company jika sudah ada
-        $user->load('company');
+        $company = Auth::user()->company;
+
+        $industries = IndustrySektor::all();
 
         return Inertia::render('Perusahaan/Profile/Edit', [
-            'company' => $user->company,
-            'industries' => IndustrySektor::all(), // Tarik data master industri
+            'company' => $company,
+            'industries' => $industries,
         ]);
     }
-
     // Menyimpan atau memperbarui profil
     public function update(Request $request)
     {

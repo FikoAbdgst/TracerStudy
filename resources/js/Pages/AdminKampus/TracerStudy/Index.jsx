@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Head, useForm, router, Link } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/Components/ui/select';
-import { Switch } from '@/Components/ui/switch';
 
 const T = {
     navy: '#0f1f3d', navyMid: '#1a3560', navyLight: '#e8f0fb',
@@ -13,7 +12,48 @@ const T = {
     red: '#dc2626', redLight: '#fff1f2',
 };
 
-/* ─── Modal (with maxHeight scroll for form builder) ─────────────────────── */
+/* ─── Custom Switch ──────────────────────────────────────────────────────── */
+function CustomSwitch({ checked, onChange }) {
+    return (
+        <button
+            type="button"
+            role="switch"
+            aria-checked={checked}
+            onClick={onChange}
+            style={{
+                position: 'relative',
+                display: 'inline-flex',
+                alignItems: 'center',
+                width: 48,
+                height: 26,
+                borderRadius: 999,
+                border: 'none',
+                cursor: 'pointer',
+                padding: 3,
+                transition: 'background 0.22s cubic-bezier(0.22,1,0.36,1)',
+                background: checked ? T.orange : '#cbd5e1',
+                boxShadow: checked
+                    ? '0 0 0 3px rgba(249,115,22,0.18), inset 0 1px 2px rgba(0,0,0,0.08)'
+                    : 'inset 0 1px 2px rgba(0,0,0,0.08)',
+                flexShrink: 0,
+                outline: 'none',
+            }}
+        >
+            <span style={{
+                display: 'block',
+                width: 20,
+                height: 20,
+                borderRadius: '50%',
+                background: '#fff',
+                boxShadow: '0 1px 4px rgba(0,0,0,0.18)',
+                transform: checked ? 'translateX(22px)' : 'translateX(0)',
+                transition: 'transform 0.22s cubic-bezier(0.22,1,0.36,1)',
+            }} />
+        </button>
+    );
+}
+
+/* ─── Modal ──────────────────────────────────────────────────────────────── */
 function Modal({ open, onClose, title, children, footer, wide = false }) {
     const [visible, setVisible] = useState(false);
     const [render, setRender] = useState(false);
@@ -28,7 +68,6 @@ function Modal({ open, onClose, title, children, footer, wide = false }) {
             display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
             opacity: visible ? 1 : 0, transition: 'opacity 0.25s ease',
         }}>
-            {/* Blur backdrop - separate div so it doesn't create stacking context for the flex layer */}
             <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(10,20,40,0.45)', backdropFilter: 'blur(3px)', cursor: 'default' }} />
             <div style={{
                 background: '#fff', borderRadius: 16,
@@ -40,7 +79,6 @@ function Modal({ open, onClose, title, children, footer, wide = false }) {
                 transform: visible ? 'translateY(0) scale(1)' : 'translateY(10px) scale(0.97)',
                 transition: 'opacity 0.25s ease, transform 0.25s cubic-bezier(0.22,1,0.36,1)',
             }}>
-                {/* sticky header */}
                 <div style={{ padding: '18px 22px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${T.borderSoft}`, flexShrink: 0 }}>
                     <span style={{ fontSize: 15, fontWeight: 800, color: T.navy }}>{title}</span>
                     <button onClick={onClose} style={{ width: 28, height: 28, borderRadius: 7, border: 'none', background: T.bg, color: T.mutedDark, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.15s' }}
@@ -49,13 +87,133 @@ function Modal({ open, onClose, title, children, footer, wide = false }) {
                         <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                     </button>
                 </div>
-                {/* scrollable body */}
                 <div style={{ padding: '18px 22px', overflowY: 'auto', flex: 1 }}>{children}</div>
-                {/* sticky footer */}
                 {footer && <>
                     <div style={{ height: 1, background: T.borderSoft, flexShrink: 0 }} />
                     <div style={{ padding: '14px 22px', display: 'flex', justifyContent: 'flex-end', gap: 8, flexShrink: 0 }}>{footer}</div>
                 </>}
+            </div>
+        </div>
+    );
+}
+
+/* ─── Alert Dialog — konsisten dengan desain proyek ─────────────────────── */
+function AlertDialog({ open, onClose, onConfirm, title, message, processing }) {
+    const [visible, setVisible] = useState(false);
+    const [render, setRender] = useState(false);
+
+    useEffect(() => {
+        if (open) { setRender(true); requestAnimationFrame(() => requestAnimationFrame(() => setVisible(true))); }
+        else { setVisible(false); const t = setTimeout(() => setRender(false), 260); return () => clearTimeout(t); }
+    }, [open]);
+
+    if (!render) return null;
+
+    return (
+        <div style={{
+            position: 'fixed', inset: 0, zIndex: 9999,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
+            opacity: visible ? 1 : 0, transition: 'opacity 0.25s ease',
+        }}>
+            {/* Backdrop — sama persis dengan Modal */}
+            <div onClick={!processing ? onClose : undefined} style={{ position: 'absolute', inset: 0, background: 'rgba(10,20,40,0.45)', backdropFilter: 'blur(3px)', cursor: 'default' }} />
+
+            <div style={{
+                background: '#fff', borderRadius: 16,
+                position: 'relative', width: '100%', maxWidth: 420,
+                boxShadow: '0 24px 60px rgba(10,20,40,0.2)',
+                display: 'flex', flexDirection: 'column',
+                opacity: visible ? 1 : 0,
+                transform: visible ? 'translateY(0) scale(1)' : 'translateY(10px) scale(0.97)',
+                transition: 'opacity 0.25s ease, transform 0.25s cubic-bezier(0.22,1,0.36,1)',
+                overflow: 'hidden',
+            }}>
+                {/* Header — sama dengan Modal */}
+                <div style={{
+                    padding: '18px 22px 14px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    borderBottom: `1px solid ${T.borderSoft}`, flexShrink: 0,
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        {/* Icon kecil inline — tidak mencolok, selaras */}
+                        <div style={{
+                            width: 30, height: 30, borderRadius: 8,
+                            background: T.redLight, color: T.red,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                        }}>
+                            <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                        </div>
+                        <span style={{ fontSize: 15, fontWeight: 800, color: T.navy }}>{title}</span>
+                    </div>
+                    <button
+                        onClick={!processing ? onClose : undefined}
+                        disabled={processing}
+                        style={{ width: 28, height: 28, borderRadius: 7, border: 'none', background: T.bg, color: T.mutedDark, cursor: processing ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.15s', opacity: processing ? 0.4 : 1 }}
+                        onMouseEnter={e => { if (!processing) e.currentTarget.style.background = T.border; }}
+                        onMouseLeave={e => e.currentTarget.style.background = T.bg}
+                    >
+                        <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
+
+                {/* Body */}
+                <div style={{ padding: '16px 22px 20px' }}>
+                    <p style={{ fontSize: 13, color: T.mutedDark, lineHeight: 1.65, margin: 0 }}>{message}</p>
+                </div>
+
+                {/* Footer — sama dengan Modal */}
+                <div style={{ height: 1, background: T.borderSoft, flexShrink: 0 }} />
+                <div style={{ padding: '14px 22px', display: 'flex', justifyContent: 'flex-end', gap: 8, flexShrink: 0 }}>
+                    <button
+                        onClick={onClose}
+                        disabled={processing}
+                        style={{
+                            height: 36, padding: '0 16px', borderRadius: 8,
+                            border: `1.5px solid ${T.border}`, background: 'transparent',
+                            color: T.mutedDark, fontSize: 13, fontWeight: 700,
+                            cursor: processing ? 'not-allowed' : 'pointer',
+                            fontFamily: 'inherit', transition: 'all 0.15s',
+                            opacity: processing ? 0.5 : 1,
+                        }}
+                        onMouseEnter={e => { if (!processing) e.currentTarget.style.background = T.bg; }}
+                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                    >
+                        Batal
+                    </button>
+                    <button
+                        onClick={onConfirm}
+                        disabled={processing}
+                        style={{
+                            height: 36, padding: '0 18px', borderRadius: 8, border: 'none',
+                            background: processing ? T.muted : T.red,
+                            color: '#fff', fontSize: 13, fontWeight: 700,
+                            cursor: processing ? 'not-allowed' : 'pointer',
+                            fontFamily: 'inherit', transition: 'all 0.15s',
+                            boxShadow: processing ? 'none' : '0 2px 8px rgba(220,38,38,0.25)',
+                            display: 'flex', alignItems: 'center', gap: 6,
+                        }}
+                        onMouseEnter={e => { if (!processing) e.currentTarget.style.filter = 'brightness(0.9)'; }}
+                        onMouseLeave={e => e.currentTarget.style.filter = 'none'}
+                    >
+                        {processing ? (
+                            <>
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ animation: 'spin 0.8s linear infinite' }}>
+                                    <path strokeLinecap="round" d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+                                </svg>
+                                Menghapus...
+                            </>
+                        ) : (
+                            <>
+                                <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                                Ya, Hapus
+                            </>
+                        )}
+                    </button>
+                </div>
             </div>
         </div>
     );
@@ -81,6 +239,10 @@ export default function TracerStudyIndex({ forms }) {
     const [isEditing, setIsEditing] = useState(false);
     const [selectedId, setSelectedId] = useState(null);
 
+    const [alertOpen, setAlertOpen] = useState(false);
+    const [idToDelete, setIdToDelete] = useState(null);
+    const [isDeleting, setIsDeleting] = useState(false);
+
     const { data, setData, post, put, processing, reset } = useForm({
         title: '', description: '', questions: [],
     });
@@ -98,7 +260,18 @@ export default function TracerStudyIndex({ forms }) {
         else post(route('adminkampus.tracer.store'), { onSuccess: () => setModalOpen(false) });
     };
 
-    const toggleStatus = id => router.patch(route('adminkampus.tracer.toggle', id), {}, { preserveScroll: true });
+    const toggleStatus = (id) => router.patch(route('adminkampus.tracer.toggle', id), {}, { preserveScroll: true });
+
+    const confirmDelete = (id) => { setIdToDelete(id); setAlertOpen(true); };
+
+    const executeDelete = () => {
+        setIsDeleting(true);
+        router.delete(route('adminkampus.tracer.destroy', idToDelete), {
+            preserveScroll: true,
+            onSuccess: () => { setAlertOpen(false); setIdToDelete(null); },
+            onFinish: () => setIsDeleting(false),
+        });
+    };
 
     const addQuestion = () => setData('questions', [...data.questions, { id: Date.now(), type: 'text', question: '', options: [] }]);
     const removeQuestion = id => setData('questions', data.questions.filter(q => q.id !== id));
@@ -122,12 +295,11 @@ export default function TracerStudyIndex({ forms }) {
 
             <style>{`
                 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-                /* Radix portal z-index fix - must be above modal overlay */
                 [data-radix-popper-content-wrapper] { z-index: 99999 !important; }
-
                 .ak-root * { font-family:'Plus Jakarta Sans',sans-serif; }
                 @keyframes cardIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
                 @keyframes rowIn  { from{opacity:0;transform:translateX(-4px)} to{opacity:1;transform:translateX(0)} }
+                @keyframes spin   { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
                 .tbl-row:hover td { background:#fafbfc; }
                 .q-card { background:#fff; border-radius:10px; border:1px solid ${T.borderSoft}; padding:16px; margin-bottom:10px; }
                 .q-card:last-child { margin-bottom:0; }
@@ -135,11 +307,11 @@ export default function TracerStudyIndex({ forms }) {
 
             <div className="ak-root">
                 <div style={{ background: '#fff', borderRadius: 14, border: `1px solid ${T.borderSoft}`, padding: 20, animation: 'cardIn 0.38s cubic-bezier(0.22,1,0.36,1) both' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
-                        <p style={{ fontSize: 13, color: T.muted, margin: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyItems: 'space-between', marginBottom: 18 }}>
+                        <p style={{ fontSize: 13, color: T.muted, margin: 0, flex: 1 }}>
                             Total <span style={{ fontWeight: 700, color: T.navy }}>{forms.length}</span> kuesioner
                             {forms.filter(f => f.is_active).length > 0 && (
-                                <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: T.greenLight, color: T.green }}>
+                                <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: T.orangeLight, color: T.orange }}>
                                     {forms.filter(f => f.is_active).length} Aktif
                                 </span>
                             )}
@@ -163,46 +335,53 @@ export default function TracerStudyIndex({ forms }) {
                         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                             <thead>
                                 <tr style={{ background: T.bg, borderBottom: `1px solid ${T.border}` }}>
-                                    {['Judul Kuesioner', 'Pertanyaan', 'Status', 'Aksi'].map((h, i) => (
-                                        <th key={i} style={{ padding: '10px 14px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#374151', textAlign: i === 3 ? 'right' : 'left' }}>{h}</th>
+                                    {['Judul Kuesioner', 'Pertanyaan', 'Status (Aktif/Draft)', 'Aksi'].map((h, i) => (
+                                        <th key={i} style={{ padding: '12px 14px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#374151', textAlign: i === 3 ? 'right' : 'left' }}>{h}</th>
                                     ))}
                                 </tr>
                             </thead>
                             <tbody>
                                 {forms.map((form, i) => (
                                     <tr key={form.id} className="tbl-row" style={{ borderBottom: `1px solid ${T.borderSoft}`, animation: `rowIn 0.26s ${i * 0.04}s both` }}>
-                                        <td style={{ padding: '13px 14px' }}>
+                                        <td style={{ padding: '14px' }}>
                                             <div style={{ fontSize: 13.5, fontWeight: 700, color: T.navy }}>{form.title}</div>
-                                            {form.description && <div style={{ fontSize: 11.5, color: T.muted, marginTop: 2, maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{form.description}</div>}
+                                            {form.description && <div style={{ fontSize: 11.5, color: T.muted, marginTop: 2, maxWidth: 350, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{form.description}</div>}
                                         </td>
-                                        <td style={{ padding: '13px 14px' }}>
+                                        <td style={{ padding: '14px' }}>
                                             <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20, background: T.navyLight, color: T.navyMid }}>
                                                 {form.questions?.length || 0} Pertanyaan
                                             </span>
                                         </td>
-                                        <td style={{ padding: '13px 14px' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                                <Switch checked={form.is_active} onCheckedChange={() => toggleStatus(form.id)} />
-                                                <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20, background: form.is_active ? T.greenLight : T.borderSoft, color: form.is_active ? T.green : T.mutedDark }}>
-                                                    {form.is_active ? 'Aktif' : 'Draft'}
+                                        <td style={{ padding: '14px' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                                <CustomSwitch
+                                                    checked={form.is_active}
+                                                    onChange={() => toggleStatus(form.id)}
+                                                />
+                                                <span style={{
+                                                    fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20,
+                                                    background: form.is_active ? T.orangeLight : T.borderSoft,
+                                                    color: form.is_active ? T.orange : T.mutedDark,
+                                                }}>
+                                                    {form.is_active ? 'Status Aktif' : 'Draft Tersimpan'}
                                                 </span>
                                             </div>
                                         </td>
-                                        <td style={{ padding: '13px 14px', textAlign: 'right' }}>
+                                        <td style={{ padding: '14px', textAlign: 'right' }}>
                                             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 6 }}>
                                                 <Link href={route('adminkampus.tracer.responses', form.id)}>
                                                     <button style={{
-                                                        height: 30, padding: '0 13px', borderRadius: 7,
-                                                        border: `1.5px solid ${T.orangeLight}`, background: T.orangeLight,
-                                                        color: T.orange, fontSize: 12, fontWeight: 700,
+                                                        height: 32, padding: '0 12px', borderRadius: 7,
+                                                        border: `1.5px solid ${T.border}`, background: T.bg,
+                                                        color: T.navyMid, fontSize: 12, fontWeight: 700,
                                                         cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.14s',
                                                     }}
-                                                        onMouseEnter={e => { e.currentTarget.style.background = '#ffedd5'; }}
-                                                        onMouseLeave={e => { e.currentTarget.style.background = T.orangeLight; }}
-                                                    >Lihat Jawaban</button>
+                                                        onMouseEnter={e => { e.currentTarget.style.background = '#e2e8f0'; }}
+                                                        onMouseLeave={e => { e.currentTarget.style.background = T.bg; }}
+                                                    >Data Jawaban</button>
                                                 </Link>
                                                 <button onClick={() => openEdit(form)} style={{
-                                                    height: 30, padding: '0 13px', borderRadius: 7,
+                                                    height: 32, padding: '0 12px', borderRadius: 7,
                                                     border: `1.5px solid ${T.border}`, background: T.bg,
                                                     color: T.navyMid, fontSize: 12, fontWeight: 600,
                                                     cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.14s',
@@ -210,18 +389,41 @@ export default function TracerStudyIndex({ forms }) {
                                                     onMouseEnter={e => { e.currentTarget.style.borderColor = T.navyMid; e.currentTarget.style.background = T.navyLight; }}
                                                     onMouseLeave={e => { e.currentTarget.style.borderColor = T.border; e.currentTarget.style.background = T.bg; }}
                                                 >Edit Form</button>
+                                                <button
+                                                    onClick={() => confirmDelete(form.id)}
+                                                    style={{
+                                                        height: 32, padding: '0 12px', borderRadius: 7,
+                                                        border: `1.5px solid #fecaca`, background: '#fff5f5',
+                                                        color: T.red, fontSize: 12, fontWeight: 600,
+                                                        cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.14s',
+                                                    }}
+                                                    onMouseEnter={e => { e.currentTarget.style.background = '#fee2e2'; e.currentTarget.style.borderColor = '#f87171'; }}
+                                                    onMouseLeave={e => { e.currentTarget.style.background = '#fff5f5'; e.currentTarget.style.borderColor = '#fecaca'; }}
+                                                >
+                                                    Hapus
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>
                                 ))}
                                 {forms.length === 0 && (
-                                    <tr><td colSpan={4} style={{ padding: '48px 16px', textAlign: 'center', fontSize: 13, color: T.muted }}>Belum ada form kuesioner.</td></tr>
+                                    <tr><td colSpan={4} style={{ padding: '48px 16px', textAlign: 'center', fontSize: 13, color: T.muted }}>Belum ada form kuesioner. Klik tombol buat kuesioner di atas.</td></tr>
                                 )}
                             </tbody>
                         </table>
                     </div>
                 </div>
             </div>
+
+            {/* Alert Dialog — konsisten dengan desain proyek */}
+            <AlertDialog
+                open={alertOpen}
+                onClose={() => !isDeleting && setAlertOpen(false)}
+                onConfirm={executeDelete}
+                processing={isDeleting}
+                title="Hapus Kuesioner?"
+                message="Tindakan ini tidak dapat dibatalkan. Semua daftar pertanyaan dan jawaban dari alumni terkait kuesioner ini akan dihapus secara permanen dari sistem."
+            />
 
             {/* Form Builder Modal */}
             <Modal open={modalOpen} onClose={() => setModalOpen(false)}
@@ -241,7 +443,6 @@ export default function TracerStudyIndex({ forms }) {
                 </>}
             >
                 <form id="tracer-form" onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                    {/* Info dasar */}
                     <div style={{ padding: '14px 16px', borderRadius: 10, background: T.bg, border: `1px solid ${T.borderSoft}`, display: 'flex', flexDirection: 'column', gap: 12 }}>
                         <div>
                             <FieldLabel>Judul Kuesioner</FieldLabel>
@@ -257,7 +458,6 @@ export default function TracerStudyIndex({ forms }) {
                         </div>
                     </div>
 
-                    {/* Question Builder */}
                     <div>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Head, useForm, router, usePage } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Switch } from '@/Components/ui/switch';
 import InputError from '@/Components/InputError';
 import axios from 'axios';
 
@@ -14,6 +13,49 @@ const T = {
     red: '#dc2626', redLight: '#fff1f2',
 };
 
+/* ─── Custom Switch ──────────────────────────────────────────────────────── */
+function CustomSwitch({ checked, onChange, disabled = false }) {
+    return (
+        <button
+            type="button"
+            role="switch"
+            aria-checked={checked}
+            onClick={disabled ? undefined : onChange}
+            style={{
+                position: 'relative',
+                display: 'inline-flex',
+                alignItems: 'center',
+                width: 48,
+                height: 26,
+                borderRadius: 999,
+                border: 'none',
+                cursor: disabled ? 'not-allowed' : 'pointer',
+                padding: 3,
+                transition: 'background 0.22s cubic-bezier(0.22,1,0.36,1)',
+                background: disabled ? '#e2e8f0' : checked ? T.green : '#cbd5e1',
+                boxShadow: (!disabled && checked)
+                    ? '0 0 0 3px rgba(22,163,74,0.15), inset 0 1px 2px rgba(0,0,0,0.08)'
+                    : 'inset 0 1px 2px rgba(0,0,0,0.08)',
+                flexShrink: 0,
+                outline: 'none',
+                opacity: disabled ? 0.55 : 1,
+            }}
+        >
+            <span style={{
+                display: 'block',
+                width: 20,
+                height: 20,
+                borderRadius: '50%',
+                background: '#fff',
+                boxShadow: '0 1px 4px rgba(0,0,0,0.18)',
+                transform: checked ? 'translateX(22px)' : 'translateX(0)',
+                transition: 'transform 0.22s cubic-bezier(0.22,1,0.36,1)',
+            }} />
+        </button>
+    );
+}
+
+/* ─── Modal ──────────────────────────────────────────────────────────────── */
 function Modal({ open, onClose, title, children, footer, wide = false }) {
     const [visible, setVisible] = React.useState(false);
     const [render, setRender] = React.useState(false);
@@ -56,6 +98,96 @@ function Modal({ open, onClose, title, children, footer, wide = false }) {
     );
 }
 
+/* ─── Alert Dialog — konsisten dengan desain proyek ─────────────────────── */
+function AlertDialog({ open, onClose, onConfirm, title, message, processing }) {
+    const [visible, setVisible] = useState(false);
+    const [render, setRender] = useState(false);
+
+    useEffect(() => {
+        if (open) { setRender(true); requestAnimationFrame(() => requestAnimationFrame(() => setVisible(true))); }
+        else { setVisible(false); const t = setTimeout(() => setRender(false), 260); return () => clearTimeout(t); }
+    }, [open]);
+
+    if (!render) return null;
+
+    return (
+        <div style={{
+            position: 'fixed', inset: 0, zIndex: 9999,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
+            opacity: visible ? 1 : 0, transition: 'opacity 0.25s ease',
+        }}>
+            <div onClick={!processing ? onClose : undefined} style={{ position: 'absolute', inset: 0, background: 'rgba(10,20,40,0.45)', backdropFilter: 'blur(3px)', cursor: 'default' }} />
+            <div style={{
+                background: '#fff', borderRadius: 16,
+                position: 'relative', width: '100%', maxWidth: 420,
+                boxShadow: '0 24px 60px rgba(10,20,40,0.2)',
+                display: 'flex', flexDirection: 'column',
+                opacity: visible ? 1 : 0,
+                transform: visible ? 'translateY(0) scale(1)' : 'translateY(10px) scale(0.97)',
+                transition: 'opacity 0.25s ease, transform 0.25s cubic-bezier(0.22,1,0.36,1)',
+                overflow: 'hidden',
+            }}>
+                {/* Header */}
+                <div style={{ padding: '18px 22px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${T.borderSoft}`, flexShrink: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{ width: 30, height: 30, borderRadius: 8, background: T.redLight, color: T.red, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                        </div>
+                        <span style={{ fontSize: 15, fontWeight: 800, color: T.navy }}>{title}</span>
+                    </div>
+                    <button
+                        onClick={!processing ? onClose : undefined}
+                        disabled={processing}
+                        style={{ width: 28, height: 28, borderRadius: 7, border: 'none', background: T.bg, color: T.mutedDark, cursor: processing ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.15s', opacity: processing ? 0.4 : 1 }}
+                        onMouseEnter={e => { if (!processing) e.currentTarget.style.background = T.border; }}
+                        onMouseLeave={e => e.currentTarget.style.background = T.bg}
+                    >
+                        <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
+                {/* Body */}
+                <div style={{ padding: '16px 22px 20px' }}>
+                    <p style={{ fontSize: 13, color: T.mutedDark, lineHeight: 1.65, margin: 0 }}>{message}</p>
+                </div>
+                {/* Footer */}
+                <div style={{ height: 1, background: T.borderSoft, flexShrink: 0 }} />
+                <div style={{ padding: '14px 22px', display: 'flex', justifyContent: 'flex-end', gap: 8, flexShrink: 0 }}>
+                    <button
+                        onClick={onClose} disabled={processing}
+                        style={{ height: 36, padding: '0 16px', borderRadius: 8, border: `1.5px solid ${T.border}`, background: 'transparent', color: T.mutedDark, fontSize: 13, fontWeight: 700, cursor: processing ? 'not-allowed' : 'pointer', fontFamily: 'inherit', transition: 'all 0.15s', opacity: processing ? 0.5 : 1 }}
+                        onMouseEnter={e => { if (!processing) e.currentTarget.style.background = T.bg; }}
+                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                    >Batal</button>
+                    <button
+                        onClick={onConfirm} disabled={processing}
+                        style={{ height: 36, padding: '0 18px', borderRadius: 8, border: 'none', background: processing ? T.muted : T.red, color: '#fff', fontSize: 13, fontWeight: 700, cursor: processing ? 'not-allowed' : 'pointer', fontFamily: 'inherit', transition: 'all 0.15s', boxShadow: processing ? 'none' : '0 2px 8px rgba(220,38,38,0.25)', display: 'flex', alignItems: 'center', gap: 6 }}
+                        onMouseEnter={e => { if (!processing) e.currentTarget.style.filter = 'brightness(0.9)'; }}
+                        onMouseLeave={e => e.currentTarget.style.filter = 'none'}
+                    >
+                        {processing ? (
+                            <>
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ animation: 'spin 0.8s linear infinite' }}>
+                                    <path strokeLinecap="round" d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+                                </svg>
+                                Menghapus...
+                            </>
+                        ) : (
+                            <>
+                                <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                                Ya, Hapus
+                            </>
+                        )}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 const BtnGhost = ({ children, onClick }) => (
     <button type="button" onClick={onClick} style={{ height: 36, padding: '0 14px', borderRadius: 8, border: `1.5px solid ${T.border}`, background: 'transparent', color: T.mutedDark, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}
         onMouseEnter={e => e.currentTarget.style.background = T.bg}
@@ -80,12 +212,17 @@ export default function LowonganIndex({ jobs, isVerified, verificationStatus, ke
     const [selectedJob, setSelectedJob] = useState(null);
     const [q, setQ] = useState('');
 
+    // Alert state
+    const [alertOpen, setAlertOpen] = useState(false);
+    const [idToDelete, setIdToDelete] = useState(null);
+    const [isDeleting, setIsDeleting] = useState(false);
+
     const [masterSkills, setMasterSkills] = useState(keahlianMaster);
     const [searchSkill, setSearchSkill] = useState('');
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const searchRef = useRef(null);
 
-    const { data, setData, post, put, delete: destroy, processing, errors, reset, clearErrors } = useForm({
+    const { data, setData, post, put, processing, errors, reset, clearErrors } = useForm({
         title: '', location: '', salary_range: '', description: '', requirements: [],
     });
 
@@ -95,8 +232,7 @@ export default function LowonganIndex({ jobs, isVerified, verificationStatus, ke
     );
 
     const openCreate = () => {
-        reset();
-        clearErrors();
+        reset(); clearErrors();
         setData('requirements', []);
         setIsEditing(false);
         setModalOpen(true);
@@ -120,14 +256,22 @@ export default function LowonganIndex({ jobs, isVerified, verificationStatus, ke
         else post(route('perusahaan.lowongan.store'), { onSuccess: () => setModalOpen(false) });
     };
 
-    const handleDelete = id => { if (confirm('Yakin ingin menghapus lowongan ini?')) destroy(route('perusahaan.lowongan.destroy', id)); };
+    const confirmDelete = (id) => { setIdToDelete(id); setAlertOpen(true); };
+
+    const executeDelete = () => {
+        setIsDeleting(true);
+        router.delete(route('perusahaan.lowongan.destroy', idToDelete), {
+            preserveScroll: true,
+            onSuccess: () => { setAlertOpen(false); setIdToDelete(null); },
+            onFinish: () => setIsDeleting(false),
+        });
+    };
 
     const toggleActive = id => {
         if (!isVerified) return;
         router.patch(route('perusahaan.lowongan.toggle', id), {}, { preserveScroll: true });
     };
 
-    // REVISI: Filter sekarang hanya berdasarkan kata kunci pencarian, tidak lagi membuang yang sudah dipilih
     const availableSkills = masterSkills.filter(s =>
         s.name.toLowerCase().includes(searchSkill.toLowerCase())
     );
@@ -183,6 +327,7 @@ export default function LowonganIndex({ jobs, isVerified, verificationStatus, ke
                 .ak-root * { font-family:'Plus Jakarta Sans',sans-serif; }
                 @keyframes cardIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
                 @keyframes rowIn  { from{opacity:0;transform:translateX(-4px)} to{opacity:1;transform:translateX(0)} }
+                @keyframes spin   { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
                 .tbl-row:hover td { background:#fafbfc; }
                 .custom-scrollbar::-webkit-scrollbar { width: 6px; }
                 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
@@ -214,7 +359,6 @@ export default function LowonganIndex({ jobs, isVerified, verificationStatus, ke
                 )}
 
                 <div style={{ background: '#fff', borderRadius: 14, border: `1px solid ${T.borderSoft}`, padding: 20, animation: 'cardIn 0.38s cubic-bezier(0.22,1,0.36,1) both' }}>
-
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 18 }}>
                         <div style={{ display: 'flex', gap: 8 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 8, background: T.navyLight, border: `1px solid ${T.navyMid}22` }}>
@@ -235,7 +379,6 @@ export default function LowonganIndex({ jobs, isVerified, verificationStatus, ke
                                 <input style={{ ...fieldBase, paddingLeft: 33, width: 220 }} placeholder="Cari posisi atau lokasi..."
                                     value={q} onChange={e => setQ(e.target.value)} onFocus={onFocus} onBlur={onBlur} />
                             </div>
-
                             <button
                                 onClick={() => isVerified && openCreate()}
                                 disabled={!isVerified}
@@ -281,9 +424,9 @@ export default function LowonganIndex({ jobs, isVerified, verificationStatus, ke
                                         <td style={{ padding: '13px 14px', fontSize: 13, color: T.mutedDark }}>{job.salary_range || '—'}</td>
                                         <td style={{ padding: '13px 14px' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                                <Switch
+                                                <CustomSwitch
                                                     checked={job.is_active}
-                                                    onCheckedChange={() => toggleActive(job.id)}
+                                                    onChange={() => toggleActive(job.id)}
                                                     disabled={!isVerified}
                                                 />
                                                 <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20, background: job.is_active ? T.greenLight : T.borderSoft, color: job.is_active ? T.green : T.mutedDark }}>
@@ -305,18 +448,17 @@ export default function LowonganIndex({ jobs, isVerified, verificationStatus, ke
                                                     }}
                                                     onMouseEnter={e => { if (isVerified) { e.currentTarget.style.borderColor = T.navyMid; e.currentTarget.style.background = T.navyLight; } }}
                                                     onMouseLeave={e => { if (isVerified) { e.currentTarget.style.borderColor = T.border; e.currentTarget.style.background = T.bg; } }}
-                                                >
-                                                    Edit
-                                                </button>
-                                                <button onClick={() => handleDelete(job.id)} style={{
-                                                    height: 30, padding: '0 12px', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.14s',
-                                                    border: `1.5px solid #fecaca`, background: T.redLight, color: T.red,
-                                                }}
+                                                >Edit</button>
+                                                <button
+                                                    onClick={() => confirmDelete(job.id)}
+                                                    style={{
+                                                        height: 30, padding: '0 12px', borderRadius: 7, fontSize: 12, fontWeight: 600,
+                                                        cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.14s',
+                                                        border: `1.5px solid #fecaca`, background: T.redLight, color: T.red,
+                                                    }}
                                                     onMouseEnter={e => e.currentTarget.style.background = '#fee2e2'}
                                                     onMouseLeave={e => e.currentTarget.style.background = T.redLight}
-                                                >
-                                                    Hapus
-                                                </button>
+                                                >Hapus</button>
                                             </div>
                                         </td>
                                     </tr>
@@ -332,6 +474,17 @@ export default function LowonganIndex({ jobs, isVerified, verificationStatus, ke
                 </div>
             </div>
 
+            {/* Alert Dialog — konsisten dengan desain proyek */}
+            <AlertDialog
+                open={alertOpen}
+                onClose={() => !isDeleting && setAlertOpen(false)}
+                onConfirm={executeDelete}
+                processing={isDeleting}
+                title="Hapus Lowongan?"
+                message="Tindakan ini tidak dapat dibatalkan. Lowongan ini beserta semua data lamaran terkait akan dihapus secara permanen dari sistem."
+            />
+
+            {/* Form Modal */}
             <Modal open={modalOpen} onClose={() => setModalOpen(false)}
                 title={isEditing ? 'Edit Lowongan' : 'Posting Lowongan Baru'}
                 wide
@@ -388,38 +541,20 @@ export default function LowonganIndex({ jobs, isVerified, verificationStatus, ke
                                     style={{ ...fieldBase, paddingLeft: 36 }}
                                     placeholder="Ketik keahlian (Misal: PHP, MySQL...)"
                                     value={searchSkill}
-                                    onChange={e => {
-                                        setSearchSkill(e.target.value);
-                                        setIsDropdownOpen(true);
-                                    }}
+                                    onChange={e => { setSearchSkill(e.target.value); setIsDropdownOpen(true); }}
                                     onFocus={(e) => { onFocus(e); setIsDropdownOpen(true); }}
                                     onBlur={onBlur}
                                 />
                             </div>
-
                             {isDropdownOpen && searchSkill && (
                                 <div className="custom-scrollbar" style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, background: '#fff', borderRadius: 10, border: `1px solid ${T.borderSoft}`, boxShadow: '0 10px 25px rgba(0,0,0,0.1)', zIndex: 100, maxHeight: 200, overflowY: 'auto', padding: '6px' }}>
                                     {availableSkills.length > 0 ? (
                                         availableSkills.map(skill => {
-                                            // REVISI: Cek apakah skill ini sudah ada di dalam array data.requirements
                                             const isSelected = data.requirements.includes(skill.name);
-
                                             return (
-                                                <div
-                                                    key={skill.id}
+                                                <div key={skill.id}
                                                     onClick={() => !isSelected && addSkill(skill.name)}
-                                                    style={{
-                                                        padding: '8px 12px',
-                                                        borderRadius: 6,
-                                                        fontSize: 13,
-                                                        display: 'flex',
-                                                        justifyContent: 'space-between',
-                                                        alignItems: 'center',
-                                                        color: isSelected ? T.muted : T.navy,
-                                                        cursor: isSelected ? 'not-allowed' : 'pointer',
-                                                        background: isSelected ? T.borderSoft : 'transparent',
-                                                        transition: 'background 0.1s'
-                                                    }}
+                                                    style={{ padding: '8px 12px', borderRadius: 6, fontSize: 13, display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: isSelected ? T.muted : T.navy, cursor: isSelected ? 'not-allowed' : 'pointer', background: isSelected ? T.borderSoft : 'transparent', transition: 'background 0.1s' }}
                                                     onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = T.navyLight; }}
                                                     onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = 'transparent'; }}
                                                 >
@@ -446,15 +581,10 @@ export default function LowonganIndex({ jobs, isVerified, verificationStatus, ke
                             <div style={{ fontSize: 13, color: T.muted, width: '100%', textAlign: 'center', padding: '6px 0' }}>Belum ada requirement keahlian yang dipilih.</div>
                         ) : (
                             data.requirements.map(skillName => (
-                                <button
-                                    key={skillName} type="button"
+                                <button key={skillName} type="button"
                                     title="Klik dua kali untuk menghapus"
                                     onDoubleClick={() => removeSkill(skillName)}
-                                    style={{
-                                        padding: '5px 12px 5px 14px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s',
-                                        border: `1.5px solid ${T.orange}`, background: T.orangeLight, color: T.orange,
-                                        display: 'flex', alignItems: 'center', gap: 6
-                                    }}
+                                    style={{ padding: '5px 12px 5px 14px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s', border: `1.5px solid ${T.orange}`, background: T.orangeLight, color: T.orange, display: 'flex', alignItems: 'center', gap: 6 }}
                                     onMouseEnter={e => { e.currentTarget.style.background = '#fecaca'; e.currentTarget.style.borderColor = '#ef4444'; e.currentTarget.style.color = '#dc2626'; }}
                                     onMouseLeave={e => { e.currentTarget.style.background = T.orangeLight; e.currentTarget.style.borderColor = T.orange; e.currentTarget.style.color = T.orange; }}
                                 >
@@ -465,7 +595,6 @@ export default function LowonganIndex({ jobs, isVerified, verificationStatus, ke
                         )}
                     </div>
                     <div style={{ fontSize: 11, color: T.muted, marginTop: -8 }}>*Klik dua kali (Double-click) pada keahlian untuk menghapusnya.</div>
-
                 </form>
             </Modal>
         </AuthenticatedLayout>

@@ -8,6 +8,7 @@ use App\Notifications\SystemNotification;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
+use App\Helpers\TextSimilarity; // <-- MENGGUNAKAN HELPER TF-IDF
 
 class ApplicantController extends Controller
 {
@@ -19,22 +20,48 @@ class ApplicantController extends Controller
             return redirect()->route('perusahaan.profile.edit')->with('error', 'Silakan lengkapi profil terlebih dahulu.');
         }
 
-        // Menarik data pelamar beserta relasinya (Lowongan, Profil Alumni, dan Akun User Alumni)
+        // 1. Tarik semua data pelamar untuk perusahaan ini
         $applications = JobApplication::with(['jobPosting', 'alumni.user'])
             ->whereHas('jobPosting', function ($query) use ($company) {
-                // Kunci keamanan: Hanya ambil pelamar pada lowongan milik perusahaan ini
                 $query->where('company_id', $company->id);
             })
-            ->latest() // Urutkan dari yang paling baru melamar
             ->get();
 
+        // 2. Kalkulasi Skor Kecocokan (TF-IDF & Cosine Similarity)
+        $applicationsWithScore = $applications->map(function ($app) {
+            // Siapkan teks lowongan (gabungan deskripsi dan syarat)
+            $requirements = is_array($app->jobPosting->requirements)
+                ? implode(' ', $app->jobPosting->requirements)
+                : ($app->jobPosting->requirements ?? '');
+
+            $teksLowongan = $app->jobPosting->description . ' ' . $requirements;
+
+            // Siapkan teks kandidat (gabungan jurusan dan skill)
+            $skills = is_array($app->alumni->skills)
+                ? implode(' ', $app->alumni->skills)
+                : ($app->alumni->skills ?? '');
+
+            $teksKandidat = ($app->alumni->major ?? '') . ' ' . $skills;
+
+            // Panggil Helper Algoritma
+            $skor = TextSimilarity::calculate($teksLowongan, $teksKandidat);
+
+            // Ubah float (0.0 - 1.0) menjadi persentase bulat (0 - 100)
+            $app->match_score = round($skor * 100);
+
+            return $app;
+        });
+
+        // 3. Urutkan dari skor tertinggi sebagai default
+        $sortedApps = $applicationsWithScore->sortByDesc('match_score')->values();
+
         return Inertia::render('Perusahaan/Pelamar/Index', [
-            'applications' => $applications,
+            'applications' => $sortedApps,
         ]);
     }
+
     public function updateStatus(Request $request, JobApplication $lamaran)
     {
-        // Ensure the application belongs to a job posted by the current company
         $company = Auth::user()->company;
         if ($lamaran->jobPosting->company_id !== $company->id) {
             abort(403, 'Unauthorized action.');
@@ -47,7 +74,6 @@ class ApplicantController extends Controller
 
         $lamaran->update($validated);
 
-        // --- NEW: SEND NOTIFICATION TO ALUMNI ---
         if ($lamaran->alumni && $lamaran->alumni->user) {
             $alumniUser = $lamaran->alumni->user;
             $alumniUser->notify(new SystemNotification(

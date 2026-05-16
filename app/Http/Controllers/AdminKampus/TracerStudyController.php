@@ -23,7 +23,7 @@ class TracerStudyController extends Controller
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'questions' => 'nullable|array', // JSON array dari Form Builder
+            'questions' => 'nullable|array',
         ]);
 
         TracerStudyForm::create($validated);
@@ -50,13 +50,17 @@ class TracerStudyController extends Controller
 
     public function toggleActive(TracerStudyForm $tracer)
     {
-        // Fitur untuk mengaktifkan/menonaktifkan kuesioner
-        $tracer->update(['is_active' => !$tracer->is_active]);
-        return back()->with('message', 'Status kuesioner diubah.');
+        if (!$tracer->is_active) {
+            TracerStudyForm::where('id', '!=', $tracer->id)->update(['is_active' => false]);
+            $tracer->update(['is_active' => true]);
+        } else {
+            $tracer->update(['is_active' => false]);
+        }
+
+        return back()->with('message', 'Status kuesioner berhasil diperbarui.');
     }
     public function responses(TracerStudyForm $tracer)
     {
-        // Ambil semua jawaban untuk form ini, beserta relasi data alumni dan usernya
         $responses = TracerStudyResponse::with('alumni.user')
             ->where('tracer_study_form_id', $tracer->id)
             ->latest()

@@ -8,7 +8,7 @@ use App\Notifications\SystemNotification;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
-use App\Helpers\TextSimilarity; // <-- MENGGUNAKAN HELPER TF-IDF
+use Carbon\Carbon;
 
 class ApplicantController extends Controller
 {
@@ -27,27 +27,83 @@ class ApplicantController extends Controller
             })
             ->get();
 
-        // 2. Kalkulasi Skor Kecocokan (TF-IDF & Cosine Similarity)
+        // 2. Kalkulasi Skor Kecocokan (Weighted ATS Scoring)
         $applicationsWithScore = $applications->map(function ($app) {
-            // Siapkan teks lowongan (gabungan deskripsi dan syarat)
-            $requirements = is_array($app->jobPosting->requirements)
-                ? implode(' ', $app->jobPosting->requirements)
-                : ($app->jobPosting->requirements ?? '');
+            $job = $app->jobPosting;
+            $alumni = $app->alumni;
 
-            $teksLowongan = $app->jobPosting->description . ' ' . $requirements;
+            // --- A. SKOR KEAHLIAN (PURE SKILL MATCH) : BOBOT 40% ---
+            $jobSkills = is_array($job->requirements) ? $job->requirements : [];
+            $alumniSkills = is_array($alumni->skills) ? $alumni->skills : [];
 
-            // Siapkan teks kandidat (gabungan jurusan dan skill)
-            $skills = is_array($app->alumni->skills)
-                ? implode(' ', $app->alumni->skills)
-                : ($app->alumni->skills ?? '');
+            $skillScore = 1.0; // Beri poin penuh jika perusahaan tidak menetapkan syarat skill
 
-            $teksKandidat = ($app->alumni->major ?? '') . ' ' . $skills;
+            if (count($jobSkills) > 0) {
+                // Ubah semua skill ke huruf kecil agar pencocokan tidak sensitif (huruf besar/kecil)
+                $lowerJobSkills = array_map('strtolower', $jobSkills);
+                $lowerAlumniSkills = array_map('strtolower', $alumniSkills);
 
-            // Panggil Helper Algoritma
-            $skor = TextSimilarity::calculate($teksLowongan, $teksKandidat);
+                // Cari irisan array (Skill pelamar yang sama persis dengan syarat lowongan)
+                $matchedSkills = array_intersect($lowerJobSkills, $lowerAlumniSkills);
 
-            // Ubah float (0.0 - 1.0) menjadi persentase bulat (0 - 100)
-            $app->match_score = round($skor * 100);
+                // Rumus: (Jumlah Skill Pelamar yang Cocok) dibagi (Jumlah Skill yang Diminta HRD)
+                $skillScore = count($matchedSkills) / count($jobSkills);
+            }
+
+            // --- B. SKOR PENDIDIKAN : BOBOT 25% ---
+            $eduScore = 1.0; // Default 100% jika perusahaan tidak mensyaratkan
+            if ($job->min_education) {
+                // Mapping hierarki pendidikan menjadi angka
+                $eduMap = ['SMA/SMK' => 1, 'D3' => 2, 'D4/S1' => 3, 'S1' => 3, 'S2' => 4, 'S3' => 5];
+                $jobEdu = $eduMap[$job->min_education] ?? 0;
+                $alumniEdu = $eduMap[$alumni->jenjang_pendidikan] ?? 0;
+
+                if ($alumniEdu >= $jobEdu) {
+                    $eduScore = 1.0; // Memenuhi atau melebihi standar
+                } else {
+                    $eduScore = 0.3; // Penalti berat jika di bawah standar pendidikan
+                }
+            }
+
+            // --- C. SKOR PENGALAMAN : BOBOT 20% ---
+            $expScore = 1.0;
+            if ($job->min_experience !== null) {
+                $alumniExp = (int) $alumni->experience;
+                if ($alumniExp >= $job->min_experience) {
+                    $expScore = 1.0;
+                } else {
+                    // Proporsional (Contoh: Butuh 2 thn, pelamar 1 thn = Skor 0.5)
+                    $expScore = $job->min_experience > 0 ? ($alumniExp / $job->min_experience) : 1.0;
+                }
+            }
+
+            // --- D. SKOR USIA : BOBOT 15% ---
+            $ageScore = 1.0;
+            if ($job->max_age !== null && $alumni->tanggal_lahir) {
+                $alumniAge = Carbon::parse($alumni->tanggal_lahir)->age;
+
+                if ($alumniAge <= $job->max_age) {
+                    $ageScore = 1.0;
+                } else {
+                    // Penalti bertahap: Kurangi skor 20% untuk setiap 1 tahun kelebihan usia
+                    $ageDiff = $alumniAge - $job->max_age;
+                    $ageScore = max(0, 1.0 - ($ageDiff * 0.2));
+                }
+            }
+
+            // --- KALKULASI FINAL DENGAN PEMBOBOTAN ---
+            $finalScore = ($skillScore * 0.40) + ($eduScore * 0.25) + ($expScore * 0.20) + ($ageScore * 0.15);
+
+            // Ubah menjadi persentase bulat
+            $app->match_score = round($finalScore * 100);
+
+            // Simpan rincian skor untuk ditampilkan di UI
+            $app->score_details = [
+                'skill_match' => round($skillScore * 100) . '%',
+                'education' => round($eduScore * 100) . '%',
+                'experience' => round($expScore * 100) . '%',
+                'age' => round($ageScore * 100) . '%'
+            ];
 
             return $app;
         });

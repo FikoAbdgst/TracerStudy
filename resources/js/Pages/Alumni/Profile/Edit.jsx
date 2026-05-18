@@ -224,8 +224,14 @@ const EditMode = ({ data, setData, errors, processing, submit, programStudis, ma
                         <div style={{ fontSize: 10, color: T.muted, marginTop: 4 }}>*NIM Terkunci (Diisi oleh Kampus)</div>
                     </div>
                     <div>
-                        <FieldLabel>Jenjang</FieldLabel>
-                        <JenjangSelect value={data.jenjang_pendidikan} onChange={v => setData('jenjang_pendidikan', v)} />
+                        <FieldLabel required>Jenjang</FieldLabel>
+                        <input
+                            style={{ ...fieldBase, opacity: 0.65, cursor: 'not-allowed', background: T.borderSoft }}
+                            value={data.jenjang_pendidikan || ''}
+                            placeholder="Otomatis terisi..."
+                            disabled
+                        />
+                        <div style={{ fontSize: 10, color: T.muted, marginTop: 4 }}>*Terisi otomatis dari prodi</div>
                     </div>
                     <div>
                         <FieldLabel required>Tahun Lulus</FieldLabel>
@@ -237,7 +243,21 @@ const EditMode = ({ data, setData, errors, processing, submit, programStudis, ma
                 {/* Program Studi */}
                 <div>
                     <FieldLabel required>Program Studi</FieldLabel>
-                    <Select value={data.major} onValueChange={v => setData('major', v)}>
+
+                    <Select
+                        value={data.major}
+                        onValueChange={v => {
+                            // 1. Cari objek prodi yang dipilih
+                            const selectedProdi = programStudis.find(p => p.name === v);
+
+                            // 2. Gunakan object spread langsung (BUKAN menggunakan currentData => ...)
+                            setData({
+                                ...data,
+                                major: v,
+                                jenjang_pendidikan: selectedProdi?.parameter_value || ''
+                            });
+                        }}
+                    >
                         <SelectTrigger
                             className="focus:ring-0 focus:ring-offset-0"
                             style={{ height: 42, borderRadius: 9, border: `1.5px solid ${T.border}`, background: T.bg, fontSize: 13.5, width: '100%' }}

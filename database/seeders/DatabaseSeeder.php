@@ -133,7 +133,6 @@ class DatabaseSeeder extends Seeder
             'is_active' => true,
         ]);
 
-        // 5. Buat Akun Alumni beserta Profilnya
         $alumni1 = User::create([
             'name' => 'Fiko Abdigusti',
             'email' => 'fiko@alumni.sitami.ac.id',
@@ -146,10 +145,11 @@ class DatabaseSeeder extends Seeder
             'user_id' => $alumni1->id,
             'nim' => '23010044',
             'major' => 'Manajemen Informatika',
+            'jenjang_pendidikan' => 'D3',              // <-- TAMBAHAN: Otomatis sesuai prodi
+            'tanggal_lahir' => '2004-05-14',           // <-- TAMBAHAN WAJIB
+            'experience' => 1,                         // <-- TAMBAHAN WAJIB
             'graduation_year' => 2026,
-
             'skills' => ['Laravel', 'React.js', 'Inertia.js', 'Tailwind CSS'],
-
             'phone_number' => '081234567890',
             'address' => 'Bandung, Jawa Barat',
         ]);
@@ -166,6 +166,9 @@ class DatabaseSeeder extends Seeder
             'user_id' => $alumni2->id,
             'nim' => '22010111',
             'major' => 'Teknik Informatika',
+            'jenjang_pendidikan' => 'S1',              // <-- TAMBAHAN: Otomatis sesuai prodi
+            'tanggal_lahir' => '2003-08-20',           // <-- TAMBAHAN WAJIB
+            'experience' => 2,                         // <-- TAMBAHAN WAJIB
             'graduation_year' => 2025,
             'skills' => ['System Analysis', 'ERP Development', 'PHP'],
             'phone_number' => '089876543210',

@@ -11,7 +11,8 @@ class JobPosting extends Model
     protected $guarded = [];
 
 
-    // Pastikan semua kolom ini ada di fillable
+    // File: app/Models/JobPosting.php
+
     protected $fillable = [
         'company_id',
         'title',
@@ -19,7 +20,11 @@ class JobPosting extends Model
         'requirements',
         'location',
         'salary_range',
-        'is_active'
+        'is_active',
+        'min_education',
+        'min_experience',
+        'max_age',
+        'work_model' // <--- Masukkan ke sini
     ];
 
     // Cast is_active menjadi boolean agar mudah dibaca di React

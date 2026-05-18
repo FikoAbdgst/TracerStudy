@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Link, usePage, router } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -273,9 +273,9 @@ export default function AuthenticatedLayout({ header, children }) {
 
                 .al-hamburger:hover { background: #f0f4f9; }
 
-                /* Mobile menu drawer */
+                /* PERBAIKAN: Mobile menu drawer menggunakan opacity/visibility bukan unmount */
                 .al-mobile-menu {
-                    position: fixed;
+                    position: absolute;
                     top: 60px;
                     left: 0;
                     right: 0;
@@ -285,12 +285,21 @@ export default function AuthenticatedLayout({ header, children }) {
                     z-index: 49;
                     padding: 12px 16px 16px;
                     transform-origin: top;
-                    animation: mobileMenuIn 0.22s cubic-bezier(0.22, 1, 0.36, 1) both;
+
+                    /* Hidden by default */
+                    opacity: 0;
+                    visibility: hidden;
+                    transform: scaleY(0.92);
+                    pointer-events: none;
+                    transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
                 }
 
-                @keyframes mobileMenuIn {
-                    from { opacity: 0; transform: scaleY(0.92); }
-                    to   { opacity: 1; transform: scaleY(1); }
+                /* Class ketika terbuka */
+                .al-mobile-menu.open {
+                    opacity: 1;
+                    visibility: visible;
+                    transform: scaleY(1);
+                    pointer-events: auto;
                 }
 
                 .al-mobile-link {
@@ -361,12 +370,12 @@ export default function AuthenticatedLayout({ header, children }) {
                     </button>
 
                     {/* Brand */}
-                    <a href="#" className="al-brand">
+                    <Link href="#" className="al-brand">
                         <div className="al-brand-mark">M</div>
                         <div className="al-brand-divider" />
                         <span className="al-brand-text">SITAMI</span>
                         <span className="al-brand-role">{userRole}</span>
-                    </a>
+                    </Link>
 
                     {/* Desktop Nav Links */}
                     <div className="al-nav-links">
@@ -395,7 +404,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                     )}
                                 </button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-80 p-0 bg-white border border-gray-100 shadow-2xl rounded-xl overflow-hidden">
+                            <DropdownMenuContent align="end" className="w-80 p-0 bg-white border border-gray-100 shadow-2xl rounded-xl overflow-hidden z-[999]">
                                 <div className="bg-slate-50 border-b border-gray-100 px-4 py-2.5 flex justify-between items-center">
                                     <span className="font-bold text-sm text-slate-700">Notifikasi</span>
                                     <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
@@ -442,7 +451,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                     </svg>
                                 </button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-52 bg-white border border-gray-100 shadow-2xl rounded-xl">
+                            <DropdownMenuContent align="end" className="w-52 bg-white border border-gray-100 shadow-2xl rounded-xl z-[999]">
                                 <DropdownMenuLabel>
                                     <p className="text-sm font-bold text-slate-800">{auth.user.name}</p>
                                     <p className="text-xs font-normal text-slate-400 mt-0.5">{auth.user.email}</p>
@@ -450,7 +459,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem asChild>
                                     <Link href={route('profile.edit')} className="cursor-pointer w-full text-sm text-slate-700">
-                                        Pengaturan Profil
+                                        Pengaturan Akun
                                     </Link>
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
@@ -467,32 +476,21 @@ export default function AuthenticatedLayout({ header, children }) {
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </div>
-                </nav>
 
-                {/* Mobile Menu Drawer */}
-                {mobileOpen && (
-                    <div className="al-mobile-menu">
+                    {/* PERBAIKAN: Mobile Menu Drawer kini selalu dirender tapi dikontrol oleh class CSS open/closed */}
+                    <div className={`al-mobile-menu ${mobileOpen ? 'open' : ''}`}>
                         {navigationMenu.map((item) => (
                             <Link
                                 key={item.name}
                                 href={item.href}
                                 className={`al-mobile-link${isActive(item.href) ? ' active' : ''}`}
-                                onClick={(e) => {
-                                    // 1. Mencegah Link melakukan navigasi default bawaan HTML
-                                    e.preventDefault();
-
-                                    // 2. Tutup menu mobile
-                                    setMobileOpen(false);
-
-                                    // 3. Paksa Inertia untuk pindah halaman
-                                    router.get(item.href);
-                                }}
+                                onClick={() => setMobileOpen(false)}
                             >
                                 {item.name}
                             </Link>
                         ))}
                     </div>
-                )}
+                </nav>
 
                 {/* Page Header */}
                 {header && (

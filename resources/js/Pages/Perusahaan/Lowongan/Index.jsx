@@ -224,8 +224,8 @@ export default function LowonganIndex({ jobs, isVerified, verificationStatus, ke
 
     const { data, setData, post, put, processing, errors, reset, clearErrors } = useForm({
         title: '', location: '', salary_range: '', description: '', requirements: [],
+        min_education: '', min_experience: '', max_age: '', work_model: '' // <--- Update state
     });
-
     const filtered = jobs.filter(j =>
         j.title.toLowerCase().includes(q.toLowerCase()) ||
         (j.location && j.location.toLowerCase().includes(q.toLowerCase()))
@@ -245,7 +245,11 @@ export default function LowonganIndex({ jobs, isVerified, verificationStatus, ke
             location: job.location || '',
             salary_range: job.salary_range || '',
             description: job.description,
-            requirements: Array.isArray(job.requirements) ? job.requirements : (job.requirements ? [job.requirements] : [])
+            requirements: Array.isArray(job.requirements) ? job.requirements : (job.requirements ? [job.requirements] : []),
+            min_education: job.min_education || '',
+            min_experience: job.min_experience || '',
+            max_age: job.max_age || '',
+            work_model: job.work_model || '' // <--- Binding data dari database
         });
         setIsEditing(true); setModalOpen(true);
     };
@@ -520,6 +524,50 @@ export default function LowonganIndex({ jobs, isVerified, verificationStatus, ke
                         <FieldLabel>Lokasi Penempatan</FieldLabel>
                         <input style={fieldBase} value={data.location} onChange={e => setData('location', e.target.value)}
                             placeholder="Contoh: Bandung, Jawa Barat (WFO/Remote)" onFocus={onFocus} onBlur={onBlur} />
+                    </div>
+                    {/* Tambahkan blok ini di bawah input "Lokasi Penempatan" atau "Deskripsi Pekerjaan" */}
+                    <div style={{ padding: '14px 16px', borderRadius: 10, background: T.navyLight, border: `1px solid ${T.navyMid}40`, marginBottom: 14 }}>
+                        <h4 style={{ margin: '0 0 12px 0', fontSize: 13, fontWeight: 800, color: T.navy }}>Kriteria Khusus (Untuk Sistem Skor ATS)</h4>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+
+                            {/* Pendidikan */}
+                            <div>
+                                <FieldLabel>Minimal Pendidikan</FieldLabel>
+                                <select style={fieldBase} value={data.min_education} onChange={e => setData('min_education', e.target.value)} onFocus={onFocus} onBlur={onBlur}>
+                                    <option value="">Pilih Pendidikan...</option>
+                                    <option value="SMA/SMK">SMA / SMK Sederajat</option>
+                                    <option value="D3">Diploma 3 (D3)</option>
+                                    <option value="D4/S1">Sarjana (D4 / S1)</option>
+                                    <option value="S2">Magister (S2)</option>
+                                </select>
+                            </div>
+
+                            {/* Pengalaman */}
+                            <div>
+                                <FieldLabel>Minimal Pengalaman (Tahun)</FieldLabel>
+                                <input type="number" min="0" style={fieldBase} value={data.min_experience} onChange={e => setData('min_experience', e.target.value)}
+                                    placeholder="Contoh: 1 (Kosongkan jika Fresh Graduate)" onFocus={onFocus} onBlur={onBlur} />
+                            </div>
+
+                            {/* Usia */}
+                            <div>
+                                <FieldLabel>Batas Usia Maksimal</FieldLabel>
+                                <input type="number" min="15" style={fieldBase} value={data.max_age} onChange={e => setData('max_age', e.target.value)}
+                                    placeholder="Contoh: 30" onFocus={onFocus} onBlur={onBlur} />
+                            </div>
+
+                            <div>
+                                <FieldLabel>Sistem Kerja</FieldLabel>
+                                <select style={fieldBase} value={data.work_model} onChange={e => setData('work_model', e.target.value)} onFocus={onFocus} onBlur={onBlur}>
+                                    <option value="">Pilih Sistem...</option>
+                                    <option value="WFO">WFO (Work From Office)</option>
+                                    <option value="WFH">WFH (Work From Home)</option>
+                                    <option value="Hybrid">Hybrid (Kombinasi)</option>
+                                    <option value="WFA">WFA (Work From Anywhere)</option>
+                                </select>
+                            </div>
+
+                        </div>
                     </div>
 
                     <div>

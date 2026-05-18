@@ -41,10 +41,14 @@ class JobPostingController extends Controller
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'required|string',
-            'requirements' => 'nullable|array', // UBAH JADI ARRAY
+            'requirements' => 'nullable|array',
             'location' => 'nullable|string|max:255',
             'salary_range' => 'nullable|string|max:255',
             'is_active' => 'boolean',
+            'min_education' => 'nullable|string|max:255',
+            'min_experience' => 'nullable|integer|min:0',
+            'max_age' => 'nullable|integer|min:0',
+            'work_model' => 'nullable|string|in:WFO,WFH,Hybrid,WFA',
         ]);
 
         $validated['company_id'] = $company->id;
@@ -66,14 +70,16 @@ class JobPostingController extends Controller
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'required|string',
-            'requirements' => 'nullable|array', // <- PASTIKAN INI ARRAY
+            'requirements' => 'nullable|array',
             'location' => 'nullable|string|max:255',
             'salary_range' => 'nullable|string|max:255',
             'is_active' => 'boolean',
+            'min_education' => 'nullable|string|max:255',
+            'min_experience' => 'nullable|integer|min:0',
+            'max_age' => 'nullable|integer|min:0',
+            'work_model' => 'nullable|string|in:WFO,WFH,Hybrid,WFA', // <--- Ganti di sini
         ]);
-
         $job->update($validated);
-
         return back()->with('message', 'Lowongan berhasil diperbarui.');
     }
 

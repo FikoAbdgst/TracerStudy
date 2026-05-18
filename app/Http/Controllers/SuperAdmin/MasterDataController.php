@@ -13,35 +13,29 @@ class MasterDataController extends Controller
 {
     public function index()
     {
-        // Ambil semua kategori beserta item di dalamnya
+        // Pastikan kategori dasar selalu ada di database (Sektor Industri, Program Studi, Keahlian)
+        // Kita menggunakan firstOrCreate agar tidak error meski dihapus sebelumnya
+        $industriCat = MasterCategory::firstOrCreate(
+            ['slug' => 'sektor-industri'],
+            ['name' => 'Sektor Industri', 'use_parameter' => false]
+        );
+        $prodiCat = MasterCategory::firstOrCreate(
+            ['slug' => 'program-studi'],
+            ['name' => 'Program Studi', 'use_parameter' => true, 'parameter_label' => 'Jenjang']
+        );
+        $keahlianCat = MasterCategory::firstOrCreate(
+            ['slug' => 'keahlian'],
+            ['name' => 'Keahlian / Skill', 'use_parameter' => false]
+        );
+
+        // Ambil data beserta relasinya (items)
         $categories = MasterCategory::with(['items' => function ($query) {
             $query->latest();
-        }])->latest()->get();
+        }])->get()->keyBy('slug'); // Kita jadikan 'slug' sebagai kunci array untuk mempermudah pemanggilan di React
 
         return Inertia::render('SuperAdmin/MasterData/Index', [
-            'categories' => $categories,
+            'categoriesData' => $categories,
         ]);
-    }
-
-    // ── KATEGORI (TABS) ────────────────────────────────────────────────────
-    public function storeCategory(Request $request)
-    {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'use_parameter' => 'boolean',
-            'parameter_label' => 'nullable|string|max:255',
-        ]);
-
-        $validated['slug'] = Str::slug($validated['name']);
-        MasterCategory::create($validated);
-
-        return back()->with('message', 'Kategori baru berhasil ditambahkan.');
-    }
-
-    public function destroyCategory(MasterCategory $category)
-    {
-        $category->delete();
-        return back()->with('message', 'Kategori beserta isinya berhasil dihapus.');
     }
 
     // ── ITEM MASTER DATA ───────────────────────────────────────────────────
@@ -73,6 +67,7 @@ class MasterDataController extends Controller
         $item->delete();
         return back()->with('message', 'Data berhasil dihapus.');
     }
+
     public function quickAddKeahlian(Request $request)
     {
         $validated = $request->validate([
@@ -85,7 +80,6 @@ class MasterDataController extends Controller
             return response()->json(['error' => 'Kategori Keahlian tidak ditemukan di Master Data.'], 404);
         }
 
-        // Cek apakah sudah ada untuk menghindari duplikat
         $existing = MasterItem::where('master_category_id', $category->id)
             ->where('name', 'like', $validated['name'])
             ->first();

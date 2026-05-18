@@ -90,8 +90,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware(['auth', 'role:Admin Kampus'])->prefix('admin-kampus')->name('adminkampus.')->group(function () {
         Route::get('/dashboard', [AdminKampusDashboard::class, 'index'])->name('dashboard');
 
-        // Rute Mengelola Data Alumni
         Route::get('/alumni', [AlumniController::class, 'index'])->name('alumni.index');
+        Route::get('/alumni/template', [AlumniController::class, 'downloadTemplate'])->name('alumni.template'); // <-- TAMBAHKAN INI
+        Route::post('/alumni/import', [AlumniController::class, 'import'])->name('alumni.import');
 
         Route::get('/tracer-study', [TracerStudyController::class, 'index'])->name('tracer');
         Route::post('/tracer-study', [TracerStudyController::class, 'store'])->name('tracer.store');

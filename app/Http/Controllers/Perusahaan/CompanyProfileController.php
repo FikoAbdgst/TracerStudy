@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Perusahaan;
 
 use App\Http\Controllers\Controller;
-use App\Models\IndustrySektor;
+use App\Models\MasterCategory;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
@@ -14,13 +14,21 @@ class CompanyProfileController extends Controller
     {
         $company = Auth::user()->company;
 
-        $industries = IndustrySektor::all();
+        // Cari kategori di Master Data yang slug-nya mengandung kata 'industri'
+        // (Berlaku untuk nama "Industri", "Sektor Industri", dll)
+        $category = MasterCategory::with('items')
+            ->where('slug', 'like', '%industri%')
+            ->first();
+
+        // Jika kategori ditemukan, ambil item di dalamnya. Jika tidak, kirim array kosong.
+        $industries = $category ? $category->items : [];
 
         return Inertia::render('Perusahaan/Profile/Edit', [
             'company' => $company,
-            'industries' => $industries,
+            'industries' => $industries, // Data item sekarang berhasil dikirim!
         ]);
     }
+
     // Menyimpan atau memperbarui profil
     public function update(Request $request)
     {
@@ -34,8 +42,6 @@ class CompanyProfileController extends Controller
 
         $user = Auth::user();
 
-        // Gunakan updateOrCreate:
-        // Jika company belum ada, buat baru. Jika sudah ada, update.
         $user->company()->updateOrCreate(
             ['user_id' => $user->id],
             $validated

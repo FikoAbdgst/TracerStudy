@@ -29,8 +29,10 @@ class AlumniController extends Controller
 
         $callback = function () {
             $file = fopen('php://output', 'w');
-            fputcsv($file, ['NIM', 'Nama Lengkap', 'Program Studi', 'Tahun Lulus']);
-            fputcsv($file, ['23010044', 'Fiko Abdigusti', 'Teknik Informatika', '2025']);
+            // 1. Tulis Header (Ditambah Jenjang dan Tgl Lahir)
+            fputcsv($file, ['NIM', 'Nama Lengkap', 'Jenjang', 'Program Studi', 'Tanggal Lahir (YYYY-MM-DD)', 'Tahun Lulus']);
+            // 2. Tulis Contoh Data
+            fputcsv($file, ['23010044', 'Fiko Abdigusti', 'D3', 'Teknik Informatika', '2001-08-15', '2025']);
             fclose($file);
         };
 
@@ -45,52 +47,42 @@ class AlumniController extends Controller
 
         $file = $request->file('file');
         $fileHandle = fopen($file->getPathname(), 'r');
-
-        fgetcsv($fileHandle); // Lewati baris pertama (Header)
+        fgetcsv($fileHandle); // Lewati Header
 
         $count = 0;
-        $duplicates = []; // Array untuk menampung data yang duplikat
+        $duplicates = [];
 
         DB::beginTransaction();
         try {
             while (($row = fgetcsv($fileHandle)) !== false) {
+                // Mapping index Excel yang baru
                 $nim = $row[0] ?? null;
                 $name = $row[1] ?? null;
-                $major = $row[2] ?? null;
-                $graduation_year = $row[3] ?? null;
+                $jenjang = $row[2] ?? null;
+                $major = $row[3] ?? null;
+                $tgl_lahir = $row[4] ?? null;
+                $graduation_year = $row[5] ?? null;
 
                 if (!$nim || !$name) continue;
 
-                // --- CEK DUPLIKASI DATA ---
-                // Jika NIM sudah ada di database, masukkan ke array dan SKIP!
-                $isDuplicate = AlumniProfile::where('nim', $nim)->exists();
-                if ($isDuplicate) {
-                    $duplicates[] = [
-                        'nim' => $nim,
-                        'name' => $name,
-                        'major' => $major
-                    ];
-                    continue; // Skip baris ini, lanjut ke baris excel berikutnya
+                if (AlumniProfile::where('nim', $nim)->exists()) {
+                    $duplicates[] = ['nim' => $nim, 'name' => $name, 'major' => $major];
+                    continue;
                 }
-
-                $email = $nim . '@alumni.kampus.ac.id';
 
                 $user = User::firstOrCreate(
-                    ['email' => $email],
-                    [
-                        'name' => $name,
-                        'password' => Hash::make($nim),
-                    ]
+                    ['email' => $nim . '@alumni.kampus.ac.id'],
+                    ['name' => $name, 'password' => Hash::make($nim)]
                 );
 
-                if (!$user->hasRole('Alumni')) {
-                    $user->assignRole('Alumni');
-                }
+                if (!$user->hasRole('Alumni')) $user->assignRole('Alumni');
 
                 AlumniProfile::create([
                     'user_id' => $user->id,
                     'nim' => $nim,
+                    'jenjang_pendidikan' => $jenjang,
                     'major' => $major,
+                    'tanggal_lahir' => $tgl_lahir,
                     'graduation_year' => $graduation_year,
                 ]);
 
@@ -100,14 +92,10 @@ class AlumniController extends Controller
             DB::commit();
             fclose($fileHandle);
 
-            // Jika ada data yang terdeteksi duplikat, kirim respon khusus
             if (count($duplicates) > 0) {
-                return back()
-                    ->with('message', "Import selesai. $count data berhasil ditambahkan.")
-                    ->with('duplicates', $duplicates); // Kirim array duplikat ke React
+                return back()->with('message', "Import selesai. $count data berhasil ditambahkan.")->with('duplicates', $duplicates);
             }
-
-            return back()->with('message', "Sukses! Semua $count data alumni berhasil diimport dan akun otomatis dibuat.");
+            return back()->with('message', "Sukses! $count data alumni berhasil diimport.");
         } catch (\Exception $e) {
             DB::rollBack();
             fclose($fileHandle);

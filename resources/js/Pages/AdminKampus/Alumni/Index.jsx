@@ -259,11 +259,13 @@ export default function AlumniIndex({ alumnis }) {
                                         Unduh Template CSV
                                     </a>
                                 </div>
-                                <div style={{ fontSize: 11, color: TOKEN.navyMid, display: 'flex', gap: 6 }}>
-                                    <span style={{ background: '#fff', padding: '2px 6px', borderRadius: 4, fontWeight: 700, border: `1px solid ${TOKEN.borderSoft}` }}>Kolom A: NIM</span>
-                                    <span style={{ background: '#fff', padding: '2px 6px', borderRadius: 4, fontWeight: 700, border: `1px solid ${TOKEN.borderSoft}` }}>Kolom B: Nama</span>
-                                    <span style={{ background: '#fff', padding: '2px 6px', borderRadius: 4, fontWeight: 700, border: `1px solid ${TOKEN.borderSoft}` }}>Kolom C: Prodi</span>
-                                    <span style={{ background: '#fff', padding: '2px 6px', borderRadius: 4, fontWeight: 700, border: `1px solid ${TOKEN.borderSoft}` }}>Kolom D: Tahun</span>
+                                <div style={{ fontSize: 11, color: TOKEN.navyMid, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                                    <span style={{ background: '#fff', padding: '2px 6px', borderRadius: 4, fontWeight: 700, border: `1px solid ${TOKEN.borderSoft}` }}>A: NIM</span>
+                                    <span style={{ background: '#fff', padding: '2px 6px', borderRadius: 4, fontWeight: 700, border: `1px solid ${TOKEN.borderSoft}` }}>B: Nama</span>
+                                    <span style={{ background: '#fff', padding: '2px 6px', borderRadius: 4, fontWeight: 700, border: `1px solid ${TOKEN.borderSoft}` }}>C: Jenjang</span>
+                                    <span style={{ background: '#fff', padding: '2px 6px', borderRadius: 4, fontWeight: 700, border: `1px solid ${TOKEN.borderSoft}` }}>D: Prodi</span>
+                                    <span style={{ background: '#fff', padding: '2px 6px', borderRadius: 4, fontWeight: 700, border: `1px solid ${TOKEN.borderSoft}` }}>E: Tgl. Lahir</span>
+                                    <span style={{ background: '#fff', padding: '2px 6px', borderRadius: 4, fontWeight: 700, border: `1px solid ${TOKEN.borderSoft}` }}>F: Tahun Lulus</span>
                                 </div>
                                 <div style={{ fontSize: 11, color: TOKEN.mutedDark, marginTop: 8, fontStyle: 'italic' }}>
                                     *Note: Jika menggunakan Excel, pastikan di-"Save As" ke format CSV (Comma delimited).

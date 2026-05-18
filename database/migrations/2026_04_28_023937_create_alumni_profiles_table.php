@@ -6,31 +6,30 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
-    // create_alumni_profiles_table
     public function up(): void
     {
         Schema::create('alumni_profiles', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->string('nim')->unique();
 
-            // Kolom-kolom baru yang dibutuhkan oleh form
-            $table->string('nim');
-            $table->string('major'); // <-- Ini yang tadi bikin error
-            $table->integer('graduation_year');
+            // Kolom dari Admin Kampus (Excel)
+            $table->string('jenjang_pendidikan')->nullable(); // D3 atau S1
+            $table->string('major')->nullable();              // Program Studi
+            $table->date('tanggal_lahir')->nullable();        // Format: YYYY-MM-DD
+            $table->year('graduation_year')->nullable();      // Tahun Lulus
+
+            // Kolom Lengkapi Profil (Dinamis dari Alumni)
             $table->string('phone_number')->nullable();
-            $table->text('skills')->nullable();
-            $table->text('address')->nullable();
+            $table->text('address')->nullable();              // Domisili Saat Ini
+            $table->text('experience')->nullable();           // Pengalaman Kerja
+            $table->json('skills')->nullable();               // Disimpan sebagai array JSON
+            $table->string('cv_path')->nullable();            // Dokumen CV
 
             $table->timestamps();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('alumni_profiles');

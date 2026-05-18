@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Link, usePage } from '@inertiajs/react';
+import { Link, usePage, router } from '@inertiajs/react';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -477,7 +477,16 @@ export default function AuthenticatedLayout({ header, children }) {
                                 key={item.name}
                                 href={item.href}
                                 className={`al-mobile-link${isActive(item.href) ? ' active' : ''}`}
-                                onClick={() => setMobileOpen(false)}
+                                onClick={(e) => {
+                                    // 1. Mencegah Link melakukan navigasi default bawaan HTML
+                                    e.preventDefault();
+
+                                    // 2. Tutup menu mobile
+                                    setMobileOpen(false);
+
+                                    // 3. Paksa Inertia untuk pindah halaman
+                                    router.get(item.href);
+                                }}
                             >
                                 {item.name}
                             </Link>

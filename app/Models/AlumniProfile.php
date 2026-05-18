@@ -2,26 +2,30 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class AlumniProfile extends Model
 {
     use HasFactory;
-    protected $guarded = [];
-    protected $casts = [
-        'graduation_year' => 'integer',
-        'skills' => 'array', // Ubah menjadi array
-    ];
-    // Pastikan semua kolom form ada di sini
+
     protected $fillable = [
         'user_id',
         'nim',
+        'jenjang_pendidikan',
         'major',
+        'tanggal_lahir',
         'graduation_year',
-        'skills',
         'phone_number',
-        'address'
+        'address',     // Domisili
+        'experience',  // Pengalaman
+        'skills',
+        'cv_path',
+    ];
+
+    protected $casts = [
+        'skills' => 'array',
+        'tanggal_lahir' => 'date',
     ];
 
     public function user()

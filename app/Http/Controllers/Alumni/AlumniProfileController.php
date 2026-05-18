@@ -3,50 +3,69 @@
 namespace App\Http\Controllers\Alumni;
 
 use App\Http\Controllers\Controller;
-use App\Models\ProgramStudi;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
+use App\Models\MasterCategory; // Pastikan import MasterCategory
+use Illuminate\Support\Facades\Storage;
 
 class AlumniProfileController extends Controller
 {
-    public function edit(Request $request)
+    public function edit()
     {
-        $profile = $request->user()->alumniProfile;
+        $user = Auth::user();
+        $alumni = $user->alumniProfile;
 
-        // Ambil Data Master Program Studi
-        $programStudiCat = \App\Models\MasterCategory::with('items')->where('slug', 'program-studi')->first();
-        $programStudis = $programStudiCat ? $programStudiCat->items : [];
-
-        // Ambil Data Master Keahlian
-        $keahlianCat = \App\Models\MasterCategory::with('items')->where('slug', 'keahlian')->first();
-        $keahlianMaster = $keahlianCat ? $keahlianCat->items : [];
+        // Ambil Master Data untuk Program Studi dan Keahlian
+        $prodiCategory = MasterCategory::with('items')->where('slug', 'program-studi')->first();
+        $skillCategory = MasterCategory::with('items')->where('slug', 'keahlian')->first();
 
         return Inertia::render('Alumni/Profile/Edit', [
-            'profile' => $profile,
-            'programStudis' => $programStudis,
-            'keahlianMaster' => $keahlianMaster,
+            'profile' => $alumni,
+            'programStudis' => $prodiCategory ? $prodiCategory->items : [],
+            'keahlianMaster' => $skillCategory ? $skillCategory->items : [],
         ]);
     }
+
     public function update(Request $request)
     {
+        // Tambahkan validasi untuk kolom-kolom baru
         $validated = $request->validate([
             'nim' => 'required|string|max:50',
-            'major' => 'required|string|max:255',
-            'graduation_year' => 'required|integer',
-            'skills' => 'nullable|array', // UBAH JADI ARRAY
+            'major' => 'nullable|string|max:255',
+            'graduation_year' => 'nullable|integer|min:1900|max:' . (date('Y') + 5),
+            'jenjang_pendidikan' => 'nullable|string|in:D3,S1,S2,S3', // Tambahan Baru
+            'tanggal_lahir' => 'nullable|date',                        // Tambahan Baru
             'phone_number' => 'nullable|string|max:20',
             'address' => 'nullable|string',
+            'experience' => 'nullable|string',
+            'skills' => 'nullable|array',
+            'cv_file' => 'nullable|file|mimes:pdf|max:5120',
         ]);
 
         $user = Auth::user();
+        $alumni = $user->alumniProfile;
 
-        // Gunakan updateOrCreate untuk insert atau update berdasarkan user_id
-        $user->alumniProfile()->updateOrCreate(
-            ['user_id' => $user->id],
-            $validated
-        );
+        // Proses File CV
+        if ($request->hasFile('cv_file')) {
+            if ($alumni && $alumni->cv_path) {
+                Storage::disk('public')->delete($alumni->cv_path);
+            }
+            $validated['cv_path'] = $request->file('cv_file')->store('cv_documents', 'public');
+        }
 
-        return back()->with('message', 'Profil Alumni berhasil diperbarui.');
+        // Hapus cv_file dari array validated agar tidak masuk ke query DB
+        unset($validated['cv_file']);
+
+        // Simpan Data
+        if ($alumni) {
+            $alumni->update($validated);
+        } else {
+            // Berjaga-jaga jika profil belum ada (meski harusnya sudah terbuat dari excel/register)
+            $validated['user_id'] = $user->id;
+            \App\Models\AlumniProfile::create($validated);
+        }
+
+        return back()->with('message', 'Profil profesional berhasil diperbarui!');
     }
 }

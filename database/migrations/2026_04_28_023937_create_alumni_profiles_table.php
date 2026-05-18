@@ -22,7 +22,7 @@ return new class extends Migration
             // Kolom Lengkapi Profil (Dinamis dari Alumni)
             $table->string('phone_number')->nullable();
             $table->text('address')->nullable();              // Domisili Saat Ini
-            $table->text('experience')->nullable();           // Pengalaman Kerja
+            $table->integer('experience')->default(0);           // Pengalaman Kerja
             $table->json('skills')->nullable();               // Disimpan sebagai array JSON
             $table->string('cv_path')->nullable();            // Dokumen CV
 

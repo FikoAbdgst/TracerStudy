@@ -125,14 +125,11 @@ const ViewMode = ({ profile, data }) => {
                     <ProfileField label="Tanggal Lahir" value={formatDate(data.tanggal_lahir)} />
                     <ProfileField label="No. WhatsApp / HP" value={data.phone_number} />
                     <ProfileField label="Domisili Saat Ini" value={data.address} full />
-                    <div style={{ gridColumn: '1 / -1', padding: '12px 0' }}>
-                        <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: T.muted, marginBottom: 4 }}>
-                            Pengalaman Kerja / Organisasi
-                        </div>
-                        <div style={{ fontSize: 13.5, color: data.experience ? T.navy : T.muted, fontStyle: data.experience ? 'normal' : 'italic', fontWeight: 400, lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
-                            {data.experience || 'Belum diisi'}
-                        </div>
-                    </div>
+                    <ProfileField
+                        label="Lama Pengalaman Kerja"
+                        value={data.experience !== null && data.experience !== '' ? `${data.experience} Tahun` : 'Belum diisi'}
+                        full
+                    />
                 </div>
             </ViewSection>
 
@@ -271,9 +268,12 @@ const EditMode = ({ data, setData, errors, processing, submit, programStudis, ma
             <Section title="Informasi Personal & Kontak" icon="📱" delay={0.07}>
                 <div className="al-grid-2" style={{ marginBottom: 14 }}>
                     <div>
-                        <FieldLabel>Tanggal Lahir</FieldLabel>
+                        <FieldLabel required>Tanggal Lahir</FieldLabel>
                         <input type="date" style={fieldBase} value={data.tanggal_lahir}
-                            onChange={e => setData('tanggal_lahir', e.target.value)} onFocus={onFocus} onBlur={onBlur} />
+                            onChange={e => setData('tanggal_lahir', e.target.value)}
+                            onFocus={onFocus} onBlur={onBlur}
+                            required
+                        />
                         <InputError message={errors.tanggal_lahir} className="mt-1.5" />
                     </div>
                     <div>
@@ -291,12 +291,15 @@ const EditMode = ({ data, setData, errors, processing, submit, programStudis, ma
                         onFocus={onFocus} onBlur={onBlur} />
                 </div>
                 <div>
-                    <FieldLabel>Pengalaman Kerja / Organisasi</FieldLabel>
-                    <textarea style={{ ...fieldBase, height: 'auto', padding: '10px 13px', resize: 'vertical' }} rows={4}
-                        placeholder="Ceritakan pengalaman kerja, magang, atau kepanitiaan Anda..."
+                    <FieldLabel required>Lama Pengalaman Kerja (Tahun)</FieldLabel>
+                    <input type="number" min="0" style={fieldBase}
+                        placeholder="Contoh: 1 (Kosongkan atau ketik 0 jika Fresh Graduate)"
                         value={data.experience} onChange={e => setData('experience', e.target.value)}
-                        onFocus={onFocus} onBlur={onBlur} />
-                    <div style={{ fontSize: 11, color: T.muted, marginTop: 4 }}>Kosongkan jika belum memiliki pengalaman kerja.</div>
+                        onFocus={onFocus} onBlur={onBlur}
+                        required /* <--- Tambahkan ini */
+                    />
+                    <InputError message={errors.experience} className="mt-1.5" />
+                    <div style={{ fontSize: 11, color: T.muted, marginTop: 4 }}>*Isi dengan angka dalam hitungan tahun (Ketik 0 jika Fresh Graduate).</div>
                 </div>
             </Section>
 
@@ -442,7 +445,15 @@ export default function EditProfile({ profile, programStudis = [], keahlianMaste
         cv_file: null,
     });
 
-    const isComplete = !!(profile?.nim && profile?.major && profile?.graduation_year && profile?.skills?.length > 0);
+    const isComplete = !!(
+        profile?.nim &&
+        profile?.major &&
+        profile?.graduation_year &&
+        profile?.tanggal_lahir &&
+        profile?.experience !== null &&
+        profile?.experience !== '' &&
+        profile?.skills?.length > 0
+    );
 
     const submit = e => {
         e.preventDefault();

@@ -25,6 +25,7 @@ class AlumniProfile extends Model
 
     protected $casts = [
         'skills' => 'array',
+        'experience' => 'integer',
         'tanggal_lahir' => 'date',
     ];
 

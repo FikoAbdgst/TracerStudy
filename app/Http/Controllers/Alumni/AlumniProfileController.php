@@ -29,16 +29,18 @@ class AlumniProfileController extends Controller
 
     public function update(Request $request)
     {
-        // Tambahkan validasi untuk kolom-kolom baru
         $validated = $request->validate([
             'nim' => 'required|string|max:50',
             'major' => 'nullable|string|max:255',
             'graduation_year' => 'nullable|integer|min:1900|max:' . (date('Y') + 5),
-            'jenjang_pendidikan' => 'nullable|string|in:D3,S1,S2,S3', // Tambahan Baru
-            'tanggal_lahir' => 'nullable|date',                        // Tambahan Baru
+            'jenjang_pendidikan' => 'nullable|string|in:D3,S1,S2,S3',
+
+            // UBAH DUA BARIS INI MENJADI REQUIRED:
+            'tanggal_lahir' => 'required|date',
+            'experience' => 'required|integer|min:0',
+
             'phone_number' => 'nullable|string|max:20',
             'address' => 'nullable|string',
-            'experience' => 'nullable|string',
             'skills' => 'nullable|array',
             'cv_file' => 'nullable|file|mimes:pdf|max:5120',
         ]);

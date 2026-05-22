@@ -5,6 +5,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import InputError from '@/Components/InputError';
 import axios from 'axios';
 
+import kotaData from '@/Data/kota.json';
+
 // ─── Design Tokens ────────────────────────────────────────────────────────────
 const T = {
     navy: '#0f1f3d', navyMid: '#1a3560', navyLight: '#e8f0fb',
@@ -178,6 +180,14 @@ const EditMode = ({ data, setData, errors, processing, submit, programStudis, ma
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const searchRef = useRef(null);
 
+    const [searchKota, setSearchKota] = useState(data.address || '');
+    const [isKotaDropdownOpen, setIsKotaDropdownOpen] = useState(false);
+    const kotaRef = useRef(null);
+
+    const filteredKota = kotaData.filter(kota =>
+        kota.toLowerCase().includes(searchKota.toLowerCase())
+    );
+
     const availableSkills = masterSkills.filter(s =>
         s.name.toLowerCase().includes(searchSkill.toLowerCase())
     );
@@ -203,6 +213,8 @@ const EditMode = ({ data, setData, errors, processing, submit, programStudis, ma
     useEffect(() => {
         const handler = (e) => {
             if (searchRef.current && !searchRef.current.contains(e.target)) setIsDropdownOpen(false);
+            // Tambahkan baris ini:
+            if (kotaRef.current && !kotaRef.current.contains(e.target)) setIsKotaDropdownOpen(false);
         };
         document.addEventListener('mousedown', handler);
         return () => document.removeEventListener('mousedown', handler);
@@ -304,11 +316,61 @@ const EditMode = ({ data, setData, errors, processing, submit, programStudis, ma
                     </div>
                 </div>
                 <div style={{ marginBottom: 14 }}>
-                    <FieldLabel>Domisili Saat Ini</FieldLabel>
-                    <textarea style={{ ...fieldBase, height: 'auto', padding: '10px 13px', resize: 'vertical' }} rows={2}
-                        placeholder="Contoh: Kota Bandung, Jawa Barat..."
-                        value={data.address} onChange={e => setData('address', e.target.value)}
-                        onFocus={onFocus} onBlur={onBlur} />
+                    {/* KODE PENGGANTI UNTUK DOMISILI */}
+                    <div style={{ marginBottom: 14 }} ref={kotaRef}>
+                        <FieldLabel required>Domisili Saat Ini (Kota / Kabupaten)</FieldLabel>
+                        <div style={{ position: 'relative' }}>
+                            {/* Ikon Pencarian */}
+                            <svg style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#b0bec5', pointerEvents: 'none', zIndex: 10 }}
+                                width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+                            </svg>
+
+                            {/* Input Pencarian */}
+                            <input
+                                style={{ ...fieldBase, paddingLeft: 36 }}
+                                placeholder="Ketik untuk mencari kota (Misal: Bandung...)"
+                                value={searchKota}
+                                onChange={e => {
+                                    setSearchKota(e.target.value);
+                                    setIsKotaDropdownOpen(true);
+                                    setData('address', e.target.value); // Simpan sementara ke form
+                                }}
+                                onFocus={e => { onFocus(e); setIsKotaDropdownOpen(true); }}
+                                onBlur={onBlur}
+                                required
+                            />
+
+                            {/* Dropdown List Kota */}
+                            {isKotaDropdownOpen && (
+                                <div className="custom-scrollbar" style={{
+                                    position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0,
+                                    background: '#fff', borderRadius: 10, border: `1px solid ${T.borderSoft}`,
+                                    boxShadow: '0 10px 25px rgba(0,0,0,0.1)', zIndex: 100, maxHeight: 200, overflowY: 'auto', padding: '6px',
+                                }}>
+                                    {filteredKota.length > 0 ? filteredKota.map((kota, idx) => (
+                                        <div key={idx}
+                                            onClick={() => {
+                                                setSearchKota(kota);
+                                                setData('address', kota); // Simpan data kota terpilih ke database
+                                                setIsKotaDropdownOpen(false);
+                                            }}
+                                            style={{ padding: '8px 12px', borderRadius: 6, fontSize: 13, color: T.navy, cursor: 'pointer', transition: 'background 0.1s' }}
+                                            onMouseEnter={e => e.currentTarget.style.background = T.navyLight}
+                                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                                        >
+                                            {kota}
+                                        </div>
+                                    )) : (
+                                        <div style={{ padding: '8px 12px', fontSize: 13, color: T.mutedDark, fontStyle: 'italic' }}>
+                                            Kota "{searchKota}" tidak ditemukan.
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                        <InputError message={errors.address} className="mt-1.5" />
+                    </div>
                 </div>
                 <div>
                     <FieldLabel required>Lama Pengalaman Kerja (Tahun)</FieldLabel>

@@ -40,7 +40,7 @@ class AlumniProfileController extends Controller
             'experience' => 'required|integer|min:0',
 
             'phone_number' => 'nullable|string|max:20',
-            'address' => 'nullable|string',
+            'address' => 'required|string',
             'skills' => 'nullable|array',
             'cv_file' => 'nullable|file|mimes:pdf|max:5120',
         ]);

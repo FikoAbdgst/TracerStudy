@@ -24,7 +24,11 @@ class JobPosting extends Model
         'min_education',
         'min_experience',
         'max_age',
-        'work_model' // <--- Masukkan ke sini
+        'work_model',
+        'weight_skill',
+        'weight_education',
+        'weight_experience',
+        'weight_age',
     ];
 
     // Cast is_active menjadi boolean agar mudah dibaca di React

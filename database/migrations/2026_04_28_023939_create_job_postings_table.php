@@ -23,11 +23,16 @@ return new class extends Migration
             $table->string('salary_range')->nullable();
 
             // --- TAMBAHAN BARU UNTUK ATS ---
-            $table->string('min_education')->nullable(); // Contoh: D3, S1
-            $table->integer('min_experience')->nullable(); // Lama pengalaman dalam tahun (contoh: 1, 2)
-            $table->integer('max_age')->nullable(); // Batas usia maksimal (contoh: 30)
+            $table->string('min_education')->nullable();
+            $table->integer('min_experience')->nullable();
+            $table->integer('max_age')->nullable();
             $table->string('work_model')->nullable();
-            // -------------------------------
+
+            // --- TAMBAHAN BOBOT ATS DINAMIS ---
+            $table->integer('weight_skill')->default(40);
+            $table->integer('weight_education')->default(25);
+            $table->integer('weight_experience')->default(20);
+            $table->integer('weight_age')->default(15);
 
             $table->boolean('is_active')->default(true);
             $table->timestamp('deadline')->nullable();

@@ -127,7 +127,6 @@ function AlertDialog({ open, onClose, onConfirm, title, message, processing }) {
                 transition: 'opacity 0.25s ease, transform 0.25s cubic-bezier(0.22,1,0.36,1)',
                 overflow: 'hidden',
             }}>
-                {/* Header */}
                 <div style={{ padding: '18px 22px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${T.borderSoft}`, flexShrink: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <div style={{ width: 30, height: 30, borderRadius: 8, background: T.redLight, color: T.red, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -147,11 +146,9 @@ function AlertDialog({ open, onClose, onConfirm, title, message, processing }) {
                         <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                     </button>
                 </div>
-                {/* Body */}
                 <div style={{ padding: '16px 22px 20px' }}>
                     <p style={{ fontSize: 13, color: T.mutedDark, lineHeight: 1.65, margin: 0 }}>{message}</p>
                 </div>
-                {/* Footer */}
                 <div style={{ height: 1, background: T.borderSoft, flexShrink: 0 }} />
                 <div style={{ padding: '14px 22px', display: 'flex', justifyContent: 'flex-end', gap: 8, flexShrink: 0 }}>
                     <button
@@ -224,8 +221,14 @@ export default function LowonganIndex({ jobs, isVerified, verificationStatus, ke
 
     const { data, setData, post, put, processing, errors, reset, clearErrors } = useForm({
         title: '', location: '', salary_range: '', description: '', requirements: [],
-        min_education: '', min_experience: '', max_age: '', work_model: '' // <--- Update state
+        min_education: '', min_experience: '', max_age: '', work_model: '',
+        weight_skill: 40, weight_education: 25, weight_experience: 20, weight_age: 15
     });
+
+    // Kalkulasi Total Bobot & Validasi (agar bisa diakses oleh Tombol Simpan)
+    const totalWeight = (data.weight_skill || 0) + (data.weight_education || 0) + (data.weight_experience || 0) + (data.weight_age || 0);
+    const isWeightValid = totalWeight === 100;
+
     const filtered = jobs.filter(j =>
         j.title.toLowerCase().includes(q.toLowerCase()) ||
         (j.location && j.location.toLowerCase().includes(q.toLowerCase()))
@@ -249,13 +252,18 @@ export default function LowonganIndex({ jobs, isVerified, verificationStatus, ke
             min_education: job.min_education || '',
             min_experience: job.min_experience || '',
             max_age: job.max_age || '',
-            work_model: job.work_model || '' // <--- Binding data dari database
+            work_model: job.work_model || '',
+            weight_skill: job.weight_skill ?? 40,
+            weight_education: job.weight_education ?? 25,
+            weight_experience: job.weight_experience ?? 20,
+            weight_age: job.weight_age ?? 15
         });
         setIsEditing(true); setModalOpen(true);
     };
 
     const handleSubmit = e => {
         e.preventDefault();
+        if (!isWeightValid) return; // Proteksi tambahan
         if (isEditing) put(route('perusahaan.lowongan.update', selectedJob.id), { onSuccess: () => setModalOpen(false) });
         else post(route('perusahaan.lowongan.store'), { onSuccess: () => setModalOpen(false) });
     };
@@ -478,7 +486,7 @@ export default function LowonganIndex({ jobs, isVerified, verificationStatus, ke
                 </div>
             </div>
 
-            {/* Alert Dialog — konsisten dengan desain proyek */}
+            {/* Alert Dialog */}
             <AlertDialog
                 open={alertOpen}
                 onClose={() => !isDeleting && setAlertOpen(false)}
@@ -494,11 +502,13 @@ export default function LowonganIndex({ jobs, isVerified, verificationStatus, ke
                 wide
                 footer={<>
                     <BtnGhost onClick={() => setModalOpen(false)}>Batal</BtnGhost>
-                    <button type="submit" form="lowongan-form" disabled={processing} style={{
+
+                    {/* BUTTON SIMPAN DENGAN VALIDASI TOTAL BOBOT 100% */}
+                    <button type="submit" form="lowongan-form" disabled={processing || !isWeightValid} style={{
                         height: 36, padding: '0 18px', borderRadius: 8, border: 'none',
-                        background: processing ? T.muted : T.orange, color: '#fff',
-                        fontSize: 13, fontWeight: 700, cursor: processing ? 'not-allowed' : 'pointer',
-                        fontFamily: 'inherit', boxShadow: processing ? 'none' : '0 2px 8px rgba(249,115,22,0.3)',
+                        background: (processing || !isWeightValid) ? T.muted : T.orange, color: '#fff',
+                        fontSize: 13, fontWeight: 700, cursor: (processing || !isWeightValid) ? 'not-allowed' : 'pointer',
+                        fontFamily: 'inherit', boxShadow: (processing || !isWeightValid) ? 'none' : '0 2px 8px rgba(249,115,22,0.3)',
                         transition: 'all 0.15s',
                     }}>
                         {processing ? 'Menyimpan...' : 'Simpan Lowongan'}
@@ -525,12 +535,11 @@ export default function LowonganIndex({ jobs, isVerified, verificationStatus, ke
                         <input style={fieldBase} value={data.location} onChange={e => setData('location', e.target.value)}
                             placeholder="Contoh: Bandung, Jawa Barat (WFO/Remote)" onFocus={onFocus} onBlur={onBlur} />
                     </div>
-                    {/* Tambahkan blok ini di bawah input "Lokasi Penempatan" atau "Deskripsi Pekerjaan" */}
-                    <div style={{ padding: '14px 16px', borderRadius: 10, background: T.navyLight, border: `1px solid ${T.navyMid}40`, marginBottom: 14 }}>
+
+                    {/* KRITERIA KHUSUS */}
+                    <div style={{ padding: '14px 16px', borderRadius: 10, background: T.navyLight, border: `1px solid ${T.navyMid}40` }}>
                         <h4 style={{ margin: '0 0 12px 0', fontSize: 13, fontWeight: 800, color: T.navy }}>Kriteria Khusus (Untuk Sistem Skor ATS)</h4>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-
-                            {/* Pendidikan */}
                             <div>
                                 <FieldLabel>Minimal Pendidikan</FieldLabel>
                                 <select style={fieldBase} value={data.min_education} onChange={e => setData('min_education', e.target.value)} onFocus={onFocus} onBlur={onBlur}>
@@ -541,21 +550,16 @@ export default function LowonganIndex({ jobs, isVerified, verificationStatus, ke
                                     <option value="S2">Magister (S2)</option>
                                 </select>
                             </div>
-
-                            {/* Pengalaman */}
                             <div>
                                 <FieldLabel>Minimal Pengalaman (Tahun)</FieldLabel>
                                 <input type="number" min="0" style={fieldBase} value={data.min_experience} onChange={e => setData('min_experience', e.target.value)}
-                                    placeholder="Contoh: 1 (Kosongkan jika Fresh Graduate)" onFocus={onFocus} onBlur={onBlur} />
+                                    placeholder="Kosongkan jika Fresh Graduate" onFocus={onFocus} onBlur={onBlur} />
                             </div>
-
-                            {/* Usia */}
                             <div>
                                 <FieldLabel>Batas Usia Maksimal</FieldLabel>
                                 <input type="number" min="15" style={fieldBase} value={data.max_age} onChange={e => setData('max_age', e.target.value)}
                                     placeholder="Contoh: 30" onFocus={onFocus} onBlur={onBlur} />
                             </div>
-
                             <div>
                                 <FieldLabel>Sistem Kerja</FieldLabel>
                                 <select style={fieldBase} value={data.work_model} onChange={e => setData('work_model', e.target.value)} onFocus={onFocus} onBlur={onBlur}>
@@ -566,7 +570,6 @@ export default function LowonganIndex({ jobs, isVerified, verificationStatus, ke
                                     <option value="WFA">WFA (Work From Anywhere)</option>
                                 </select>
                             </div>
-
                         </div>
                     </div>
 
@@ -643,6 +646,38 @@ export default function LowonganIndex({ jobs, isVerified, verificationStatus, ke
                         )}
                     </div>
                     <div style={{ fontSize: 11, color: T.muted, marginTop: -8 }}>*Klik dua kali (Double-click) pada keahlian untuk menghapusnya.</div>
+
+                    {/* BLOK PENGATURAN BOBOT ATS (Dipindah ke paling bawah agar rapi) */}
+                    <div style={{ padding: '14px 16px', borderRadius: 10, background: T.navyLight, border: `1px solid ${T.navyMid}40`, marginTop: 8 }}>
+                        <h4 style={{ margin: '0 0 12px 0', fontSize: 13, fontWeight: 800, color: T.navy }}>Pengaturan Bobot Filter ATS (%)</h4>
+                        <p style={{ fontSize: 11, color: T.mutedDark, marginBottom: 12 }}>Tentukan seberapa penting kriteria di bawah ini. <b>Total wajib 100%</b>.</p>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+                            <div>
+                                <FieldLabel>Keahlian</FieldLabel>
+                                <input type="number" style={fieldBase} value={data.weight_skill} onChange={e => setData('weight_skill', parseInt(e.target.value) || 0)} />
+                            </div>
+                            <div>
+                                <FieldLabel>Pendidikan</FieldLabel>
+                                <input type="number" style={fieldBase} value={data.weight_education} onChange={e => setData('weight_education', parseInt(e.target.value) || 0)} />
+                            </div>
+                            <div>
+                                <FieldLabel>Pengalaman</FieldLabel>
+                                <input type="number" style={fieldBase} value={data.weight_experience} onChange={e => setData('weight_experience', parseInt(e.target.value) || 0)} />
+                            </div>
+                            <div>
+                                <FieldLabel>Usia</FieldLabel>
+                                <input type="number" style={fieldBase} value={data.weight_age} onChange={e => setData('weight_age', parseInt(e.target.value) || 0)} />
+                            </div>
+                        </div>
+
+                        {/* Kalkulator Total & Validasi Visual */}
+                        <div style={{ marginTop: 12, padding: '8px 12px', borderRadius: 6, background: isWeightValid ? T.greenLight : '#fef2f2', border: `1px solid ${isWeightValid ? '#bbf7d0' : '#fecaca'}`, display: 'flex', justifyContent: 'space-between' }}>
+                            <span style={{ fontSize: 12, fontWeight: 700, color: isWeightValid ? T.green : T.red }}>Total Bobot Keseluruhan:</span>
+                            <span style={{ fontSize: 12, fontWeight: 800, color: isWeightValid ? T.green : T.red }}>{totalWeight}% {isWeightValid ? '✅ Valid' : '❌ (Wajib 100%)'}</span>
+                        </div>
+                    </div>
+
                 </form>
             </Modal>
         </AuthenticatedLayout>

@@ -519,10 +519,26 @@ export default function PelamarIndex({ applications }) {
                                                     Rincian Bobot Skor
                                                 </div>
                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                                                    <ScoreBar label="Keahlian" weight="Bobot 40%" scoreStr={activeApp.score_details.skill_match} />
-                                                    <ScoreBar label="Pendidikan" weight="Bobot 25%" scoreStr={activeApp.score_details.education} />
-                                                    <ScoreBar label="Pengalaman" weight="Bobot 20%" scoreStr={activeApp.score_details.experience} />
-                                                    <ScoreBar label="Usia" weight="Bobot 15%" scoreStr={activeApp.score_details.age} />
+                                                    <ScoreBar
+                                                        label="Keahlian"
+                                                        weight={`Bobot ${activeJob.weight_skill ?? 40}%`}
+                                                        scoreStr={`${activeApp.score_details.skill_match}%`}
+                                                    />
+                                                    <ScoreBar
+                                                        label="Pendidikan"
+                                                        weight={`Bobot ${activeJob.weight_education ?? 25}%`}
+                                                        scoreStr={`${activeApp.score_details.education}%`}
+                                                    />
+                                                    <ScoreBar
+                                                        label="Pengalaman"
+                                                        weight={`Bobot ${activeJob.weight_experience ?? 20}%`}
+                                                        scoreStr={`${activeApp.score_details.experience}%`}
+                                                    />
+                                                    <ScoreBar
+                                                        label="Usia"
+                                                        weight={`Bobot ${activeJob.weight_age ?? 15}%`}
+                                                        scoreStr={`${activeApp.score_details.age}%`}
+                                                    />
                                                 </div>
                                             </div>
                                         )}

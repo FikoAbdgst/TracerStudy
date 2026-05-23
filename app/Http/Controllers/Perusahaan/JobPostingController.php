@@ -77,7 +77,14 @@ class JobPostingController extends Controller
             'min_education' => 'nullable|string|max:255',
             'min_experience' => 'nullable|integer|min:0',
             'max_age' => 'nullable|integer|min:0',
-            'work_model' => 'nullable|string|in:WFO,WFH,Hybrid,WFA', // <--- Ganti di sini
+            'work_model' => 'nullable|string|in:WFO,WFH,Hybrid,WFA',
+
+            // Validasi Bobot Dinamis
+            'weight_skill' => 'required|integer|min:0|max:100',
+            'weight_education' => 'required|integer|min:0|max:100',
+            'weight_experience' => 'required|integer|min:0|max:100',
+            'weight_age' => 'required|integer|min:0|max:100',
+
         ]);
         $job->update($validated);
         return back()->with('message', 'Lowongan berhasil diperbarui.');

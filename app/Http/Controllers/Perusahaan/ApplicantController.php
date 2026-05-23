@@ -91,20 +91,23 @@ class ApplicantController extends Controller
                 }
             }
 
-            // --- KALKULASI FINAL DENGAN PEMBOBOTAN ---
-            $finalScore = ($skillScore * 0.40) + ($eduScore * 0.25) + ($expScore * 0.20) + ($ageScore * 0.15);
+            $wSkill = ($job->weight_skill ?? 40) / 100;
+            $wEdu   = ($job->weight_education ?? 25) / 100;
+            $wExp   = ($job->weight_experience ?? 20) / 100;
+            $wAge   = ($job->weight_age ?? 15) / 100;
+
+            $finalScore = ($skillScore * $wSkill) + ($eduScore * $wEdu) + ($expScore * $wExp) + ($ageScore * $wAge);
 
             // Ubah menjadi persentase bulat
             $app->match_score = round($finalScore * 100);
 
-            // Simpan rincian skor untuk ditampilkan di UI
+            // Simpan rincian skor TANPA label tulisan persen (agar UI React yang urus)
             $app->score_details = [
-                'skill_match' => round($skillScore * 100) . '%',
-                'education' => round($eduScore * 100) . '%',
-                'experience' => round($expScore * 100) . '%',
-                'age' => round($ageScore * 100) . '%'
+                'skill_match' => round($skillScore * 100),
+                'education' => round($eduScore * 100),
+                'experience' => round($expScore * 100),
+                'age' => round($ageScore * 100)
             ];
-
             return $app;
         });
 

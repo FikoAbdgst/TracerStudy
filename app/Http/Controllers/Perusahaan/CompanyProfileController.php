@@ -7,6 +7,7 @@ use App\Models\MasterCategory;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class CompanyProfileController extends Controller
 {
@@ -29,24 +30,43 @@ class CompanyProfileController extends Controller
         ]);
     }
 
-    // Menyimpan atau memperbarui profil
     public function update(Request $request)
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'industry' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'address' => 'nullable|string',
-            'website' => 'nullable|url|max:255',
+            'address' => 'required|string',
+            'description' => 'required|string',
+            'website' => 'nullable|string|max:255',
+
+            // Tambahkan validasi file gambar
+            'logo_file' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
         ]);
 
-        $user = Auth::user();
+        $company = $request->user()->company;
 
-        $user->company()->updateOrCreate(
-            ['user_id' => $user->id],
-            $validated
-        );
+        // --- PROSES UPLOAD LOGO ---
+        if ($request->hasFile('logo_file')) {
+            // Hapus logo lama dari storage jika sebelumnya sudah ada
+            if ($company && $company->logo_url) {
+                Storage::disk('public')->delete($company->logo_url);
+            }
 
-        return back()->with('message', 'Profil Perusahaan berhasil diperbarui.');
+            // Simpan gambar baru ke folder storage/app/public/company_logos
+            $validated['logo_url'] = $request->file('logo_file')->store('company_logos', 'public');
+        }
+
+        // Buang logo_file dari array divalidasi agar tidak error saat disimpan ke DB
+        unset($validated['logo_file']);
+        // --------------------------
+
+        if ($company) {
+            $company->update($validated);
+        } else {
+            $validated['user_id'] = $request->user()->id;
+            \App\Models\Company::create($validated);
+        }
+
+        return back()->with('message', 'Profil perusahaan dan logo berhasil diperbarui!');
     }
 }

@@ -12,6 +12,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->string('nim')->unique();
+            $table->string('photo_path')->nullable();
 
             // Kolom dari Admin Kampus (Excel)
             $table->string('jenjang_pendidikan')->nullable(); // D3 atau S1

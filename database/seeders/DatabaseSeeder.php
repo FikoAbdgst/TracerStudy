@@ -9,6 +9,9 @@ use App\Models\AlumniProfile;
 // Import Model Master Data Dinamis Baru
 use App\Models\MasterCategory;
 use App\Models\MasterItem;
+// Import Model untuk Ruang Diskusi Forum
+use App\Models\ForumTopic;
+use App\Models\ForumReply;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str; // <-- Tambahkan Str
@@ -52,7 +55,29 @@ class DatabaseSeeder extends Seeder
             'use_parameter' => false,
         ]);
 
-        $skills = ['PHP', 'Laravel', 'React.js', 'Vue.js', 'Inertia.js', 'Tailwind CSS', 'System Analysis', 'ERP Development', 'Mobile App', 'UI/UX Design'];
+        // Keahlian diperluas mencakup bidang IT, Akuntansi, Administrasi, dan Kreatif
+        $skills = [
+            'PHP',
+            'Laravel',
+            'React.js',
+            'Vue.js',
+            'Inertia.js',
+            'Tailwind CSS',
+            'System Analysis',
+            'ERP Development',
+            'Mobile App',
+            'UI/UX Design',
+            'Financial Accounting',
+            'Tax Reporting',
+            'MYOB',
+            'Microsoft Excel Advanced',
+            'Data Entry',
+            'Administrative Skills',
+            'Digital Marketing',
+            'Content Creation',
+            'Inventory Management',
+            'Customer Service'
+        ];
         foreach ($skills as $s) {
             MasterItem::create([
                 'master_category_id' => $catKeahlian->id,
@@ -61,7 +86,7 @@ class DatabaseSeeder extends Seeder
             ]);
         }
 
-        // Buat Kategori (Tab) Industri
+        // Buat Kategori (Tab) Industri (Diperluas agar bervariasi)
         $catIndustri = MasterCategory::create([
             'name' => 'Sektor Industri',
             'slug' => Str::slug('Sektor Industri'),
@@ -69,7 +94,7 @@ class DatabaseSeeder extends Seeder
             'parameter_label' => null,
         ]);
 
-        $industries = ['Teknologi Informasi', 'Perbankan & Keuangan', 'Manufaktur', 'Pendidikan', 'Kesehatan'];
+        $industries = ['Teknologi Informasi', 'Perbankan & Keuangan', 'Manufaktur', 'Pendidikan', 'Kesehatan', 'Retail & FMCG', 'Media & Kreatif'];
         foreach ($industries as $ind) {
             MasterItem::create([
                 'master_category_id' => $catIndustri->id,
@@ -102,17 +127,19 @@ class DatabaseSeeder extends Seeder
             ]);
         }
 
-        // 4. Buat Akun Perusahaan (Admin PT) yang sudah terverifikasi
-        $hrdUser = User::create([
+        // 4. Buat Akun Perusahaan (Admin PT) & Lowongan Pekerjaan Bervariasi
+
+        // --- PERUSAHAAN 1: Sektor IT ---
+        $hrdUser1 = User::create([
             'name' => 'HRD PT Inovasi Dinamika Solusi',
             'email' => 'hrd@inovasidinamika.com',
             'password' => Hash::make('password123'),
             'role' => 'Admin PT',
         ]);
-        $hrdUser->assignRole('Admin PT');
+        $hrdUser1->assignRole('Admin PT');
 
-        $company = Company::create([
-            'user_id' => $hrdUser->id,
+        $company1 = Company::create([
+            'user_id' => $hrdUser1->id,
             'name' => 'PT Inovasi Dinamika Solusi',
             'address' => 'Gedung Cyber, Jakarta Selatan',
             'description' => 'Perusahaan IT Consultant yang berfokus pada pengembangan ERP dan Sistem Informasi Enterprise.',
@@ -122,17 +149,107 @@ class DatabaseSeeder extends Seeder
         ]);
 
         JobPosting::create([
-            'company_id' => $company->id,
+            'company_id' => $company1->id,
             'title' => 'Full-Stack Web Developer (Laravel & React)',
-            'description' => 'Kami mencari developer berpengalaman yang menguasai ekosistem Laravel dan React/Inertia.js.',
-
+            'description' => 'Kami mencari developer berpengalaman yang menguasai ekosistem Laravel dan React/Inertia.js untuk berkontribusi dalam pengembangan modul ERP.',
             'requirements' => ['PHP', 'Laravel', 'React.js', 'Inertia.js'],
-
             'location' => 'Jakarta Selatan (Hybrid)',
             'salary_range' => 'Rp 7.000.000 - Rp 10.000.000',
             'is_active' => true,
         ]);
 
+
+        // --- PERUSAHAAN 2: Sektor Perbankan & Keuangan (Non-IT) ---
+        $hrdUser2 = User::create([
+            'name' => 'HRD Bank Mandiri Sejahtera',
+            'email' => 'recruitment@mandirisejahtera.co.id',
+            'password' => Hash::make('password123'),
+            'role' => 'Admin PT',
+        ]);
+        $hrdUser2->assignRole('Admin PT');
+
+        $company2 = Company::create([
+            'user_id' => $hrdUser2->id,
+            'name' => 'PT Bank Mandiri Sejahtera Tbk',
+            'address' => 'Jl. Jendral Sudirman Kav. 21, Jakarta Pusat',
+            'description' => 'Lembaga keuangan perbankan terkemuka di Indonesia yang menyediakan berbagai solusi finansial nasabah.',
+            'industry' => 'Perbankan & Keuangan',
+            'website' => 'https://mandirisejahtera.co.id',
+            'verification_status' => 'verified',
+        ]);
+
+        JobPosting::create([
+            'company_id' => $company2->id,
+            'title' => 'Staff Accounting & Pajak',
+            'description' => 'Membuat laporan keuangan bulanan, melakukan rekonsiliasi bank, dan menyusun pelaporan pajak berkala (PPh 21/23/25) perusahaan.',
+            'requirements' => ['Financial Accounting', 'Tax Reporting', 'Microsoft Excel Advanced'],
+            'location' => 'Jakarta Pusat (On-site)',
+            'salary_range' => 'Rp 5.500.000 - Rp 7.500.000',
+            'is_active' => true,
+        ]);
+
+
+        // --- PERUSAHAAN 3: Sektor Manufaktur / FMCG (Non-IT) ---
+        $hrdUser3 = User::create([
+            'name' => 'HRD PT Nusantara Food Industri',
+            'email' => 'career@nusantarafood.com',
+            'password' => Hash::make('password123'),
+            'role' => 'Admin PT',
+        ]);
+        $hrdUser3->assignRole('Admin PT');
+
+        $company3 = Company::create([
+            'user_id' => $hrdUser3->id,
+            'name' => 'PT Nusantara Food Industri',
+            'address' => 'Kawasan Industri Jababeka, Cikarang',
+            'description' => 'Perusahaan manufaktur berskala nasional yang bergerak di bidang pengolahan makanan ringan dan minuman kemasan.',
+            'industry' => 'Manufaktur',
+            'website' => 'https://nusantarafood.com',
+            'verification_status' => 'verified',
+        ]);
+
+        JobPosting::create([
+            'company_id' => $company3->id,
+            'title' => 'Admin Gudang & Inventory Control',
+            'description' => 'Bertanggung jawab atas pencatatan arus masuk-keluar barang di gudang, pelaksanaan opname stock bulanan, serta menyusun laporan inventaris menggunakan sistem gudang terintegrasi.',
+            'requirements' => ['Inventory Management', 'Data Entry', 'Microsoft Excel Advanced'],
+            'location' => 'Cikarang, Bekasi',
+            'salary_range' => 'Rp 4.800.000 - Rp 6.000.000',
+            'is_active' => true,
+        ]);
+
+
+        // --- PERUSAHAAN 4: Sektor Media & Kreatif (Non-IT) ---
+        $hrdUser4 = User::create([
+            'name' => 'HRD Circle Media Group',
+            'email' => 'hr@circlemedia.id',
+            'password' => Hash::make('password123'),
+            'role' => 'Admin PT',
+        ]);
+        $hrdUser4->assignRole('Admin PT');
+
+        $company4 = Company::create([
+            'user_id' => $hrdUser4->id,
+            'name' => 'Circle Media Group',
+            'address' => 'Jl. Dipatiukur No. 45, Bandung',
+            'description' => 'Creative agency yang bergerak di bidang pengelolaan brand digital, social media management, dan content production.',
+            'industry' => 'Media & Kreatif',
+            'website' => 'https://circlemedia.id',
+            'verification_status' => 'verified',
+        ]);
+
+        JobPosting::create([
+            'company_id' => $company4->id,
+            'title' => 'Social Media Specialist & Content Creator',
+            'description' => 'Mengembangkan ide konten kreatif harian untuk Instagram dan TikTok klien, mengelola interaksi (engagement), serta menganalisis performa insight mingguan.',
+            'requirements' => ['Digital Marketing', 'Content Creation', 'Customer Service'],
+            'location' => 'Bandung (Remote / WFH Allowed)',
+            'salary_range' => 'Rp 4.000.000 - Rp 5.500.000',
+            'is_active' => true,
+        ]);
+
+
+        // 5. Buat Akun & Profil Alumni
         $alumni1 = User::create([
             'name' => 'Fiko Abdigusti',
             'email' => 'fiko@alumni.sitami.ac.id',
@@ -145,9 +262,9 @@ class DatabaseSeeder extends Seeder
             'user_id' => $alumni1->id,
             'nim' => '23010044',
             'major' => 'Manajemen Informatika',
-            'jenjang_pendidikan' => 'D3',              // <-- TAMBAHAN: Otomatis sesuai prodi
-            'tanggal_lahir' => '2004-05-14',           // <-- TAMBAHAN WAJIB
-            'experience' => 1,                         // <-- TAMBAHAN WAJIB
+            'jenjang_pendidikan' => 'D3',
+            'tanggal_lahir' => '2004-05-14',
+            'experience' => 1,
             'graduation_year' => 2026,
             'skills' => ['Laravel', 'React.js', 'Inertia.js', 'Tailwind CSS'],
             'phone_number' => '081234567890',
@@ -166,15 +283,72 @@ class DatabaseSeeder extends Seeder
             'user_id' => $alumni2->id,
             'nim' => '22010111',
             'major' => 'Teknik Informatika',
-            'jenjang_pendidikan' => 'S1',              // <-- TAMBAHAN: Otomatis sesuai prodi
-            'tanggal_lahir' => '2003-08-20',           // <-- TAMBAHAN WAJIB
-            'experience' => 2,                         // <-- TAMBAHAN WAJIB
+            'jenjang_pendidikan' => 'S1',
+            'tanggal_lahir' => '2003-08-20',
+            'experience' => 2,
             'graduation_year' => 2025,
             'skills' => ['System Analysis', 'ERP Development', 'PHP'],
             'phone_number' => '089876543210',
             'address' => 'Jakarta Selatan',
         ]);
 
-        echo "Selesai! Database dan Master Data Dinamis berhasil dipasang! \n";
+
+        // ==========================================
+        // 6. SEED DATA: RUANG DISKUSI (FORUM)
+        // ==========================================
+
+        // Diskusi 1: Seputar Tips Interview (Dibuat oleh Alumni 1)
+        $topic1 = ForumTopic::create([
+            'user_id' => $alumni1->id,
+            'title' => 'Tips Lolos Interview Kerja untuk Fresh Graduate D3/S1',
+            'slug' => Str::slug('Tips Lolos Interview Kerja untuk Fresh Graduate D3 S1'), // Diaktifkan kembali untuk memenuhi Not-Null Constraint PostgreSQL
+            'content' => 'Halo rekan-rekan alumni! Di sini ada yang punya tips atau pengalaman menarik saat menghadapi interview kerja pertama kali tidak? Terutama cara menjawab pertanyaan "Ceritakan tentang diri Anda" agar HRD tertarik dengan portofolio project kuliah kita. Bagikan pengalamannya dong!',
+        ]);
+
+        // Balasan untuk Diskusi 1
+        ForumReply::create([
+            'forum_topic_id' => $topic1->id,
+            'user_id' => $alumni2->id,
+            'content' => 'Bantu jawab berdasarkan pengalaman kemarin ya. Kuncinya pakai metode STAR (Situation, Task, Action, Result) saat menceritakan project KP atau tugas akhir. Ceritakan kendala teknis apa yang dihadapi dan cara kita menyelesaikannya. HRD paling suka tipe problem solver!',
+        ]);
+
+        ForumReply::create([
+            'forum_topic_id' => $topic1->id,
+            'user_id' => $adminKampus->id,
+            'content' => 'Kombinasi yang bagus! Dari pihak kampus juga menyarankan untuk tetap melatih komunikasi verbal (mock interview) dan pastikan CV yang dikirimkan sinkron dengan apa yang diucapkan saat wawancara berlangsung. Semangat untuk para lulusan baru!',
+        ]);
+
+
+        // Diskusi 2: Topik Karier & Industri (Dibuat oleh Alumni 2)
+        $topic2 = ForumTopic::create([
+            'user_id' => $alumni2->id,
+            'title' => 'Peluang Kerja Full-stack Developer Menggunakan React + Inertia.js di Tahun Ini',
+            'slug' => Str::slug('Peluang Kerja Full-stack Developer Menggunakan React Inertia js di Tahun Ini'),
+            'content' => 'Melihat tren sekarang, ekosistem Laravel modern banyak yang pakai Inertia.js digabung dengan React atau Vue. Menurut teman-teman di sini, apakah efisiensinya di industri skala corporate sudah cukup bersaing dibandingkan dengan memisahkan pure REST API (Laravel) dan standalone SPA (React)? Yuk diskusi kelebihannya!',
+        ]);
+
+        // Balasan untuk Diskusi 2
+        ForumReply::create([
+            'forum_topic_id' => $topic2->id,
+            'user_id' => $alumni1->id,
+            'content' => 'Kalau untuk tim kecil-menengah atau kejar target MVP (Minimum Viable Product), kombinasi Laravel + Inertia + React juara banget sih bang. Soalnya kita ga perlu pusing routing ganda dan handling state authentication yang ribet. Tapi kalau buat aplikasi mobile-ready ke depannya, emang mau ga mau harus dipisah ke pure REST API.',
+        ]);
+
+
+        // Diskusi 3: Informasi Umum tentang Sertifikasi (Dibuat oleh Admin Kampus)
+        $topic3 = ForumTopic::create([
+            'user_id' => $adminKampus->id,
+            'title' => 'Pentingnya Sertifikasi Kompetensi (BNSP) Saat Melamar Kerja',
+            'slug' => Str::slug('Pentingnya Sertifikasi Kompetensi BNSP Saat Melamar Kerja'),
+            'content' => 'Halo semuanya, sekadar mengingatkan bagi rekan-rekan lulusan baru, jangan lupa untuk melampirkan sertifikat kompetensi BNSP yang pernah diikuti di kampus saat wisuda kemarin. Beberapa mitra perusahaan PT yang bekerja sama dengan SITAMI sering kali menjadikan sertifikasi tersebut sebagai nilai tambah utama.',
+        ]);
+
+        ForumReply::create([
+            'forum_topic_id' => $topic3->id,
+            'user_id' => $alumni2->id,
+            'content' => 'Betul sekali Pak/Bu, waktu saya melamar di Tech Company kemarin, sertifikat kompetensi Sistem Analis sangat membantu memvalidasi keahlian saya di mata user.',
+        ]);
+
+        echo "Selesai! Database, Master Data, Lowongan Multi-Industri, dan Ruang Diskusi berhasil dipasang! \n";
     }
 }

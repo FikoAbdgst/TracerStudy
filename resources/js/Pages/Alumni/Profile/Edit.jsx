@@ -1,11 +1,12 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Head, useForm, usePage } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/Components/ui/select';
 import InputError from '@/Components/InputError';
 import axios from 'axios';
 
-import kotaData from '@/Data/kota.json';
+// Import data wilayah hierarkis (Pastikan file JSON ini sudah Anda buat sebelumnya)
+import wilayahData from '@/Data/wilayah.json';
 
 // ─── Design Tokens ────────────────────────────────────────────────────────────
 const T = {
@@ -44,38 +45,6 @@ const Section = ({ title, icon, children, delay = 0 }) => (
             <span style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: T.navy }}>{title}</span>
         </div>
         <div style={{ padding: '20px' }}>{children}</div>
-    </div>
-);
-
-// ─── Jenjang — native select (konsisten & clean di semua browser) ─────────────
-const JenjangSelect = ({ value, onChange }) => (
-    <div style={{ position: 'relative' }}>
-        <select
-            value={value}
-            onChange={e => onChange(e.target.value)}
-            onFocus={onFocus}
-            onBlur={onBlur}
-            style={{
-                ...fieldBase,
-                appearance: 'none',
-                WebkitAppearance: 'none',
-                MozAppearance: 'none',
-                paddingRight: 36,
-                cursor: 'pointer',
-                color: value ? T.navy : T.muted,
-            }}
-        >
-            <option value="" disabled>Pilih...</option>
-            <option value="D3">D3</option>
-            <option value="S1">S1</option>
-            <option value="S2">S2</option>
-        </select>
-        <svg
-            style={{ position: 'absolute', right: 11, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: T.mutedDark }}
-            width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"
-        >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-        </svg>
     </div>
 );
 
@@ -176,17 +145,31 @@ const ViewMode = ({ profile, data }) => {
 
 // ─── EDIT MODE ────────────────────────────────────────────────────────────────
 const EditMode = ({ data, setData, errors, processing, submit, programStudis, masterSkills, setMasterSkills, onCancel }) => {
+    // State Keahlian
     const [searchSkill, setSearchSkill] = useState('');
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const searchRef = useRef(null);
 
-    const [searchKota, setSearchKota] = useState(data.address || '');
-    const [isKotaDropdownOpen, setIsKotaDropdownOpen] = useState(false);
-    const kotaRef = useRef(null);
+    // ─── STATE UNTUK DOMISILI HIERARKIS ───
+    const initialAddressParts = data.address ? data.address.split(', ') : ['', ''];
+    // Asumsi format di DB adalah "Kota, Provinsi"
+    const initialKota = initialAddressParts[0] || '';
+    const initialProvinsi = initialAddressParts.length > 1 ? initialAddressParts[1] : '';
 
-    const filteredKota = kotaData.filter(kota =>
-        kota.toLowerCase().includes(searchKota.toLowerCase())
-    );
+    const [selectedProvinsi, setSelectedProvinsi] = useState(initialProvinsi);
+    const [selectedKota, setSelectedKota] = useState(initialKota);
+
+    const listProvinsi = Object.keys(wilayahData);
+    const listKota = selectedProvinsi ? (wilayahData[selectedProvinsi] || []) : [];
+
+    const updateAddressInForm = (kota, provinsi) => {
+        if (kota && provinsi) {
+            setData('address', `${kota}, ${provinsi}`);
+        } else {
+            setData('address', '');
+        }
+    };
+    // ──────────────────────────────────────
 
     const availableSkills = masterSkills.filter(s =>
         s.name.toLowerCase().includes(searchSkill.toLowerCase())
@@ -197,6 +180,7 @@ const EditMode = ({ data, setData, errors, processing, submit, programStudis, ma
         setSearchSkill('');
         setIsDropdownOpen(false);
     };
+
     const removeSkill = (skillName) => setData('skills', data.skills.filter(s => s !== skillName));
 
     const createNewSkill = async () => {
@@ -210,11 +194,17 @@ const EditMode = ({ data, setData, errors, processing, submit, programStudis, ma
         }
     };
 
+    // Hitung tanggal lahir maksimal (-18 tahun dari hari ini)
+    const maxAgeDate = useMemo(() => {
+        const date = new Date();
+        date.setFullYear(date.getFullYear() - 18);
+        return date.toISOString().split('T')[0]; // YYYY-MM-DD
+    }, []);
+
+    // Tutup dropdown keahlian jika klik di luar
     useEffect(() => {
         const handler = (e) => {
             if (searchRef.current && !searchRef.current.contains(e.target)) setIsDropdownOpen(false);
-            // Tambahkan baris ini:
-            if (kotaRef.current && !kotaRef.current.contains(e.target)) setIsKotaDropdownOpen(false);
         };
         document.addEventListener('mousedown', handler);
         return () => document.removeEventListener('mousedown', handler);
@@ -225,7 +215,6 @@ const EditMode = ({ data, setData, errors, processing, submit, programStudis, ma
 
             {/* ── Data Akademik ── */}
             <Section title="Data Akademik" icon="🎓" delay={0.04}>
-                {/* NIM + Jenjang + Tahun Lulus */}
                 <div className="al-grid-akademik" style={{ marginBottom: 14 }}>
                     <div>
                         <FieldLabel required>NIM</FieldLabel>
@@ -252,17 +241,14 @@ const EditMode = ({ data, setData, errors, processing, submit, programStudis, ma
                         <InputError message={errors.graduation_year} className="mt-1.5" />
                     </div>
                 </div>
+
                 {/* Program Studi */}
                 <div>
                     <FieldLabel required>Program Studi</FieldLabel>
-
                     <Select
                         value={data.major}
                         onValueChange={v => {
-                            // 1. Cari objek prodi yang dipilih
                             const selectedProdi = programStudis.find(p => p.name === v);
-
-                            // 2. Gunakan object spread langsung (BUKAN menggunakan currentData => ...)
                             setData({
                                 ...data,
                                 major: v,
@@ -270,23 +256,12 @@ const EditMode = ({ data, setData, errors, processing, submit, programStudis, ma
                             });
                         }}
                     >
-                        <SelectTrigger
-                            className="focus:ring-0 focus:ring-offset-0"
-                            style={{ height: 42, borderRadius: 9, border: `1.5px solid ${T.border}`, background: T.bg, fontSize: 13.5, width: '100%' }}
-                        >
+                        <SelectTrigger className="focus:ring-0 focus:ring-offset-0" style={{ height: 42, borderRadius: 9, border: `1.5px solid ${T.border}`, background: T.bg, fontSize: 13.5, width: '100%' }}>
                             <SelectValue placeholder="Pilih Program Studi..." />
                         </SelectTrigger>
-                        <SelectContent
-                            position="popper" sideOffset={4}
-                            className="z-[500] rounded-xl overflow-hidden border border-gray-200 shadow-xl"
-                            style={{ background: '#ffffff', minWidth: 'var(--radix-select-trigger-width)' }}
-                        >
+                        <SelectContent position="popper" sideOffset={4} className="z-[500] rounded-xl overflow-hidden border border-gray-200 shadow-xl" style={{ background: '#ffffff', minWidth: 'var(--radix-select-trigger-width)' }}>
                             {programStudis?.map(prodi => (
-                                <SelectItem
-                                    key={prodi.id} value={prodi.name}
-                                    className="text-sm cursor-pointer px-3 py-2 outline-none data-[highlighted]:bg-slate-50"
-                                    style={{ color: '#1e293b' }}
-                                >
+                                <SelectItem key={prodi.id} value={prodi.name} className="text-sm cursor-pointer px-3 py-2 outline-none data-[highlighted]:bg-slate-50" style={{ color: '#1e293b' }}>
                                     {prodi.name} {prodi.parameter_value ? `(${prodi.parameter_value})` : ''}
                                 </SelectItem>
                             ))}
@@ -301,12 +276,23 @@ const EditMode = ({ data, setData, errors, processing, submit, programStudis, ma
                 <div className="al-grid-2" style={{ marginBottom: 14 }}>
                     <div>
                         <FieldLabel required>Tanggal Lahir</FieldLabel>
-                        <input type="date" style={fieldBase} value={data.tanggal_lahir}
-                            onChange={e => setData('tanggal_lahir', e.target.value)}
-                            onFocus={onFocus} onBlur={onBlur}
-                            required
-                        />
+                        <div style={{ position: 'relative' }}>
+                            <input
+                                type="date"
+                                style={{
+                                    ...fieldBase,
+                                    color: data.tanggal_lahir ? T.navy : T.muted,
+                                    cursor: 'pointer'
+                                }}
+                                value={data.tanggal_lahir}
+                                max={maxAgeDate}
+                                onChange={e => setData('tanggal_lahir', e.target.value)}
+                                onFocus={onFocus} onBlur={onBlur}
+                                required
+                            />
+                        </div>
                         <InputError message={errors.tanggal_lahir} className="mt-1.5" />
+                        <div style={{ fontSize: 11, color: T.muted, marginTop: 4 }}>*Kandidat minimal berusia 18 tahun.</div>
                     </div>
                     <div>
                         <FieldLabel>No. WhatsApp / HP</FieldLabel>
@@ -315,70 +301,85 @@ const EditMode = ({ data, setData, errors, processing, submit, programStudis, ma
                         <InputError message={errors.phone_number} className="mt-1.5" />
                     </div>
                 </div>
+
+                {/* ── DOMISILI BERHIERARKI ── */}
                 <div style={{ marginBottom: 14 }}>
-                    {/* KODE PENGGANTI UNTUK DOMISILI */}
-                    <div style={{ marginBottom: 14 }} ref={kotaRef}>
-                        <FieldLabel required>Domisili Saat Ini (Kota / Kabupaten)</FieldLabel>
+                    <FieldLabel required>Domisili Saat Ini</FieldLabel>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                        {/* Provinsi */}
                         <div style={{ position: 'relative' }}>
-                            {/* Ikon Pencarian */}
-                            <svg style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#b0bec5', pointerEvents: 'none', zIndex: 10 }}
-                                width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
-                            </svg>
-
-                            {/* Input Pencarian */}
-                            <input
-                                style={{ ...fieldBase, paddingLeft: 36 }}
-                                placeholder="Ketik untuk mencari kota (Misal: Bandung...)"
-                                value={searchKota}
-                                onChange={e => {
-                                    setSearchKota(e.target.value);
-                                    setIsKotaDropdownOpen(true);
-                                    setData('address', e.target.value); // Simpan sementara ke form
+                            <select
+                                style={{
+                                    ...fieldBase,
+                                    appearance: 'none', WebkitAppearance: 'none', MozAppearance: 'none',
+                                    paddingRight: 36, cursor: 'pointer',
+                                    color: selectedProvinsi ? T.navy : T.muted
                                 }}
-                                onFocus={e => { onFocus(e); setIsKotaDropdownOpen(true); }}
-                                onBlur={onBlur}
+                                value={selectedProvinsi}
+                                onChange={e => {
+                                    const prov = e.target.value;
+                                    setSelectedProvinsi(prov);
+                                    setSelectedKota('');
+                                    updateAddressInForm('', prov);
+                                }}
+                                onFocus={onFocus} onBlur={onBlur}
                                 required
-                            />
-
-                            {/* Dropdown List Kota */}
-                            {isKotaDropdownOpen && (
-                                <div className="custom-scrollbar" style={{
-                                    position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0,
-                                    background: '#fff', borderRadius: 10, border: `1px solid ${T.borderSoft}`,
-                                    boxShadow: '0 10px 25px rgba(0,0,0,0.1)', zIndex: 100, maxHeight: 200, overflowY: 'auto', padding: '6px',
-                                }}>
-                                    {filteredKota.length > 0 ? filteredKota.map((kota, idx) => (
-                                        <div key={idx}
-                                            onClick={() => {
-                                                setSearchKota(kota);
-                                                setData('address', kota); // Simpan data kota terpilih ke database
-                                                setIsKotaDropdownOpen(false);
-                                            }}
-                                            style={{ padding: '8px 12px', borderRadius: 6, fontSize: 13, color: T.navy, cursor: 'pointer', transition: 'background 0.1s' }}
-                                            onMouseEnter={e => e.currentTarget.style.background = T.navyLight}
-                                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                                        >
-                                            {kota}
-                                        </div>
-                                    )) : (
-                                        <div style={{ padding: '8px 12px', fontSize: 13, color: T.mutedDark, fontStyle: 'italic' }}>
-                                            Kota "{searchKota}" tidak ditemukan.
-                                        </div>
-                                    )}
-                                </div>
-                            )}
+                            >
+                                <option value="" disabled>Pilih Provinsi...</option>
+                                {listProvinsi.map(prov => (
+                                    <option key={prov} value={prov}>{prov}</option>
+                                ))}
+                            </select>
+                            <svg style={{ position: 'absolute', right: 11, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: T.mutedDark }} width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
                         </div>
-                        <InputError message={errors.address} className="mt-1.5" />
+
+                        {/* Kota */}
+                        <div style={{ position: 'relative' }}>
+                            <select
+                                style={{
+                                    ...fieldBase,
+                                    appearance: 'none', WebkitAppearance: 'none', MozAppearance: 'none',
+                                    paddingRight: 36,
+                                    cursor: selectedProvinsi ? 'pointer' : 'not-allowed',
+                                    background: selectedProvinsi ? '#fff' : T.borderSoft,
+                                    color: selectedKota ? T.navy : T.muted
+                                }}
+                                value={selectedKota}
+                                onChange={e => {
+                                    const kota = e.target.value;
+                                    setSelectedKota(kota);
+                                    updateAddressInForm(kota, selectedProvinsi);
+                                }}
+                                onFocus={onFocus} onBlur={onBlur}
+                                disabled={!selectedProvinsi}
+                                required
+                            >
+                                <option value="" disabled>
+                                    {selectedProvinsi ? 'Pilih Kota...' : 'Pilih Provinsi Dulu'}
+                                </option>
+                                {listKota.map(kota => (
+                                    <option key={kota} value={kota}>{kota}</option>
+                                ))}
+                            </select>
+                            <svg style={{ position: 'absolute', right: 11, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: T.mutedDark }} width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+                        </div>
                     </div>
+                    <InputError message={errors.address} className="mt-1.5" />
+                    {data.address && (
+                        <div style={{ fontSize: 11, fontWeight: 600, color: T.green, marginTop: 6 }}>
+                            Alamat tersimpan: {data.address}
+                        </div>
+                    )}
                 </div>
+                {/* ────────────────────────── */}
+
                 <div>
                     <FieldLabel required>Lama Pengalaman Kerja (Tahun)</FieldLabel>
                     <input type="number" min="0" style={fieldBase}
                         placeholder="Contoh: 1 (Kosongkan atau ketik 0 jika Fresh Graduate)"
                         value={data.experience} onChange={e => setData('experience', e.target.value)}
                         onFocus={onFocus} onBlur={onBlur}
-                        required /* <--- Tambahkan ini */
+                        required
                     />
                     <InputError message={errors.experience} className="mt-1.5" />
                     <div style={{ fontSize: 11, color: T.muted, marginTop: 4 }}>*Isi dengan angka dalam hitungan tahun (Ketik 0 jika Fresh Graduate).</div>
@@ -459,6 +460,13 @@ const EditMode = ({ data, setData, errors, processing, submit, programStudis, ma
                 <input type="file" accept="application/pdf" onChange={e => setData('cv_file', e.target.files[0])}
                     style={{ width: '100%', padding: '10px 14px', borderRadius: 9, border: `2px dashed ${T.border}`, fontSize: 13.5, background: T.bg, boxSizing: 'border-box' }} />
                 <InputError className="mt-2" message={errors.cv_file} />
+            </Section>
+            {/* Tambahkan di bawah Section Dokumen Pelengkap */}
+            <Section title="Foto Profil" icon="👤" delay={0.16}>
+                <FieldLabel>Upload Foto Profil (PNG/JPG Max 2MB)</FieldLabel>
+                <input type="file" accept="image/*" onChange={e => setData('photo_file', e.target.files[0])}
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: 9, border: `2px dashed ${T.border}`, fontSize: 13.5, background: T.bg }} />
+                {data.photo_file && <div style={{ fontSize: 11, color: T.green, marginTop: 4 }}>Foto baru terpilih.</div>}
             </Section>
 
             {/* ── Footer Simpan / Batal ── */}
@@ -577,47 +585,32 @@ export default function EditProfile({ profile, programStudis = [], keahlianMaste
 
                 /* ── Responsive grids ── */
 
-                /* 2 kolom: NIM + Jenjang + Tahun */
                 .al-grid-akademik {
                     display: grid;
                     grid-template-columns: 2fr 1fr 1fr;
                     gap: 14px;
                 }
-                /* Tablet kecil: NIM full, Jenjang & Tahun di baris kedua */
                 @media (max-width: 600px) {
-                    .al-grid-akademik {
-                        grid-template-columns: 1fr 1fr;
-                    }
-                    .al-grid-akademik > div:first-child {
-                        grid-column: 1 / -1;
-                    }
+                    .al-grid-akademik { grid-template-columns: 1fr 1fr; }
+                    .al-grid-akademik > div:first-child { grid-column: 1 / -1; }
                 }
-                /* Mobile: semua 1 kolom */
                 @media (max-width: 420px) {
-                    .al-grid-akademik {
-                        grid-template-columns: 1fr;
-                    }
-                    .al-grid-akademik > div:first-child {
-                        grid-column: auto;
-                    }
+                    .al-grid-akademik { grid-template-columns: 1fr; }
+                    .al-grid-akademik > div:first-child { grid-column: auto; }
                 }
 
-                /* 2 kolom simetris */
                 .al-grid-2 {
                     display: grid;
                     grid-template-columns: 1fr 1fr;
                     gap: 0;
                 }
                 @media (max-width: 500px) {
-                    .al-grid-2 {
-                        grid-template-columns: 1fr;
-                    }
+                    .al-grid-2 { grid-template-columns: 1fr; }
                 }
             `}</style>
 
             <div className="al-root" style={{ maxWidth: 720, margin: '0 auto', padding: '0 2px' }}>
 
-                {/* Flash sukses */}
                 {flash?.message && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', borderRadius: 10, marginBottom: 18, background: T.greenLight, border: '1px solid #bbf7d0', animation: 'fadeIn 0.3s both' }}>
                         <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke={T.green} strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -625,7 +618,6 @@ export default function EditProfile({ profile, programStudis = [], keahlianMaste
                     </div>
                 )}
 
-                {/* Banner belum lengkap — view mode saja */}
                 {!isEditing && !isComplete && (
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 18px', borderRadius: 12, marginBottom: 16, background: '#fffbeb', border: '1px solid #fed7aa', animation: 'fadeIn 0.3s both' }}>
                         <div style={{ width: 30, height: 30, borderRadius: '50%', background: T.orangeLight, color: T.orange, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
@@ -638,7 +630,6 @@ export default function EditProfile({ profile, programStudis = [], keahlianMaste
                     </div>
                 )}
 
-                {/* ── Hero Card (tombol Edit/Batal ada di sini) ── */}
                 <div style={{
                     background: `linear-gradient(135deg, ${T.navyMid} 0%, ${T.navy} 100%)`,
                     borderRadius: 14, padding: '20px 24px', marginBottom: 16,
@@ -647,15 +638,16 @@ export default function EditProfile({ profile, programStudis = [], keahlianMaste
                     animation: 'cardIn 0.4s cubic-bezier(0.22,1,0.36,1) both',
                     position: 'relative', overflow: 'hidden',
                 }}>
-                    {/* Dekorasi */}
                     <div style={{ position: 'absolute', right: -20, top: -20, width: 120, height: 120, borderRadius: '50%', background: 'rgba(249,115,22,0.1)', pointerEvents: 'none' }} />
 
-                    {/* Avatar */}
-                    <div style={{ width: 54, height: 54, borderRadius: 14, background: T.orange, color: '#fff', fontSize: 22, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 4px 16px rgba(249,115,22,0.35)', position: 'relative' }}>
-                        {(auth?.user?.name || '?').charAt(0).toUpperCase()}
-                    </div>
+                    {profile?.photo_path ? (
+                        <img src={`/storage/${profile.photo_path}`} style={{ width: 54, height: 54, borderRadius: 14, objectFit: 'cover' }} />
+                    ) : (
+                        <div style={{ width: 54, height: 54, borderRadius: 14, background: T.orange, color: '#fff', fontSize: 22, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            {(auth?.user?.name || '?').charAt(0).toUpperCase()}
+                        </div>
+                    )}
 
-                    {/* Nama & info */}
                     <div style={{ flex: 1, minWidth: 0, position: 'relative' }}>
                         <div style={{ fontSize: 16, fontWeight: 800, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {auth?.user?.name}
@@ -667,14 +659,12 @@ export default function EditProfile({ profile, programStudis = [], keahlianMaste
                         </div>
                     </div>
 
-                    {/* Badge lengkap */}
                     {isComplete && !isEditing && (
                         <span style={{ fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20, background: 'rgba(22,163,74,0.2)', color: '#4ade80', flexShrink: 0, position: 'relative' }}>
                             ✓ Profil Lengkap
                         </span>
                     )}
 
-                    {/* ── TOMBOL EDIT / BATAL ── */}
                     {isEditing ? (
                         <button
                             type="button"
@@ -718,7 +708,6 @@ export default function EditProfile({ profile, programStudis = [], keahlianMaste
                     )}
                 </div>
 
-                {/* ── Konten utama ── */}
                 {isEditing ? (
                     <EditMode
                         data={data}

@@ -29,37 +29,51 @@ class AlumniProfileController extends Controller
 
     public function update(Request $request)
     {
+        // Hitung tanggal tepat 18 tahun yang lalu dari hari ini
+        $maxDate = now()->subYears(18)->format('Y-m-d');
+
         $validated = $request->validate([
             'nim' => 'required|string|max:50',
             'major' => 'nullable|string|max:255',
             'graduation_year' => 'nullable|integer|min:1900|max:' . (date('Y') + 5),
             'jenjang_pendidikan' => 'nullable|string|in:D3,S1,S2,S3',
 
-            // UBAH DUA BARIS INI MENJADI REQUIRED:
-            'tanggal_lahir' => 'required|date',
-            'experience' => 'required|integer|min:0',
+            // Batasi tanggal lahir minimal 18 tahun yang lalu
+            'tanggal_lahir' => 'required|date|before_or_equal:' . $maxDate,
 
             'phone_number' => 'nullable|string|max:20',
             'address' => 'required|string',
+            'experience' => 'required|integer|min:0',
             'skills' => 'nullable|array',
             'cv_file' => 'nullable|file|mimes:pdf|max:5120',
+            'photo_file' => 'nullable|file|mimes:png,jpg,jpeg|max:2048'
+        ], [
+            // Tambahkan pesan error kustom agar lebih ramah (user-friendly)
+            'tanggal_lahir.before_or_equal' => 'Maaf, usia Anda harus minimal 18 tahun untuk menggunakan sistem ini.',
+            'tanggal_lahir.required' => 'Tanggal lahir wajib diisi.',
+            'experience.required' => 'Pengalaman wajib diisi.',
+            'address.required' => 'Domisili wajib diisi.'
         ]);
 
         $user = Auth::user();
-        $alumni = $user->alumniProfile;
+        $alumni = $request->user()->alumniProfile;
 
-        // Proses File CV
+        if ($request->hasFile('photo_file')) {
+            if ($alumni && $alumni->photo_path) {
+                Storage::disk('public')->delete($alumni->photo_path);
+            }
+            $validated['photo_path'] = $request->file('photo_file')->store('alumni_photos', 'public');
+        }
+        unset($validated['photo_file']);
+
         if ($request->hasFile('cv_file')) {
             if ($alumni && $alumni->cv_path) {
                 Storage::disk('public')->delete($alumni->cv_path);
             }
-            $validated['cv_path'] = $request->file('cv_file')->store('cv_documents', 'public');
+            $validated['cv_path'] = $request->file('cv_file')->store('alumni_cvs', 'public');
         }
-
-        // Hapus cv_file dari array validated agar tidak masuk ke query DB
         unset($validated['cv_file']);
 
-        // Simpan Data
         if ($alumni) {
             $alumni->update($validated);
         } else {

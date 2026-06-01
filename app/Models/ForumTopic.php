@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class ForumTopic extends Model
 {
-    protected $fillable = ['user_id', 'title', 'content'];
+    protected $fillable = ['user_id', 'title', 'slug', 'content'];
 
     // Relasi ke pembuat topik
     public function user()

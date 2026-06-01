@@ -13,12 +13,10 @@ return new class extends Migration
     {
         Schema::create('forum_topics', function (Blueprint $table) {
             $table->id();
-            // Relasi ke user (pembuat topik)
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-
+            $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->string('title');
+            $table->string('slug')->unique(); // <-- TAMBAHKAN BARIS INI
             $table->text('content');
-
             $table->timestamps();
         });
     }

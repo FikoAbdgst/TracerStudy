@@ -21,6 +21,7 @@ class AlumniProfile extends Model
         'experience',  // Pengalaman
         'skills',
         'cv_path',
+        'photo_path'
     ];
 
     protected $casts = [

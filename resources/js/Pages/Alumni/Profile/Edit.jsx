@@ -96,6 +96,7 @@ const ViewMode = ({ profile, data }) => {
                     <ProfileField label="Tanggal Lahir" value={formatDate(data.tanggal_lahir)} />
                     <ProfileField label="No. WhatsApp / HP" value={data.phone_number} />
                     <ProfileField label="Domisili Saat Ini" value={data.address} full />
+                    {data.detail_address && <ProfileField label="Detail Alamat" value={data.detail_address} full />}
                     <ProfileField
                         label="Lama Pengalaman Kerja"
                         value={data.experience !== null && data.experience !== '' ? `${data.experience} Tahun` : 'Belum diisi'}
@@ -168,6 +169,10 @@ const EditMode = ({ data, setData, errors, processing, submit, programStudis, ma
         } else {
             setData('address', '');
         }
+    };
+
+    const updateDetailAddress = (detail) => {
+        setData('detail_address', detail);
     };
     // ──────────────────────────────────────
 
@@ -371,6 +376,19 @@ const EditMode = ({ data, setData, errors, processing, submit, programStudis, ma
                         </div>
                     )}
                 </div>
+
+                {/* ── DETAIL ALAMAT ── */}
+                <div style={{ marginBottom: 14 }}>
+                    <FieldLabel>Detail Alamat <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: '#94a3b8' }}>(opsional)</span></FieldLabel>
+                    <textarea
+                        style={{ ...fieldBase, minHeight: 70, paddingTop: 10, resize: 'vertical', fontFamily: 'inherit' }}
+                        placeholder="Contoh: Jl. Merdeka No. 123, RT 01/RW 02, Kel. Cibeunying"
+                        value={data.detail_address || ''}
+                        onChange={e => updateDetailAddress(e.target.value)}
+                        onFocus={onFocus} onBlur={onBlur}
+                    />
+                    <InputError message={errors.detail_address} className="mt-1.5" />
+                </div>
                 {/* ────────────────────────── */}
 
                 <div>
@@ -530,6 +548,7 @@ export default function EditProfile({ profile, programStudis = [], keahlianMaste
         tanggal_lahir: profile?.tanggal_lahir || '',
         phone_number: profile?.phone_number || '',
         address: profile?.address || '',
+        detail_address: profile?.detail_address || '',
         experience: profile?.experience || '',
         skills: profile?.skills || [],
         cv_file: null,

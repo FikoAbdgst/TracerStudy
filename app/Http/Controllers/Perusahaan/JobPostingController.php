@@ -24,9 +24,10 @@ class JobPostingController extends Controller
 
         return Inertia::render('Perusahaan/Lowongan/Index', [
             'jobs' => $jobs,
+            'company' => $company,
             'isVerified' => $company->verification_status === 'verified',
             'verificationStatus' => $company->verification_status,
-            'keahlianMaster' => $keahlianMaster, // 2. Kirim ke React
+            'keahlianMaster' => $keahlianMaster,
         ]);
     }
 
@@ -43,12 +44,16 @@ class JobPostingController extends Controller
             'description' => 'required|string',
             'requirements' => 'nullable|array',
             'location' => 'nullable|string|max:255',
+            'province' => 'nullable|string|max:255',
+            'city' => 'nullable|string|max:255',
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
             'salary_range' => 'nullable|string|max:255',
             'is_active' => 'boolean',
             'min_education' => 'nullable|string|max:255',
             'min_experience' => 'nullable|integer|min:0',
             'max_age' => 'nullable|integer|min:0',
-            'work_model' => 'nullable|string|in:WFO,WFH,Hybrid,WFA',
+            'work_model' => 'nullable|string|in:On-site,Hybrid,Remote,WFO,WFH,WFA',
         ]);
 
         $validated['company_id'] = $company->id;
@@ -72,14 +77,17 @@ class JobPostingController extends Controller
             'description' => 'required|string',
             'requirements' => 'nullable|array',
             'location' => 'nullable|string|max:255',
+            'province' => 'nullable|string|max:255',
+            'city' => 'nullable|string|max:255',
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
             'salary_range' => 'nullable|string|max:255',
             'is_active' => 'boolean',
             'min_education' => 'nullable|string|max:255',
             'min_experience' => 'nullable|integer|min:0',
             'max_age' => 'nullable|integer|min:0',
-            'work_model' => 'nullable|string|in:WFO,WFH,Hybrid,WFA',
+            'work_model' => 'nullable|string|in:On-site,Hybrid,Remote,WFO,WFH,WFA',
 
-            // Validasi Bobot Dinamis
             'weight_skill' => 'required|integer|min:0|max:100',
             'weight_education' => 'required|integer|min:0|max:100',
             'weight_experience' => 'required|integer|min:0|max:100',

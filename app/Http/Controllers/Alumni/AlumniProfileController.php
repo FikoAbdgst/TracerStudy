@@ -29,7 +29,6 @@ class AlumniProfileController extends Controller
 
     public function update(Request $request)
     {
-        // Hitung tanggal tepat 18 tahun yang lalu dari hari ini
         $maxDate = now()->subYears(18)->format('Y-m-d');
 
         $validated = $request->validate([
@@ -38,17 +37,16 @@ class AlumniProfileController extends Controller
             'graduation_year' => 'nullable|integer|min:1900|max:' . (date('Y') + 5),
             'jenjang_pendidikan' => 'nullable|string|in:D3,S1,S2,S3',
 
-            // Batasi tanggal lahir minimal 18 tahun yang lalu
             'tanggal_lahir' => 'required|date|before_or_equal:' . $maxDate,
 
             'phone_number' => 'nullable|string|max:20',
             'address' => 'required|string',
+            'detail_address' => 'nullable|string',
             'experience' => 'required|integer|min:0',
             'skills' => 'nullable|array',
             'cv_file' => 'nullable|file|mimes:pdf|max:5120',
             'photo_file' => 'nullable|file|mimes:png,jpg,jpeg|max:2048'
         ], [
-            // Tambahkan pesan error kustom agar lebih ramah (user-friendly)
             'tanggal_lahir.before_or_equal' => 'Maaf, usia Anda harus minimal 18 tahun untuk menggunakan sistem ini.',
             'tanggal_lahir.required' => 'Tanggal lahir wajib diisi.',
             'experience.required' => 'Pengalaman wajib diisi.',

@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Head, useForm, usePage } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/Components/ui/select';
 import InputError from '@/Components/InputError';
+import LocationPicker from '@/Components/LocationPicker';
 
+import MapWidget from '@/Components/MapWidget';
 import wilayahData from '@/Data/wilayah.json';
 
 /* ─── Tokens ─────────────────────────────────────────────────────────────── */
@@ -47,34 +49,46 @@ const Section = ({ title, icon, children, delay = 0 }) => (
 // ─── EDIT MODE ────────────────────────────────────────────────────────────────
 const EditMode = ({ data, setData, errors, processing, submit, industries, company, onCancel }) => {
 
-    const initialAddressParts = data.address ? data.address.split(', ') : [];
-
-    let initialProvinsi = '';
-    let initialKota = '';
-    let initialDetail = '';
-
-    if (initialAddressParts.length >= 2) {
-        initialProvinsi = initialAddressParts.pop();
-        initialKota = initialAddressParts.pop();
-        initialDetail = initialAddressParts.join(', ');
-    } else if (initialAddressParts.length === 1) {
-        initialKota = initialAddressParts[0];
-    }
-
-    const [selectedProvinsi, setSelectedProvinsi] = useState(initialProvinsi);
-    const [selectedKota, setSelectedKota] = useState(initialKota);
-    const [detailAlamat, setDetailAlamat] = useState(initialDetail);
+    const [selectedProvinsi, setSelectedProvinsi] = useState(data.province || '');
+    const [selectedKota, setSelectedKota] = useState(data.city || '');
+    const [detailAlamat, setDetailAlamat] = useState('');
+    const [isResolvingAddress, setIsResolvingAddress] = useState(false);
 
     const listProvinsi = Object.keys(wilayahData);
     const listKota = selectedProvinsi ? (wilayahData[selectedProvinsi] || []) : [];
 
     const updateAddressInForm = (detail, kota, provinsi) => {
-        const parts = [];
-        if (detail) parts.push(detail.trim());
-        if (kota) parts.push(kota);
-        if (provinsi) parts.push(provinsi);
-
+        const parts = [detail, kota, provinsi].filter(Boolean);
         setData('address', parts.join(', '));
+    };
+
+    const onProvinsiChange = (prov) => {
+        setSelectedProvinsi(prov);
+        setSelectedKota('');
+        setData('province', prov);
+        setData('city', '');
+        updateAddressInForm(detailAlamat, '', prov);
+    };
+
+    const onKotaChange = (kota) => {
+        setSelectedKota(kota);
+        setData('city', kota);
+        updateAddressInForm(detailAlamat, kota, selectedProvinsi);
+    };
+
+    const onDetailChange = (val) => {
+        setDetailAlamat(val);
+        updateAddressInForm(val, selectedKota, selectedProvinsi);
+    };
+
+    const onLocationChange = (lat, lng) => {
+        setData('latitude', lat);
+        setData('longitude', lng);
+    };
+
+    const handleAddressResolve = (address) => {
+        setDetailAlamat(address);
+        updateAddressInForm(address, selectedKota, selectedProvinsi);
     };
 
     const safeIndustries = Array.isArray(industries) ? industries : [];
@@ -83,7 +97,6 @@ const EditMode = ({ data, setData, errors, processing, submit, industries, compa
         <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <Section title="Informasi Perusahaan" icon="🏢" delay={0.04}>
 
-                {/* ── INPUT UPLOAD LOGO PERUSAHAAN ── */}
                 <div style={{ marginBottom: 14 }}>
                     <FieldLabel>Logo Perusahaan (Opsional)</FieldLabel>
                     <input
@@ -141,12 +154,10 @@ const EditMode = ({ data, setData, errors, processing, submit, industries, compa
                     <div />
                 </div>
 
-                {/* ── ALAMAT PERUSAHAAN (DOMISILI + DETAIL) ── */}
                 <div style={{ padding: '16px', background: T.bg, border: `1px solid ${T.borderSoft}`, borderRadius: 12, marginBottom: 14 }}>
                     <div style={{ marginBottom: 14 }}>
-                        <FieldLabel required>Domisili Kota & Provinsi (Untuk Sistem ATS)</FieldLabel>
+                        <FieldLabel required>Domisili Kota & Provinsi</FieldLabel>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                            {/* Provinsi */}
                             <div style={{ position: 'relative' }}>
                                 <select
                                     style={{
@@ -156,12 +167,7 @@ const EditMode = ({ data, setData, errors, processing, submit, industries, compa
                                         color: selectedProvinsi ? T.navy : T.muted
                                     }}
                                     value={selectedProvinsi}
-                                    onChange={e => {
-                                        const prov = e.target.value;
-                                        setSelectedProvinsi(prov);
-                                        setSelectedKota('');
-                                        updateAddressInForm(detailAlamat, '', prov);
-                                    }}
+                                    onChange={e => onProvinsiChange(e.target.value)}
                                     onFocus={onFocus} onBlur={onBlur} required
                                 >
                                     <option value="" disabled>Pilih Provinsi...</option>
@@ -172,7 +178,6 @@ const EditMode = ({ data, setData, errors, processing, submit, industries, compa
                                 <svg style={{ position: 'absolute', right: 11, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: T.mutedDark }} width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
                             </div>
 
-                            {/* Kota */}
                             <div style={{ position: 'relative' }}>
                                 <select
                                     style={{
@@ -184,11 +189,7 @@ const EditMode = ({ data, setData, errors, processing, submit, industries, compa
                                         color: selectedKota ? T.navy : T.muted
                                     }}
                                     value={selectedKota}
-                                    onChange={e => {
-                                        const kota = e.target.value;
-                                        setSelectedKota(kota);
-                                        updateAddressInForm(detailAlamat, kota, selectedProvinsi);
-                                    }}
+                                    onChange={e => onKotaChange(e.target.value)}
                                     onFocus={onFocus} onBlur={onBlur} disabled={!selectedProvinsi} required
                                 >
                                     <option value="" disabled>
@@ -208,12 +209,13 @@ const EditMode = ({ data, setData, errors, processing, submit, industries, compa
                         <textarea style={{ ...fieldBase, height: 'auto', padding: '12px 14px', resize: 'vertical' }} rows={2}
                             placeholder="Misal: Gedung Cyber Lt. 2, Jl. Kuningan Barat Raya No. 8..."
                             value={detailAlamat}
-                            onChange={e => {
-                                const val = e.target.value;
-                                setDetailAlamat(val);
-                                updateAddressInForm(val, selectedKota, selectedProvinsi);
-                            }}
+                            onChange={e => onDetailChange(e.target.value)}
                             onFocus={onFocus} onBlur={onBlur} />
+                        {isResolvingAddress && (
+                            <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>
+                                ⏳ Mencari alamat dari peta...
+                            </div>
+                        )}
                     </div>
 
                     <InputError message={errors.address} className="mt-1.5" />
@@ -224,7 +226,19 @@ const EditMode = ({ data, setData, errors, processing, submit, industries, compa
                         </div>
                     )}
                 </div>
-                {/* ─────────────────────────────────────────────── */}
+
+                <div style={{ marginBottom: 14 }}>
+                    <FieldLabel>Tandai Lokasi di Peta <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: '#94a3b8' }}>(opsional)</span></FieldLabel>
+                    <LocationPicker
+                        latitude={data.latitude}
+                        longitude={data.longitude}
+                        onLocationChange={onLocationChange}
+                        onAddressResolve={handleAddressResolve}
+                        onResolvingChange={setIsResolvingAddress}
+                        height={280}
+                    />
+                    <InputError message={errors.latitude} className="mt-1.5" />
+                </div>
 
                 <div>
                     <FieldLabel required>Deskripsi Perusahaan</FieldLabel>
@@ -236,7 +250,6 @@ const EditMode = ({ data, setData, errors, processing, submit, industries, compa
                 </div>
             </Section>
 
-            {/* ── Footer Simpan / Batal ── */}
             <div style={{
                 display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
                 padding: '16px 20px', background: '#fff', borderRadius: 14,
@@ -302,6 +315,16 @@ const ViewMode = ({ profile }) => {
                     <ProfileField label="Alamat Lengkap" value={profile?.address} />
                     <ProfileField label="Deskripsi Perusahaan" value={profile?.description} full />
                 </div>
+                {profile?.latitude && profile?.longitude && (
+                    <div style={{ marginTop: 16 }}>
+                        <MapWidget
+                            latitude={parseFloat(profile.latitude)}
+                            longitude={parseFloat(profile.longitude)}
+                            label={profile.name}
+                            height={220}
+                        />
+                    </div>
+                )}
             </Section>
         </div>
     );
@@ -317,12 +340,16 @@ export default function EditCompanyProfile({ company, industries = [] }) {
         name: company?.name || '',
         industry: company?.industry || '',
         address: company?.address || '',
+        province: company?.province || '',
+        city: company?.city || '',
+        latitude: company?.latitude ? parseFloat(company.latitude) : null,
+        longitude: company?.longitude ? parseFloat(company.longitude) : null,
         description: company?.description || '',
         website: company?.website || '',
         logo_file: null,
     });
 
-    const isComplete = !!(company?.name && company?.industry && company?.address && company?.description);
+    const isComplete = !!(company?.name && company?.industry && company?.address && company?.province && company?.city && company?.description);
 
     const submit = e => {
         e.preventDefault();

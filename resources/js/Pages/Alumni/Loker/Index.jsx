@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Head, useForm, usePage } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import InputError from '@/Components/InputError';
+import MapWidget from '@/Components/MapWidget';
+import { Badge } from '@/Components/ui/badge';
 
 const T = {
     navy: '#0f1f3d', navyMid: '#1a3560', navyLight: '#e8f0fb',
@@ -10,6 +12,26 @@ const T = {
     muted: '#94a3b8', mutedDark: '#64748b',
     green: '#16a34a', greenLight: '#f0fdf4',
     red: '#dc2626', redLight: '#fff1f2',
+};
+
+const formatSalary = (salary) => {
+    if (!salary) return 'Gaji dirahasiakan';
+    if (salary.startsWith('Rp')) return salary;
+    const match = salary.match(/^(\d+)\s*-\s*(\d+)$/);
+    if (match) {
+        const fmt = (n) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(Number(n));
+        return `${fmt(match[1])} - ${fmt(match[2])}`;
+    }
+    if (/^\d+$/.test(salary)) {
+        return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(Number(salary));
+    }
+    return salary;
+};
+
+const workModelMap = {
+    'Remote': { variant: 'secondary', icon: '🌐' },
+    'Hybrid': { variant: 'outline', icon: '🏢' },
+    'On-site': { variant: 'default', icon: '📍' },
 };
 
 /* ─── Modal ──────────────────────────────────────────────────────────────── */
@@ -25,7 +47,7 @@ function Modal({ open, onClose, title, subtitle, children, footer }) {
         <div style={{ position: 'fixed', inset: 0, zIndex: 9000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, opacity: visible ? 1 : 0, transition: 'opacity 0.25s ease' }}>
             <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(10,20,40,0.45)', backdropFilter: 'blur(3px)', cursor: 'default' }} />
             <div style={{
-                background: '#fff', borderRadius: 16, position: 'relative', width: '100%', maxWidth: 480,
+                background: '#fff', borderRadius: 16, position: 'relative', width: '100%', maxWidth: 520,
                 boxShadow: '0 24px 60px rgba(10,20,40,0.2)',
                 opacity: visible ? 1 : 0,
                 transform: visible ? 'translateY(0) scale(1)' : 'translateY(10px) scale(0.97)',
@@ -63,14 +85,19 @@ const fieldBase = { height: 42, padding: '0 13px', border: `1.5px solid ${T.bord
 const onFocus = e => { e.target.style.borderColor = T.navyMid; e.target.style.background = '#fff'; e.target.style.boxShadow = '0 0 0 3px rgba(26,53,96,0.09)'; };
 const onBlur = e => { e.target.style.borderColor = T.border; e.target.style.background = T.bg; e.target.style.boxShadow = 'none'; };
 
-export default function LokerIndex({ jobs, appliedJobIds }) {
-    const { flash } = usePage().props;
+export default function LokerIndex({ jobs, appliedJobIds, alumniProfile }) {
+    const { flash, auth } = usePage().props;
     const [searchQuery, setSearchQuery] = useState('');
     const [modalOpen, setModalOpen] = useState(false);
     const [selectedJob, setSelectedJob] = useState(null);
-    const [isUpdatingCV, setIsUpdatingCV] = useState(false); // State untuk mengecek apakah ini update atau apply baru
+    const [isUpdatingCV, setIsUpdatingCV] = useState(false);
 
-    const { data, setData, post, processing, errors, reset, clearErrors } = useForm({ cv_file: null });
+    const { data, setData, post, processing, errors, reset, clearErrors } = useForm({
+        cv_option: 'profile',
+        cv_file: null,
+    });
+
+    const hasProfileCv = !!alumniProfile?.cv_path;
 
     const filtered = jobs.filter(job =>
         job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -79,18 +106,20 @@ export default function LokerIndex({ jobs, appliedJobIds }) {
     );
 
     const openApply = (job, isUpdate = false) => {
-        reset();
         clearErrors();
         setSelectedJob(job);
         setIsUpdatingCV(isUpdate);
+        setData({
+            cv_option: hasProfileCv ? 'profile' : 'upload',
+            cv_file: null,
+        });
         setModalOpen(true);
     };
 
-    const handleApply = e => {
+    const handleApply = (e) => {
         e.preventDefault();
-        // Arahkan rute secara dinamis (Lamar Baru vs Update CV)
+        if (data.cv_option === 'upload' && !data.cv_file) return;
         const routeName = isUpdatingCV ? 'alumni.loker.update-cv' : 'alumni.loker.apply';
-
         post(route(routeName, selectedJob.id), { onSuccess: () => setModalOpen(false) });
     };
 
@@ -148,6 +177,8 @@ export default function LokerIndex({ jobs, appliedJobIds }) {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
                     {filtered.map((job, i) => {
                         const isApplied = appliedJobIds.includes(job.id);
+                        const wm = job.work_model;
+                        const wmInfo = workModelMap[wm] || null;
                         return (
                             <div key={job.id} className="job-card" style={{
                                 background: '#fff', borderRadius: 14,
@@ -158,13 +189,21 @@ export default function LokerIndex({ jobs, appliedJobIds }) {
                             }}>
                                 {/* Header */}
                                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, marginBottom: 14 }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1 }}>
                                         <div style={{ width: 40, height: 40, borderRadius: 10, background: T.navyLight, color: T.navyMid, fontSize: 16, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                                             {job.company?.name?.charAt(0)?.toUpperCase() ?? '?'}
                                         </div>
-                                        <div style={{ minWidth: 0 }}>
-                                            <div style={{ fontSize: 14, fontWeight: 800, color: T.navy, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{job.title}</div>
+                                        <div>
+                                            <div style={{ fontSize: 14, fontWeight: 800, color: T.navy }}>{job.title}</div>
                                             <div style={{ fontSize: 12, color: T.muted, marginTop: 1 }}>{job.company?.name}</div>
+                                            <div style={{ display: 'flex', gap: 5, marginTop: 6, flexWrap: 'wrap' }}>
+                                                <Badge variant="secondary" className="text-[10px] leading-none">Full-Time</Badge>
+                                                {wmInfo && (
+                                                    <Badge variant={wmInfo.variant} className="text-[10px] leading-none">
+                                                        {wmInfo.icon} {wm}
+                                                    </Badge>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                     {isApplied && (
@@ -178,18 +217,27 @@ export default function LokerIndex({ jobs, appliedJobIds }) {
                                         <span>📍</span> {job.location || 'Lokasi tidak disebutkan'}
                                     </div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, color: T.mutedDark }}>
-                                        <span>💰</span> {job.salary_range || 'Gaji dirahasiakan'}
+                                        <span>💰</span> {formatSalary(job.salary_range)}
                                     </div>
                                     {job.description && (
                                         <p style={{ fontSize: 12.5, color: T.muted, marginTop: 4, lineHeight: 1.6, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                                             {job.description}
                                         </p>
                                     )}
+                                    {job.latitude && job.longitude && (
+                                        <div style={{ marginTop: 8, borderRadius: 8, overflow: 'hidden' }}>
+                                            <MapWidget
+                                                latitude={parseFloat(job.latitude)}
+                                                longitude={parseFloat(job.longitude)}
+                                                height={120}
+                                            />
+                                        </div>
+                                    )}
                                 </div>
 
-                                {/* Footer Button (Diubah agar selalu bisa diklik) */}
+                                {/* Footer Button */}
                                 <button
-                                    onClick={() => openApply(job, isApplied)} // <--- Kirim parameter isUpdate = true jika isApplied
+                                    onClick={() => openApply(job, isApplied)}
                                     style={{
                                         height: 38, borderRadius: 9, border: 'none', width: '100%',
                                         fontSize: 13, fontWeight: 700, cursor: 'pointer',
@@ -222,21 +270,23 @@ export default function LokerIndex({ jobs, appliedJobIds }) {
                 )}
             </div>
 
-            {/* Modal Lamar / Update CV */}
+            {/* Modal Konfirmasi Lamaran */}
             <Modal open={modalOpen} onClose={() => setModalOpen(false)}
-                title={isUpdatingCV ? `Perbarui CV: ${selectedJob?.title}` : `Lamar: ${selectedJob?.title}`}
-                subtitle={`${selectedJob?.company?.name} akan meninjau dokumen yang Anda lampirkan.`}
+                title={isUpdatingCV ? `Perbarui Lamaran: ${selectedJob?.title}` : `Konfirmasi Lamaran: ${selectedJob?.title}`}
+                subtitle={`${selectedJob?.company?.name}`}
                 footer={<>
                     <BtnGhost onClick={() => setModalOpen(false)}>Batal</BtnGhost>
-                    <button type="submit" form="apply-form" disabled={processing || !data.cv_file} style={{
-                        height: 36, padding: '0 18px', borderRadius: 8, border: 'none',
-                        background: (processing || !data.cv_file) ? T.muted : (isUpdatingCV ? T.green : T.orange),
-                        color: '#fff', fontSize: 13, fontWeight: 700,
-                        cursor: (processing || !data.cv_file) ? 'not-allowed' : 'pointer',
-                        fontFamily: 'inherit', boxShadow: (processing || !data.cv_file) ? 'none' : '0 2px 8px rgba(249,115,22,0.3)',
-                        transition: 'all 0.15s',
-                    }}>
-                        {processing ? 'Mengirim...' : (isUpdatingCV ? 'Perbarui CV' : 'Kirim Lamaran')}
+                    <button type="submit" form="apply-form"
+                        disabled={processing || (data.cv_option === 'upload' && !data.cv_file)}
+                        style={{
+                            height: 36, padding: '0 18px', borderRadius: 8, border: 'none',
+                            background: (processing || (data.cv_option === 'upload' && !data.cv_file)) ? T.muted : (isUpdatingCV ? T.green : T.orange),
+                            color: '#fff', fontSize: 13, fontWeight: 700,
+                            cursor: (processing || (data.cv_option === 'upload' && !data.cv_file)) ? 'not-allowed' : 'pointer',
+                            fontFamily: 'inherit', boxShadow: (processing || (data.cv_option === 'upload' && !data.cv_file)) ? 'none' : '0 2px 8px rgba(249,115,22,0.3)',
+                            transition: 'all 0.15s',
+                        }}>
+                        {processing ? 'Mengirim...' : (isUpdatingCV ? 'Perbarui Lamaran' : 'Kirim Lamaran')}
                     </button>
                 </>}
             >
@@ -252,42 +302,85 @@ export default function LokerIndex({ jobs, appliedJobIds }) {
                         </div>
                     </div>
 
-                    {isUpdatingCV && (
-                        <div style={{ marginBottom: 16, padding: '10px 12px', background: T.orangeLight, borderRadius: 8, border: '1px solid #fed7aa', fontSize: 12.5, color: '#9a3412', display: 'flex', gap: 8 }}>
-                            <span style={{ fontSize: 16 }}>⚠️</span> File CV Anda sebelumnya akan ditimpa dengan file yang baru Anda unggah.
+                    {/* Disclaimer */}
+                    <div style={{ marginBottom: 16, padding: '12px 14px', borderRadius: 10, background: T.navyLight, border: `1px solid ${T.navyMid}22`, display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                        <span style={{ fontSize: 16, flexShrink: 0, marginTop: 1 }}>ℹ️</span>
+                        <div style={{ fontSize: 12.5, lineHeight: 1.6, color: T.navyMid }}>
+                            Data profil Anda (<strong>{auth?.user?.name || 'Nama'}</strong>
+                            {alumniProfile?.nim && <>, NIM: <strong>{alumniProfile.nim}</strong></>}
+                            {alumniProfile?.major && <>, Jurusan: <strong>{alumniProfile.major}</strong></>}) akan otomatis terlampir dan dikirimkan ke HRD perusahaan bersama lamaran ini.
                         </div>
-                    )}
+                    </div>
 
-                    <div>
-                        <label style={{ display: 'block', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#374151', marginBottom: 6 }}>
+                    {/* CV Option */}
+                    <div style={{ marginBottom: 16 }}>
+                        <label style={{ display: 'block', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#374151', marginBottom: 8 }}>
                             Curriculum Vitae (CV) <span style={{ color: T.red }}>*</span>
                         </label>
-                        {/* Custom file input */}
+
                         <label style={{
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 8,
-                            height: 100, borderRadius: 10, border: `2px dashed ${data.cv_file ? T.orange : T.border}`,
-                            background: data.cv_file ? T.orangeLight : T.bg, cursor: 'pointer', transition: 'all 0.18s',
-                        }}
-                            onMouseEnter={e => e.currentTarget.style.borderColor = T.orange}
-                            onMouseLeave={e => e.currentTarget.style.borderColor = data.cv_file ? T.orange : T.border}
-                        >
-                            <input type="file" accept=".pdf" onChange={e => setData('cv_file', e.target.files[0])} style={{ display: 'none' }} />
-                            {data.cv_file ? (
-                                <>
-                                    <div style={{ fontSize: 22 }}>📄</div>
-                                    <div style={{ fontSize: 12.5, fontWeight: 700, color: T.orange }}>{data.cv_file.name}</div>
-                                    <div style={{ fontSize: 11, color: T.muted }}>Klik untuk ganti file</div>
-                                </>
-                            ) : (
-                                <>
-                                    <div style={{ fontSize: 22 }}>📎</div>
-                                    <div style={{ fontSize: 12.5, fontWeight: 600, color: T.mutedDark }}>Klik untuk upload CV Baru</div>
-                                    <div style={{ fontSize: 11, color: T.muted }}>Format PDF, maks. 5MB</div>
-                                </>
-                            )}
+                            display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px',
+                            borderRadius: 9, border: `1.5px solid ${data.cv_option === 'profile' ? T.navyMid : T.border}`,
+                            background: data.cv_option === 'profile' ? T.navyLight : '#fff',
+                            cursor: hasProfileCv ? 'pointer' : 'not-allowed', opacity: hasProfileCv ? 1 : 0.5, marginBottom: 8,
+                            transition: 'all 0.15s',
+                        }}>
+                            <input type="radio" name="cv_option" value="profile"
+                                checked={data.cv_option === 'profile'}
+                                onChange={() => setData('cv_option', 'profile')}
+                                disabled={!hasProfileCv}
+                                style={{ accentColor: T.navyMid }} />
+                            <div>
+                                <div style={{ fontSize: 13, fontWeight: 600, color: T.navy }}>Gunakan CV dari Profil</div>
+                                <div style={{ fontSize: 11.5, color: T.muted, marginTop: 1 }}>
+                                    {hasProfileCv ? 'CV tersimpan akan dilampirkan' : 'Belum ada CV di profil'}
+                                </div>
+                            </div>
                         </label>
+
+                        <label style={{
+                            display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px',
+                            borderRadius: 9, border: `1.5px solid ${data.cv_option === 'upload' ? T.navyMid : T.border}`,
+                            background: data.cv_option === 'upload' ? T.orangeLight : '#fff',
+                            cursor: 'pointer', transition: 'all 0.15s',
+                        }}>
+                            <input type="radio" name="cv_option" value="upload"
+                                checked={data.cv_option === 'upload'}
+                                onChange={() => setData('cv_option', 'upload')}
+                                style={{ accentColor: T.navyMid }} />
+                            <div>
+                                <div style={{ fontSize: 13, fontWeight: 600, color: T.navy }}>Upload CV Baru (.pdf)</div>
+                            </div>
+                        </label>
+
+                        {data.cv_option === 'upload' && (
+                            <label style={{
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 8,
+                                height: 80, borderRadius: 9, marginTop: 8,
+                                border: `2px dashed ${data.cv_file ? T.orange : T.border}`,
+                                background: data.cv_file ? T.orangeLight : T.bg, cursor: 'pointer', transition: 'all 0.18s',
+                            }}
+                                onMouseEnter={e => e.currentTarget.style.borderColor = T.orange}
+                                onMouseLeave={e => e.currentTarget.style.borderColor = data.cv_file ? T.orange : T.border}
+                            >
+                                <input type="file" accept=".pdf" onChange={e => setData('cv_file', e.target.files[0])} style={{ display: 'none' }} />
+                                {data.cv_file ? (
+                                    <>
+                                        <div style={{ fontSize: 18 }}>📄</div>
+                                        <div style={{ fontSize: 12.5, fontWeight: 700, color: T.orange }}>{data.cv_file.name}</div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div style={{ fontSize: 18 }}>📎</div>
+                                        <div style={{ fontSize: 12.5, fontWeight: 600, color: T.mutedDark }}>Klik untuk pilih file PDF</div>
+                                        <div style={{ fontSize: 11, color: T.muted }}>Maks. 5MB</div>
+                                    </>
+                                )}
+                            </label>
+                        )}
                         <InputError message={errors.cv_file} className="mt-1" />
                     </div>
+
                 </form>
             </Modal>
         </AuthenticatedLayout>

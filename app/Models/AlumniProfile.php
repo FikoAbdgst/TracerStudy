@@ -17,8 +17,9 @@ class AlumniProfile extends Model
         'tanggal_lahir',
         'graduation_year',
         'phone_number',
-        'address',     // Domisili
-        'experience',  // Pengalaman
+        'address',
+        'detail_address',
+        'experience',
         'skills',
         'cv_path',
         'photo_path'

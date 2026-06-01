@@ -13,12 +13,8 @@ use Illuminate\Support\Facades\Storage;
 
 class JobPortalController extends Controller
 {
-    // Fitur 3: Melihat Lowongan (Bursa Kerja)
     public function index()
     {
-        // REVISI TERBARU: 
-        // Pastikan job posting TIDAK AKAN AKTIF/TAMPIL jika status perusahaan bukan 'verified'.
-        // Walaupun dari data perusahaannya loker tersebut statusnya dibuka (is_active = true).
         $jobs = JobPosting::with('company')
             ->whereHas('company', function ($query) {
                 $query->where('verification_status', 'verified');
@@ -27,8 +23,8 @@ class JobPortalController extends Controller
             ->latest()
             ->get();
 
-        // Cek lowongan mana saja yang sudah dilamar oleh alumni ini
-        $alumniProfile = Auth::user()->alumniProfile;
+        $user = Auth::user();
+        $alumniProfile = $user->alumniProfile;
         $appliedJobIds = $alumniProfile
             ? JobApplication::where('alumni_id', $alumniProfile->id)->pluck('job_posting_id')->toArray()
             : [];
@@ -36,6 +32,7 @@ class JobPortalController extends Controller
         return Inertia::render('Alumni/Loker/Index', [
             'jobs' => $jobs,
             'appliedJobIds' => $appliedJobIds,
+            'alumniProfile' => $alumniProfile?->only(['id', 'nim', 'major', 'cv_path', 'jenjang_pendidikan']),
         ]);
     }
 
@@ -48,7 +45,8 @@ class JobPortalController extends Controller
         }
 
         $request->validate([
-            'cv_file' => 'required|file|mimes:pdf|max:5120',
+            'cv_option' => 'required|in:profile,upload',
+            'cv_file' => 'required_if:cv_option,upload|file|mimes:pdf|max:5120',
         ]);
 
         $exists = JobApplication::where('job_posting_id', $job->id)
@@ -59,7 +57,14 @@ class JobPortalController extends Controller
             return back()->with('error', 'Anda sudah pernah melamar ke lowongan ini.');
         }
 
-        $path = $request->file('cv_file')->store('cv_documents', 'public');
+        if ($request->cv_option === 'upload') {
+            $path = $request->file('cv_file')->store('cv_documents', 'public');
+        } else {
+            if (!$alumniProfile->cv_path) {
+                return back()->with('error', 'Anda belum memiliki CV di profil. Silakan upload CV terlebih dahulu.');
+            }
+            $path = $alumniProfile->cv_path;
+        }
 
         JobApplication::create([
             'job_posting_id' => $job->id,
@@ -68,7 +73,6 @@ class JobPortalController extends Controller
             'status' => 'pending',
         ]);
 
-        // Kirim Notifikasi
         if ($job->company && $job->company->user) {
             $hrdUser = $job->company->user;
             $hrdUser->notify(new SystemNotification(
@@ -90,10 +94,10 @@ class JobPortalController extends Controller
         }
 
         $request->validate([
-            'cv_file' => 'required|file|mimes:pdf|max:5120',
+            'cv_option' => 'required|in:profile,upload',
+            'cv_file' => 'required_if:cv_option,upload|file|mimes:pdf|max:5120',
         ]);
 
-        // Cari lamaran yang sudah ada
         $application = JobApplication::where('job_posting_id', $job->id)
             ->where('alumni_id', $alumniProfile->id)
             ->first();
@@ -102,21 +106,26 @@ class JobPortalController extends Controller
             return back()->with('error', 'Anda belum melamar untuk lowongan ini.');
         }
 
-        // Hapus file CV lama dari storage (agar penyimpanan tidak penuh)
-        if ($application->cv_path && Storage::disk('public')->exists($application->cv_path)) {
-            Storage::disk('public')->delete($application->cv_path);
+        $path = $application->cv_path;
+
+        if ($request->cv_option === 'upload') {
+            if ($application->cv_path && Storage::disk('public')->exists($application->cv_path)) {
+                Storage::disk('public')->delete($application->cv_path);
+            }
+            $path = $request->file('cv_file')->store('cv_documents', 'public');
+        } else {
+            if (!$alumniProfile->cv_path) {
+                return back()->with('error', 'Anda belum memiliki CV di profil.');
+            }
+            $path = $alumniProfile->cv_path;
         }
 
-        // Simpan file CV baru
-        $path = $request->file('cv_file')->store('cv_documents', 'public');
-
-        // Update database (Opsional: status diubah lagi ke 'pending' jika Anda ingin HRD tahu ada update)
         $application->update([
             'cv_path' => $path,
             'status' => 'pending',
         ]);
 
-        return back()->with('message', 'File CV Anda berhasil diperbarui!');
+        return back()->with('message', 'Lamaran berhasil diperbarui!');
     }
 
     // Fitur 5: Melihat Status Lamaran

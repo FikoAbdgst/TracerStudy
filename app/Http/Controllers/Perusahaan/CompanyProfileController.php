@@ -36,10 +36,13 @@ class CompanyProfileController extends Controller
             'name' => 'required|string|max:255',
             'industry' => 'required|string|max:255',
             'address' => 'required|string',
+            'province' => 'required|string|max:255',
+            'city' => 'required|string|max:255',
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
             'description' => 'required|string',
             'website' => 'nullable|string|max:255',
 
-            // Tambahkan validasi file gambar
             'logo_file' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
         ]);
 

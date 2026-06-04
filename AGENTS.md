@@ -37,7 +37,7 @@
 | `php artisan test --filter=<name>` | Run a single test class or method |
 | `composer setup` | Full bootstrap: install, `.env`, key, migrate, `npm install --ignore-scripts`, `npm run build` |
 | `php artisan migrate:fresh --seed` | Reset DB with demo data (roles, companies, jobs, alumni, forum) |
-| `composer pint` | Laravel Pint — PHP code style fixer |
+| `./vendor/bin/pint` | Laravel Pint — PHP code style fixer |
 
 ## Conventions
 
@@ -47,17 +47,23 @@
 - **Layout** — All role-protected pages wrap content with `AuthenticatedLayout` from `@/Layouts/AuthenticatedLayout`
 - **Form handling** — `react-hook-form` + `zod` schema + `@hookform/resolvers/zod` (see existing pages for pattern)
 - **Data tables** — `@tanstack/react-table` for sortable/filterable lists
-- **Maps** — `react-leaflet` + `leaflet` for location features on companies, job postings, alumni profiles
+- **Maps** — `react-leaflet` + `leaflet` for location features
 - **JSON casts** — `AlumniProfile.skills`, `JobPosting.requirements`, `TracerStudyForm.questions` are JSON arrays (cast on model)
-- **SPK weights** — `JobPosting` has `weight_skill`, `weight_education`, `weight_experience`, `weight_age` for alumni-job matching
+- **SPK matching** — `App\Helpers\TextSimilarity::calculate()` provides TF-IDF Cosine Similarity for alumni-job matching; `JobPosting` has `weight_skill`, `weight_education`, `weight_experience`, `weight_age`
+- **Notifications** — Single `SystemNotification` class used via `$user->notify(new SystemNotification($title, $body, $url, $type))`
+- **`cn()` utility** — `@/lib/utils` exports `cn()` combining `clsx` + `tailwind-merge`
+- **Master data** — Dynamic taxonomy via `MasterCategory` (tabs: Keahlian, Sektor Industri, Program Studi) → `MasterItem` (values)
 - **npm scripts disabled** — `.npmrc` has `ignore-scripts=true`; no postinstall hooks run
 
 ## Gotchas
 
 - `.env` uses **PostgreSQL** (`DB_CONNECTION=pgsql`), `.env.example` defaults to SQLite
 - Session, cache, queue all use `database` driver (jobs table must exist)
+- `User` has a `role` column (string, redundant with Spatie roles, used for display only)
 - `AlumniProfile` and `Company` are `hasOne` relations on `User`
-- `ForumTopic.slug` has a not-null constraint — always populate with `Str::slug`
+- `ForumTopic.slug` has a not-null constraint — `booted()` auto-fills from title on create
+- Forum topic/reply routes have `throttle:3,10` and `throttle:5,10` middleware
 - `AlumniProfile` has `cv_path` and `photo_path` — file uploads require `php artisan storage:link`
-- Seeder creates explicit records (no factories used in `DatabaseSeeder`)
-- Test login accounts: `superadmin@sitami.ac.id`, `adminkampus@sitami.ac.id`, `fiko@alumni.sitami.ac.id` — all with password `password123`
+- `JobApplication.cv_path` can reference either the profile CV or an uploaded `cv_documents/` file
+- Seeder creates explicit records (no factories used in `DatabaseSeeder`); `UserFactory` exists for tests only
+- Test login accounts (all password `password123`): `superadmin@sitami.ac.id`, `adminkampus@sitami.ac.id`, `fiko@alumni.sitami.ac.id`, `hrd@inovasidinamika.com`

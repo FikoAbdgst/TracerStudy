@@ -154,9 +154,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // 5. Forum Diskusi
         Route::get('/forum', [ForumController::class, 'index'])->name('forum.index');
-        Route::post('/forum', [ForumController::class, 'store'])->name('forum.store');
+        Route::post('/forum', [ForumController::class, 'store'])->name('forum.store')->middleware('throttle:3,10');
         Route::get('/forum/{forum}', [ForumController::class, 'show'])->name('forum.show');
-        Route::post('/forum/{forum}/reply', [ForumController::class, 'reply'])->name('forum.reply');
+        Route::put('/forum/{forum}', [ForumController::class, 'update'])->name('forum.update');
+        Route::delete('/forum/{forum}', [ForumController::class, 'destroy'])->name('forum.destroy');
+        Route::post('/forum/{forum}/reply', [ForumController::class, 'reply'])->name('forum.reply')->middleware('throttle:5,10');
+        Route::put('/forum/{forum}/reply/{reply}', [ForumController::class, 'updateReply'])->name('forum.reply.update');
+        Route::delete('/forum/{forum}/reply/{reply}', [ForumController::class, 'destroyReply'])->name('forum.reply.destroy');
     });
 });
 

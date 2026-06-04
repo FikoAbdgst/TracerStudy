@@ -1,7 +1,9 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Head, useForm } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/Components/ui/select';
+import { Dialog, DialogContent } from '@/Components/ui/dialog';
+import LocationPicker from '@/Components/LocationPicker';
 
 /* ─── Tokens ──────────────────────────────────────────────────────────────── */
 const T = {
@@ -17,23 +19,26 @@ const T = {
 
 /* ─── Status config ───────────────────────────────────────────────────────── */
 const STATUS = {
-    pending: { bg: T.borderSoft, color: T.mutedDark, border: T.border, label: 'Menunggu', dot: '#94a3b8' },
-    direview: { bg: T.navyLight, color: T.navyMid, border: '#bfdbfe', label: 'Direview', dot: '#3b82f6' },
-    wawancara: { bg: T.purpleLight, color: T.purple, border: T.purpleBorder, label: 'Wawancara', dot: T.purple },
-    diterima: { bg: T.greenLight, color: T.green, border: T.greenBorder, label: 'Diterima ✓', dot: T.green },
-    ditolak: { bg: T.redLight, color: T.red, border: T.redBorder, label: 'Ditolak', dot: T.red },
+    pending: { bg: T.borderSoft, color: T.mutedDark, border: T.border, label: 'Menunggu', dot: '#94a3b8', desc: 'Belum ditindaklanjuti' },
+    direview: { bg: T.navyLight, color: T.navyMid, border: '#bfdbfe', label: 'Direview', dot: '#3b82f6', desc: 'Sedang diperiksa tim' },
+    wawancara: { bg: T.purpleLight, color: T.purple, border: T.purpleBorder, label: 'Wawancara', dot: T.purple, desc: 'Panggil kandidat' },
+    diterima: { bg: T.greenLight, color: T.green, border: T.greenBorder, label: 'Diterima ✓', dot: T.green, desc: 'Kandidat terpilih' },
+    ditolak: { bg: T.redLight, color: T.red, border: T.redBorder, label: 'Ditolak', dot: T.red, desc: 'Tidak lolos seleksi' },
 };
 
-const StatusBadge = ({ status, size = 'sm' }) => {
+const StatusBadge = ({ status, size = 'sm', onClick }) => {
     const s = STATUS[status] ?? STATUS.pending;
     const pad = size === 'lg' ? '5px 14px' : '3px 10px';
     const fs = size === 'lg' ? 12 : 11;
     return (
-        <span style={{
+        <span onClick={onClick} style={{
             fontSize: fs, fontWeight: 700, padding: pad, borderRadius: 20,
             background: s.bg, color: s.color, border: `1px solid ${s.border}`,
             display: 'inline-flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap',
-        }}>
+            cursor: onClick ? 'pointer' : 'default', transition: 'opacity 0.15s',
+        }}
+            onMouseEnter={e => { if (onClick) e.currentTarget.style.opacity = '0.75'; }}
+            onMouseLeave={e => { if (onClick) e.currentTarget.style.opacity = '1'; }}>
             <span style={{ width: 6, height: 6, borderRadius: '50%', background: s.dot, display: 'inline-block', flexShrink: 0 }} />
             {s.label}
         </span>
@@ -43,7 +48,6 @@ const StatusBadge = ({ status, size = 'sm' }) => {
 /* ─── Score ring ──────────────────────────────────────────────────────────── */
 const ScoreRing = ({ score, size = 48 }) => {
     const color = score >= 70 ? T.green : score >= 40 ? T.orange : T.red;
-    const bg = score >= 70 ? T.greenLight : score >= 40 ? T.orangeLight : T.redLight;
     const r = (size / 2) - 5;
     const circ = 2 * Math.PI * r;
     const offset = circ - (score / 100) * circ;
@@ -54,7 +58,7 @@ const ScoreRing = ({ score, size = 48 }) => {
                 <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth="4"
                     strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round" />
             </svg>
-            <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <span style={{ fontSize: size > 40 ? 11 : 9, fontWeight: 800, color, lineHeight: 1 }}>{score}%</span>
             </div>
         </div>
@@ -85,7 +89,8 @@ const AVATAR_COLORS = [
     ['#f5f3ff', '#6d28d9'], ['#fff1f2', '#be123c'], ['#fefce8', '#92400e'],
 ];
 const Avatar = ({ name = '?', size = 36, index = 0 }) => {
-    const [bg, fg] = AVATAR_COLORS[index % AVATAR_COLORS.length];
+    const safeIdx = ((index % AVATAR_COLORS.length) + AVATAR_COLORS.length) % AVATAR_COLORS.length;
+    const [bg, fg] = AVATAR_COLORS[safeIdx];
     return (
         <div style={{ width: size, height: size, borderRadius: size * 0.28, background: bg, color: fg, fontSize: size * 0.38, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             {name.charAt(0).toUpperCase()}
@@ -110,17 +115,126 @@ const onFocus = e => { e.target.style.borderColor = T.navyMid; e.target.style.bo
 const onBlur = e => { e.target.style.borderColor = T.border; e.target.style.boxShadow = 'none'; };
 
 /* ════════════════════════════════════════════════════════════════════════════
+   STATUS OPTION CARD (modal)
+════════════════════════════════════════════════════════════════════════════ */
+const StatusOptionCard = ({ value, current, onClick }) => {
+    const s = STATUS[value];
+    const isActive = current === value;
+
+    const activeBorderColor = {
+        pending: '#94a3b8',
+        direview: '#3b82f6',
+        wawancara: T.purple,
+        diterima: T.green,
+        ditolak: T.red,
+    }[value];
+
+    const activeBg = {
+        pending: T.borderSoft,
+        direview: T.navyLight,
+        wawancara: T.purpleLight,
+        diterima: T.greenLight,
+        ditolak: T.redLight,
+    }[value];
+
+    return (
+        <div
+            onClick={() => onClick(value)}
+            style={{
+                border: `${isActive ? '1.5px' : '1px'} solid ${isActive ? activeBorderColor : T.border}`,
+                borderRadius: 10,
+                padding: '10px 13px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                transition: 'all 0.15s',
+                background: isActive ? activeBg : '#fff',
+            }}
+            onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = T.bg; }}
+            onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = '#fff'; }}
+        >
+            <span style={{
+                width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
+                background: s.dot,
+                boxShadow: isActive ? `0 0 0 3px ${activeBg}, 0 0 0 4px ${s.dot}` : 'none',
+                transition: 'box-shadow 0.15s',
+            }} />
+            <div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: isActive ? s.color : T.navy, lineHeight: 1.2 }}>{s.label}</div>
+                <div style={{ fontSize: 11, color: T.muted, marginTop: 1 }}>{s.desc}</div>
+            </div>
+        </div>
+    );
+};
+
+/* ════════════════════════════════════════════════════════════════════════════
    HALAMAN UTAMA
 ════════════════════════════════════════════════════════════════════════════ */
-export default function PelamarIndex({ applications }) {
+export default function PelamarIndex({ applications, company }) {
     const [activeJobId, setActiveJobId] = useState(null);
     const [activeAppId, setActiveAppId] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedSkillFilter, setSelectedSkillFilter] = useState('');
     const [sortBy, setSortBy] = useState('match_score');
-    const [mobilePanel, setMobilePanel] = useState('list'); // 'list' | 'detail'
+    const [mobilePanel, setMobilePanel] = useState('list');
 
-    const { data, setData, patch, processing } = useForm({ status: '', notes: '' });
+    const [modalOpen, setModalOpen] = useState(false);
+    const [modalTarget, setModalTarget] = useState(null);
+    const [activeNoteTab, setActiveNoteTab] = useState('alumni'); // 'alumni' | 'internal'
+    const [alumniNoteLen, setAlumniNoteLen] = useState(0);
+    const [sameAsCompany, setSameAsCompany] = useState(false);
+    const [freshCompany, setFreshCompany] = useState(null);
+
+    const statusForm = useForm({
+        status: '',
+        notes: '',
+        hr_notes: '',
+        interview_details: { scheduled_at: '', location: '', latitude: null, longitude: null, duration: '60', notes: '', interview_mode: 'offline' },
+    });
+
+    const openStatusModal = (app) => {
+        setModalTarget(app);
+        setActiveNoteTab('alumni');
+        setAlumniNoteLen((app.notes || '').length);
+        setSameAsCompany(false);
+        setFreshCompany(null);
+        const prev = app.interview_details || {};
+        statusForm.setData({
+            status: app.status || 'pending',
+            notes: app.notes || '',
+            hr_notes: app.hr_notes || '',
+            interview_details: {
+                scheduled_at: prev.scheduled_at || '',
+                location: prev.location || '',
+                latitude: prev.latitude ?? null,
+                longitude: prev.longitude ?? null,
+                duration: prev.duration || '60',
+                notes: prev.notes || '',
+                interview_mode: prev.interview_mode || 'offline',
+            },
+        });
+        setModalOpen(true);
+    };
+
+    const submitStatus = (e) => {
+        e.preventDefault();
+        if (!modalTarget) return;
+        statusForm.patch(route('perusahaan.pelamar.status', modalTarget.id), {
+            preserveScroll: true,
+            onSuccess: () => { setModalOpen(false); setModalTarget(null); },
+        });
+    };
+
+    const handleInterviewLocationChange = (lat, lng) => {
+        statusForm.setData('interview_details', { ...statusForm.data.interview_details, latitude: lat, longitude: lng });
+    };
+
+    const handleInterviewAddressResolve = (lat, lng, address) => {
+        if (address) {
+            statusForm.setData('interview_details', { ...statusForm.data.interview_details, latitude: lat, longitude: lng, location: address });
+        }
+    };
 
     /* grup per job */
     const groupedJobs = useMemo(() => {
@@ -141,7 +255,6 @@ export default function PelamarIndex({ applications }) {
 
     const activeJob = groupedJobs.find(j => j.id === activeJobId);
 
-    /* filter + sort */
     const filteredApps = useMemo(() => {
         if (!activeJob) return [];
         let r = [...activeJob.applications];
@@ -163,16 +276,6 @@ export default function PelamarIndex({ applications }) {
 
     const activeApp = filteredApps.find(a => a.id === activeAppId);
 
-    useEffect(() => {
-        if (activeApp) setData({ status: activeApp.status || 'pending', notes: activeApp.notes || '' });
-    }, [activeAppId, applications]);
-
-    const submitStatus = e => {
-        e.preventDefault();
-        if (!activeApp) return;
-        patch(route('perusahaan.pelamar.status', activeApp.id), { preserveScroll: true });
-    };
-
     const handleJobChange = jid => {
         setActiveJobId(jid);
         setActiveAppId(null);
@@ -187,7 +290,6 @@ export default function PelamarIndex({ applications }) {
         setMobilePanel('detail');
     };
 
-    /* ─── stats helper ─── */
     const jobStats = job => {
         const total = job.applications.length;
         const diterima = job.applications.filter(a => a.status === 'diterima').length;
@@ -195,6 +297,15 @@ export default function PelamarIndex({ applications }) {
         const avgScore = total ? Math.round(job.applications.reduce((s, a) => s + (a.match_score || 0), 0) / total) : 0;
         return { total, diterima, proses, avgScore };
     };
+
+    /* placeholder pesan alumni berdasarkan status */
+    const alumniPlaceholder = {
+        pending: 'Pesan tambahan untuk alumni...',
+        direview: 'Pesan tambahan untuk alumni...',
+        wawancara: 'Informasi jadwal wawancara dan hal yang perlu disiapkan...',
+        diterima: 'Ucapkan selamat dan informasi langkah selanjutnya...',
+        ditolak: 'Sampaikan alasan penolakan yang konstruktif kepada alumni...',
+    }[statusForm.data.status] ?? 'Pesan tambahan untuk alumni...';
 
     /* ════ RENDER ════ */
     return (
@@ -234,6 +345,7 @@ export default function PelamarIndex({ applications }) {
                 @keyframes fadeIn   { from { opacity:0; } to { opacity:1; } }
                 @keyframes slideIn  { from { opacity:0; transform:translateX(16px); } to { opacity:1; transform:translateX(0); } }
                 @keyframes spin     { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
+                @keyframes slideDown { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:translateY(0); } }
 
                 .ats-card { background:#fff; border-radius:14px; border:1px solid ${T.borderSoft}; box-shadow:0 1px 4px rgba(15,31,61,0.05); transition:box-shadow 0.2s,transform 0.2s; }
                 .ats-card:hover { box-shadow:0 4px 16px rgba(15,31,61,0.10); transform:translateY(-2px); }
@@ -246,12 +358,24 @@ export default function PelamarIndex({ applications }) {
                 .panel-scroll::-webkit-scrollbar-track { background:transparent; }
                 .panel-scroll::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:4px; }
 
-                /* ── Responsive ── */
                 .ats-two-panel { display:flex; gap:0; background:#fff; border:1px solid ${T.borderSoft}; border-radius:14px; min-height:80vh; overflow:hidden; }
                 .ats-left  { width:340px; flex-shrink:0; border-right:1px solid ${T.borderSoft}; display:flex; flex-direction:column; background:${T.bg}; }
                 .ats-right { flex:1; overflow-y:auto; }
 
                 .mob-tabs  { display:none; }
+
+                /* ── Modal note tabs ── */
+                .modal-note-tabs { display:flex; border:1px solid ${T.border}; border-radius:8px; overflow:hidden; margin-bottom:10px; }
+                .modal-note-tab  { flex:1; padding:8px 12px; font-size:12px; font-weight:700; border:none; background:transparent; cursor:pointer; color:${T.muted}; font-family:'Plus Jakarta Sans',sans-serif; transition:all 0.15s; display:flex; align-items:center; justify-content:center; gap:5px; }
+                .modal-note-tab:first-child { border-right:1px solid ${T.border}; }
+                .modal-note-tab.active { background:${T.bg}; color:${T.navy}; }
+
+                /* ── Interview panel slide ── */
+                .interview-panel-animated { animation: slideDown 0.2s ease both; }
+
+                /* ── Modal overlay & elevation ── */
+                [data-slot="dialog-overlay"] { background:rgba(15,31,61,0.45) !important; backdrop-filter:blur(2px); }
+                [data-slot="dialog-content"] { box-shadow:0 16px 70px rgba(15,31,61,0.2) !important; }
 
                 @media (max-width: 768px) {
                     .ats-left  { width:100%; border-right:none; }
@@ -262,6 +386,11 @@ export default function PelamarIndex({ applications }) {
                     .mob-tabs { display:flex; border-bottom:1px solid ${T.borderSoft}; background:#fff; }
                     .mob-tab  { flex:1; padding:12px; font-size:13px; font-weight:700; border:none; background:transparent; cursor:pointer; color:${T.muted}; transition:all 0.15s; }
                     .mob-tab.active { color:${T.orange}; border-bottom:2px solid ${T.orange}; }
+                    .status-option-grid { grid-template-columns:1fr 1fr !important; }
+                }
+
+                @media (max-width: 640px) {
+                    [data-slot="dialog-content"].sm\:max-w-lg { max-height:calc(100vh - 1rem) !important; border-radius:12px !important; }
                 }
 
                 @media (max-width: 480px) {
@@ -269,6 +398,23 @@ export default function PelamarIndex({ applications }) {
                     .info-grid-3 { grid-template-columns:1fr 1fr !important; }
                     .score-grid  { grid-template-columns:1fr !important; }
                     .ats-card-grid { grid-template-columns:1fr !important; }
+                    .status-option-grid { grid-template-columns:1fr !important; }
+                    .modal-interview-two-col { grid-template-columns:1fr !important; }
+                    .modal-body { padding:16px !important; }
+                    .modal-footer { flex-direction:column !important; gap:8px !important; }
+                    .modal-footer > div:first-child { display:none !important; }
+                    .modal-footer > div:last-child { width:100% !important; justify-content:stretch !important; }
+                    .modal-footer button { flex:1 !important; justify-content:center !important; }
+                    .location-picker-wrap .leaflet-container { height:130px !important; }
+                }
+
+                @media (min-width: 481px) {
+                    .location-picker-wrap .leaflet-container { height:180px !important; }
+                }
+
+                @media (min-width: 481px) and (max-width: 768px) {
+                    .modal-body { padding:18px !important; }
+                    .status-option-grid { grid-template-columns:1fr 1fr !important; }
                 }
             `}</style>
 
@@ -294,7 +440,6 @@ export default function PelamarIndex({ applications }) {
                                             style={{ padding: 0, overflow: 'hidden', animation: `fadeUp 0.3s ${idx * 0.06}s both`, cursor: 'pointer' }}
                                             onClick={() => handleJobChange(job.id)}
                                         >
-                                            {/* Header kartu */}
                                             <div style={{ padding: '18px 20px', borderBottom: `1px solid ${T.borderSoft}` }}>
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
                                                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -311,8 +456,6 @@ export default function PelamarIndex({ applications }) {
                                                     </div>
                                                 </div>
                                             </div>
-
-                                            {/* Stats row */}
                                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', padding: '14px 20px', gap: 8 }}>
                                                 <div style={{ textAlign: 'center' }}>
                                                     <div style={{ fontSize: 18, fontWeight: 800, color: T.green }}>{stats.diterima}</div>
@@ -327,8 +470,6 @@ export default function PelamarIndex({ applications }) {
                                                     <div style={{ fontSize: 10, color: T.muted, fontWeight: 600 }}>Avg. Cocok</div>
                                                 </div>
                                             </div>
-
-                                            {/* Avatar strip */}
                                             <div style={{ padding: '0 20px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                                 <div style={{ display: 'flex', paddingLeft: 6 }}>
                                                     {job.applications.slice(0, 5).map((app, i) => (
@@ -362,7 +503,6 @@ export default function PelamarIndex({ applications }) {
                     <div style={{ animation: 'fadeIn 0.25s both' }}>
                         <div className="ats-two-panel">
 
-                            {/* ── Mobile tab switcher ── */}
                             <div className="mob-tabs">
                                 <button className={`mob-tab ${mobilePanel === 'list' ? 'active' : ''}`} onClick={() => setMobilePanel('list')}>
                                     📋 Daftar ({filteredApps.length})
@@ -372,12 +512,9 @@ export default function PelamarIndex({ applications }) {
                                 </button>
                             </div>
 
-                            {/* ──────── PANEL KIRI — Daftar Pelamar ──────── */}
+                            {/* ──────── PANEL KIRI ──────── */}
                             <div className={`ats-left panel-list ${mobilePanel !== 'list' ? 'hidden-mobile' : ''}`}>
-
-                                {/* Filter bar */}
                                 <div style={{ padding: '16px', background: '#fff', borderBottom: `1px solid ${T.borderSoft}` }}>
-                                    {/* Search */}
                                     <div style={{ position: 'relative', marginBottom: 10 }}>
                                         <svg style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: T.muted, pointerEvents: 'none' }} width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" /></svg>
                                         <input
@@ -388,8 +525,6 @@ export default function PelamarIndex({ applications }) {
                                             onFocus={onFocus} onBlur={onBlur}
                                         />
                                     </div>
-
-                                    {/* Sort + Filter */}
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                                         <Select value={sortBy} onValueChange={setSortBy}>
                                             <SelectTrigger style={{ height: 36, borderRadius: 8, border: `1.5px solid ${T.border}`, background: T.bg, fontSize: 12, boxShadow: 'none' }}>
@@ -401,7 +536,6 @@ export default function PelamarIndex({ applications }) {
                                                 <SelectItem className="text-sm cursor-pointer px-3 py-2" value="oldest">⏳ Terlama</SelectItem>
                                             </SelectContent>
                                         </Select>
-
                                         <Select value={selectedSkillFilter} onValueChange={setSelectedSkillFilter}>
                                             <SelectTrigger style={{ height: 36, borderRadius: 8, border: `1.5px solid ${T.border}`, background: T.bg, fontSize: 12, boxShadow: 'none' }}>
                                                 <SelectValue placeholder="Filter Skill..." />
@@ -416,12 +550,10 @@ export default function PelamarIndex({ applications }) {
                                     </div>
                                 </div>
 
-                                {/* Jumlah hasil */}
                                 <div style={{ padding: '10px 18px', fontSize: 11, fontWeight: 700, color: T.muted, background: T.bg, borderBottom: `1px solid ${T.borderSoft}` }}>
                                     {filteredApps.length} KANDIDAT DITEMUKAN
                                 </div>
 
-                                {/* Daftar */}
                                 <div className="panel-scroll" style={{ overflowY: 'auto', flex: 1 }}>
                                     {filteredApps.length === 0 ? (
                                         <div style={{ padding: '40px 20px', textAlign: 'center', color: T.muted, fontSize: 13 }}>
@@ -466,7 +598,7 @@ export default function PelamarIndex({ applications }) {
                                 </div>
                             </div>
 
-                            {/* ──────── PANEL KANAN — Detail Pelamar ──────── */}
+                            {/* ──────── PANEL KANAN ──────── */}
                             <div className={`ats-right panel-detail ${mobilePanel !== 'detail' ? 'hidden-mobile' : ''}`}>
                                 {!activeApp ? (
                                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: T.muted, textAlign: 'center', padding: 40, gap: 12 }}>
@@ -477,7 +609,6 @@ export default function PelamarIndex({ applications }) {
                                 ) : (
                                     <div className="ats-detail-inner" style={{ padding: '28px 32px', animation: 'slideIn 0.25s both' }}>
 
-                                        {/* ─ Header kandidat ─ */}
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24, flexWrap: 'wrap' }}>
                                             <Avatar name={activeApp.alumni?.user?.name} size={60} index={filteredApps.findIndex(a => a.id === activeAppId)} />
                                             <div style={{ flex: 1, minWidth: 180 }}>
@@ -488,7 +619,7 @@ export default function PelamarIndex({ applications }) {
                                                 </div>
                                             </div>
                                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
-                                                <StatusBadge status={activeApp.status} size="lg" />
+                                                <StatusBadge status={activeApp.status} size="lg" onClick={() => openStatusModal(activeApp)} />
                                                 {activeApp.cv_path ? (
                                                     <a href={`/storage/${activeApp.cv_path}`} target="_blank" rel="noreferrer"
                                                         style={{ fontSize: 12, fontWeight: 700, color: T.orange, textDecoration: 'none', background: T.orangeLight, padding: '6px 12px', borderRadius: 8, display: 'inline-flex', alignItems: 'center', gap: 5, border: `1px solid ${T.orangeBorder}` }}>
@@ -499,7 +630,6 @@ export default function PelamarIndex({ applications }) {
                                             </div>
                                         </div>
 
-                                        {/* ─ Skor ATS besar ─ */}
                                         <div style={{ background: activeApp.match_score >= 70 ? T.greenLight : activeApp.match_score >= 40 ? T.orangeLight : T.redLight, border: `1px solid ${activeApp.match_score >= 70 ? T.greenBorder : activeApp.match_score >= 40 ? T.orangeBorder : T.redBorder}`, borderRadius: 12, padding: '16px 20px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 16 }}>
                                             <ScoreRing score={activeApp.match_score} size={60} />
                                             <div>
@@ -512,44 +642,23 @@ export default function PelamarIndex({ applications }) {
                                             </div>
                                         </div>
 
-                                        {/* ─ Rincian skor ─ */}
                                         {activeApp.score_details && (
                                             <div style={{ background: '#fff', border: `1px solid ${T.borderSoft}`, borderRadius: 12, padding: '18px 20px', marginBottom: 20 }}>
                                                 <div style={{ fontSize: 11, fontWeight: 800, color: T.navyMid, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 14 }}>
                                                     Rincian Bobot Skor
                                                 </div>
                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                                                    <ScoreBar
-                                                        label="Keahlian"
-                                                        weight={`Bobot ${activeJob.weight_skill ?? 40}%`}
-                                                        scoreStr={`${activeApp.score_details.skill_match}%`}
-                                                    />
-                                                    <ScoreBar
-                                                        label="Pendidikan"
-                                                        weight={`Bobot ${activeJob.weight_education ?? 25}%`}
-                                                        scoreStr={`${activeApp.score_details.education}%`}
-                                                    />
-                                                    <ScoreBar
-                                                        label="Pengalaman"
-                                                        weight={`Bobot ${activeJob.weight_experience ?? 20}%`}
-                                                        scoreStr={`${activeApp.score_details.experience}%`}
-                                                    />
-                                                    <ScoreBar
-                                                        label="Usia"
-                                                        weight={`Bobot ${activeJob.weight_age ?? 15}%`}
-                                                        scoreStr={`${activeApp.score_details.age}%`}
-                                                    />
+                                                    <ScoreBar label="Keahlian" weight={`Bobot ${activeJob.weight_skill ?? 40}%`} scoreStr={`${activeApp.score_details.skill_match}%`} />
+                                                    <ScoreBar label="Pendidikan" weight={`Bobot ${activeJob.weight_education ?? 25}%`} scoreStr={`${activeApp.score_details.education}%`} />
+                                                    <ScoreBar label="Pengalaman" weight={`Bobot ${activeJob.weight_experience ?? 20}%`} scoreStr={`${activeApp.score_details.experience}%`} />
+                                                    <ScoreBar label="Usia" weight={`Bobot ${activeJob.weight_age ?? 15}%`} scoreStr={`${activeApp.score_details.age}%`} />
                                                 </div>
                                             </div>
                                         )}
 
-                                        {/* ─ Komparasi skill ─ */}
                                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 20 }}>
-                                            {/* Syarat posisi */}
                                             <div style={{ background: T.orangeLight, border: `1px solid ${T.orangeBorder}`, borderRadius: 12, padding: '16px 18px' }}>
-                                                <div style={{ fontSize: 11, fontWeight: 800, color: '#9a3412', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>
-                                                    Syarat Posisi
-                                                </div>
+                                                <div style={{ fontSize: 11, fontWeight: 800, color: '#9a3412', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>Syarat Posisi</div>
                                                 {(!activeJob.requirements || activeJob.requirements.length === 0) ? (
                                                     <span style={{ fontSize: 12, color: '#9a3412', fontStyle: 'italic' }}>Tidak ada syarat spesifik.</span>
                                                 ) : (
@@ -560,11 +669,8 @@ export default function PelamarIndex({ applications }) {
                                                     </div>
                                                 )}
                                             </div>
-                                            {/* Keahlian kandidat */}
                                             <div style={{ background: T.navyLight, border: `1px solid #bfdbfe`, borderRadius: 12, padding: '16px 18px' }}>
-                                                <div style={{ fontSize: 11, fontWeight: 800, color: T.navyMid, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>
-                                                    Keahlian Kandidat
-                                                </div>
+                                                <div style={{ fontSize: 11, fontWeight: 800, color: T.navyMid, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>Keahlian Kandidat</div>
                                                 {(!activeApp.alumni?.skills || activeApp.alumni.skills.length === 0) ? (
                                                     <span style={{ fontSize: 12, color: T.navyMid, fontStyle: 'italic' }}>Belum mengisi keahlian.</span>
                                                 ) : (
@@ -582,7 +688,6 @@ export default function PelamarIndex({ applications }) {
                                             </div>
                                         </div>
 
-                                        {/* ─ Profil Akademik & Kontak ─ */}
                                         <div style={{ fontSize: 11, fontWeight: 800, color: T.navy, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 12 }}>
                                             Profil Akademik &amp; Kontak
                                         </div>
@@ -603,48 +708,17 @@ export default function PelamarIndex({ applications }) {
 
                                         <div style={{ borderTop: `1px solid ${T.borderSoft}`, margin: '0 0 20px' }} />
 
-                                        {/* ─ Tindakan Keputusan ─ */}
                                         <div style={{ fontSize: 11, fontWeight: 800, color: T.navy, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 12 }}>
-                                            Tindakan Keputusan
+                                            Tindakan
                                         </div>
-                                        <form onSubmit={submitStatus} style={{ background: T.bg, padding: '20px', borderRadius: 12, border: `1px solid ${T.borderSoft}` }}>
-                                            <div style={{ marginBottom: 16 }}>
-                                                <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#374151', marginBottom: 7 }}>UBAH STATUS KANDIDAT</label>
-                                                <Select value={data.status} onValueChange={v => setData('status', v)}>
-                                                    <SelectTrigger className="focus:ring-0 focus:ring-offset-0" style={{ height: 42, borderRadius: 9, border: `1.5px solid ${T.border}`, background: '#fff', fontSize: 13.5, width: '100%' }}>
-                                                        <SelectValue />
-                                                    </SelectTrigger>
-                                                    <SelectContent position="popper" sideOffset={4} className="z-[500] rounded-xl overflow-hidden shadow-xl" style={{ background: '#fff', border: `1px solid ${T.border}` }}>
-                                                        <SelectItem className="text-sm cursor-pointer px-3 py-2" value="pending">⏳ Menunggu (Pending)</SelectItem>
-                                                        <SelectItem className="text-sm cursor-pointer px-3 py-2" value="direview">👁️ Sedang Direview</SelectItem>
-                                                        <SelectItem className="text-sm cursor-pointer px-3 py-2" value="wawancara">🎙️ Panggil Wawancara</SelectItem>
-                                                        <SelectItem className="text-sm cursor-pointer px-3 py-2" value="diterima">✅ Diterima (Hired)</SelectItem>
-                                                        <SelectItem className="text-sm cursor-pointer px-3 py-2" value="ditolak">❌ Ditolak (Rejected)</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-                                            <div style={{ marginBottom: 16 }}>
-                                                <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#374151', marginBottom: 7 }}>CATATAN INTERNAL <span style={{ fontWeight: 400, color: T.muted }}>(opsional)</span></label>
-                                                <textarea
-                                                    style={{ ...fieldBase, height: 'auto', padding: '10px 13px', resize: 'vertical', fontSize: 13 }} rows={3}
-                                                    placeholder="Jadwal wawancara, hasil interview, alasan penolakan..."
-                                                    value={data.notes} onChange={e => setData('notes', e.target.value)}
-                                                    onFocus={onFocus} onBlur={onBlur}
-                                                />
-                                            </div>
-                                            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                                                <button type="submit" disabled={processing}
-                                                    style={{ height: 42, padding: '0 24px', borderRadius: 9, border: 'none', background: processing ? T.muted : T.orange, color: '#fff', fontSize: 13, fontWeight: 700, cursor: processing ? 'not-allowed' : 'pointer', fontFamily: 'inherit', transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: 8, boxShadow: processing ? 'none' : '0 2px 10px rgba(249,115,22,0.3)' }}
-                                                    onMouseEnter={e => { if (!processing) { e.currentTarget.style.background = '#ea6c0a'; e.currentTarget.style.transform = 'translateY(-1px)'; } }}
-                                                    onMouseLeave={e => { e.currentTarget.style.background = processing ? T.muted : T.orange; e.currentTarget.style.transform = 'none'; }}
-                                                >
-                                                    {processing
-                                                        ? <><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ animation: 'spin 0.8s linear infinite' }}><path strokeLinecap="round" d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83" /></svg>Menyimpan...</>
-                                                        : <><svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>Simpan Pembaruan</>
-                                                    }
-                                                </button>
-                                            </div>
-                                        </form>
+                                        <button onClick={() => openStatusModal(activeApp)}
+                                            style={{ display: 'flex', alignItems: 'center', gap: 8, height: 42, padding: '0 20px', borderRadius: 9, border: 'none', background: T.orange, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s', boxShadow: '0 2px 10px rgba(249,115,22,0.3)' }}
+                                            onMouseEnter={e => { e.currentTarget.style.background = '#ea6c0a'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                                            onMouseLeave={e => { e.currentTarget.style.background = T.orange; e.currentTarget.style.transform = 'none'; }}
+                                        >
+                                            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg>
+                                            Update Status &amp; Kirim Notifikasi
+                                        </button>
 
                                     </div>
                                 )}
@@ -653,6 +727,309 @@ export default function PelamarIndex({ applications }) {
                     </div>
                 )}
             </div>
+
+            {/* ══════════════════════════════════════════════════════════
+                MODAL — Update Status Lamaran (REDESIGN)
+            ══════════════════════════════════════════════════════════ */}
+            <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+                <DialogContent className="sm:max-w-lg" style={{ background: '#fff', padding: 0, overflowY: 'auto', borderRadius: 16, border: `1px solid ${T.border}`, maxHeight: 'min(90vh, 700px)' }}>
+                    <form onSubmit={submitStatus}>
+
+                        {/* ── Header ── */}
+                        <div style={{ padding: '20px 24px', borderBottom: `1px solid ${T.borderSoft}`, display: 'flex', alignItems: 'center', gap: 14 }}>
+                            <Avatar
+                                name={modalTarget?.alumni?.user?.name}
+                                size={40}
+                                index={filteredApps.findIndex(a => a.id === modalTarget?.id)}
+                            />
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: 15, fontWeight: 800, color: T.navy, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    Update Status Lamaran
+                                </div>
+                                <div style={{ fontSize: 12, color: T.muted, marginTop: 2 }}>
+                                    {modalTarget?.alumni?.user?.name || '—'} &middot; {modalTarget?.job_posting?.title || '—'}
+                                </div>
+                            </div>
+                            {/* current status badge */}
+                            <StatusBadge status={statusForm.data.status} size="sm" />
+                        </div>
+
+                        {/* ── Body ── */}
+                        <div className="modal-body" style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+
+                            {/* Status grid cards */}
+                            <div>
+                                <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: T.mutedDark, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>
+                                    Status Lamaran
+                                </label>
+                                <div className="status-option-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
+                                    {Object.keys(STATUS).map(val => (
+                                        <StatusOptionCard
+                                            key={val}
+                                            value={val}
+                                            current={statusForm.data.status}
+                                            onClick={v => statusForm.setData('status', v)}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Interview panel — hanya muncul saat wawancara */}
+                            {statusForm.data.status === 'wawancara' && (() => {
+                                const mode = statusForm.data.interview_details.interview_mode || 'offline';
+                                return (
+                                    <div className="interview-panel-animated" style={{ background: T.purpleLight, border: `1px solid ${T.purpleBorder}`, borderRadius: 12, padding: '16px 18px' }}>
+                                        <div style={{ fontSize: 11, fontWeight: 800, color: T.purple, display: 'flex', alignItems: 'center', gap: 6, marginBottom: 14 }}>
+                                            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" /></svg>
+                                            Detail Panggilan Wawancara
+                                        </div>
+
+                                        {/* Mode toggle */}
+                                        <div style={{ display: 'flex', border: `1px solid ${T.purpleBorder}`, borderRadius: 8, overflow: 'hidden', marginBottom: 14 }}>
+                                            {['offline', 'online'].map(m => (
+                                                <button key={m} type="button"
+                                                    onClick={() => {
+                                                        const isOnline = m === 'online';
+                                                        statusForm.setData('interview_details', {
+                                                            ...statusForm.data.interview_details,
+                                                            interview_mode: m,
+                                                            location: isOnline ? '' : statusForm.data.interview_details.location,
+                                                            latitude: isOnline ? null : statusForm.data.interview_details.latitude,
+                                                            longitude: isOnline ? null : statusForm.data.interview_details.longitude,
+                                                        });
+                                                        if (isOnline) setSameAsCompany(false);
+                                                    }}
+                                                    style={{
+                                                        flex: 1, padding: '9px 12px', fontSize: 12, fontWeight: 700,
+                                                        border: 'none', cursor: 'pointer',
+                                                        background: mode === m ? T.purple : 'transparent',
+                                                        color: mode === m ? '#fff' : T.purple,
+                                                        fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                                                        transition: 'all 0.15s',
+                                                    }}>
+                                                    {m === 'offline' ? (
+                                                        <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" /></svg>
+                                                    ) : (
+                                                        <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 20.25c4.97 0 9-3.694 9-8.25s-4.03-8.25-9-8.25S3 7.444 3 12c0 2.104.859 4.023 2.273 5.48.432.447.74 1.04.586 1.641a4.483 4.483 0 01-.923 1.785A5.969 5.969 0 006 21c1.282 0 2.47-.402 3.445-1.087.81.22 1.668.337 2.555.337z" /></svg>
+                                                    )}
+                                                    {m === 'offline' ? 'Offline (Temu Langsung)' : 'Online (Video Call)'}
+                                                </button>
+                                            ))}
+                                        </div>
+
+                                        <div className="modal-interview-two-col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+                                            <div>
+                                                <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: T.mutedDark, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 7 }}>Jadwal</label>
+                                                <input
+                                                    type="datetime-local"
+                                                    style={{ ...fieldBase }}
+                                                    value={statusForm.data.interview_details.scheduled_at || ''}
+                                                    onChange={e => statusForm.setData('interview_details', { ...statusForm.data.interview_details, scheduled_at: e.target.value })}
+                                                    onFocus={onFocus} onBlur={onBlur}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: T.mutedDark, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 7 }}>Durasi</label>
+                                                <select
+                                                    style={{ ...fieldBase, cursor: 'pointer' }}
+                                                    value={statusForm.data.interview_details.duration || '60'}
+                                                    onChange={e => statusForm.setData('interview_details', { ...statusForm.data.interview_details, duration: e.target.value })}
+                                                    onFocus={onFocus} onBlur={onBlur}
+                                                >
+                                                    <option value="30">30 menit</option>
+                                                    <option value="60">60 menit</option>
+                                                    <option value="90">90 menit</option>
+                                                    <option value="120">120 menit</option>
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        {mode === 'offline' && company && (
+                                            <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: 12, fontWeight: 600, color: T.mutedDark, cursor: 'pointer', marginBottom: 10, padding: '10px 12px', borderRadius: 8, background: '#fff', border: `1px solid ${T.borderSoft}`, userSelect: 'none', transition: 'border-color 0.15s', borderColor: sameAsCompany ? T.purple : T.borderSoft }}>
+                                                <input type="checkbox" checked={sameAsCompany}
+                                                    onChange={async e => {
+                                                        const checked = e.target.checked;
+                                                        setSameAsCompany(checked);
+                                                        if (checked) {
+                                                            try {
+                                                                const res = await fetch(route('perusahaan.profile.company-address'));
+                                                                if (!res.ok) throw new Error('Gagal memuat data');
+                                                                const data = await res.json();
+                                                                setFreshCompany(data);
+                                                                statusForm.setData('interview_details', {
+                                                                    ...statusForm.data.interview_details,
+                                                                    location: data.address || '',
+                                                                    latitude: data.latitude ? parseFloat(data.latitude) : null,
+                                                                    longitude: data.longitude ? parseFloat(data.longitude) : null,
+                                                                });
+                                                            } catch {
+                                                                const loc = company.address || '';
+                                                                statusForm.setData('interview_details', {
+                                                                    ...statusForm.data.interview_details,
+                                                                    location: loc,
+                                                                    latitude: company.latitude ? parseFloat(company.latitude) : null,
+                                                                    longitude: company.longitude ? parseFloat(company.longitude) : null,
+                                                                });
+                                                            }
+                                                        }
+                                                    }}
+                                                    style={{ marginTop: 2, width: 15, height: 15, accentColor: T.purple, cursor: 'pointer', flexShrink: 0 }}
+                                                />
+                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+                                                        <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" /></svg>
+                                                        <span>Samakan dengan alamat kantor</span>
+                                                    </div>
+                                                    <div style={{ fontSize: 11, fontWeight: 500, color: T.muted, lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                        {(freshCompany ? freshCompany.address : company.address) || '—'}
+                                                    </div>
+                                                </div>
+                                            </label>
+                                        )}
+
+                                        <div>
+                                            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: T.mutedDark, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 7 }}>
+                                                {mode === 'offline' ? 'Lokasi' : 'Link Meeting'}
+                                            </label>
+                                            <textarea
+                                                rows={2}
+                                                style={{ ...fieldBase, resize: 'vertical', minHeight: 56 }}
+                                                placeholder={mode === 'offline' ? 'Letakkan lokasi, misal kantor' : 'Letakkan link video call, misal Zoom/Google Meet/Teams'}
+                                                value={statusForm.data.interview_details.location || ''}
+                                                onChange={e => {
+                                                    setSameAsCompany(false);
+                                                    statusForm.setData('interview_details', {
+                                                        ...statusForm.data.interview_details,
+                                                        location: e.target.value,
+                                                        ...(mode === 'offline' ? {} : { latitude: null, longitude: null }),
+                                                    });
+                                                }}
+                                                onFocus={onFocus} onBlur={onBlur}
+                                            />
+                                        </div>
+
+                                        {mode === 'offline' && (
+                                            <div style={{ marginTop: 12 }}>
+                                                <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: T.mutedDark, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 7 }}>Pilih Lokasi di Peta</label>
+                                                <div className="location-picker-wrap">
+                                                    <LocationPicker
+                                                        latitude={statusForm.data.interview_details.latitude}
+                                                        longitude={statusForm.data.interview_details.longitude}
+                                                        onLocationChange={(lat, lng) => {
+                                                            setSameAsCompany(false);
+                                                            handleInterviewLocationChange(lat, lng);
+                                                        }}
+                                                        onAddressResolve={handleInterviewAddressResolve}
+                                                        height={180}
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })()}
+
+                            {/* Catatan — tab alumni / internal */}
+                            <div>
+                                <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: T.mutedDark, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>
+                                    Catatan
+                                </label>
+                                <div className="modal-note-tabs">
+                                    <button
+                                        type="button"
+                                        className={`modal-note-tab ${activeNoteTab === 'alumni' ? 'active' : ''}`}
+                                        onClick={() => setActiveNoteTab('alumni')}
+                                    >
+                                        <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" /></svg>
+                                        Pesan ke Alumni
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={`modal-note-tab ${activeNoteTab === 'internal' ? 'active' : ''}`}
+                                        onClick={() => setActiveNoteTab('internal')}
+                                    >
+                                        <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" /></svg>
+                                        Catatan Internal
+                                    </button>
+                                </div>
+
+                                {activeNoteTab === 'alumni' && (
+                                    <div>
+                                        <textarea
+                                            style={{ ...fieldBase, height: 'auto', padding: '10px 13px', resize: 'vertical', fontSize: 13, lineHeight: 1.5 }}
+                                            rows={3}
+                                            placeholder={alumniPlaceholder}
+                                            value={statusForm.data.notes}
+                                            onChange={e => {
+                                                statusForm.setData('notes', e.target.value);
+                                                setAlumniNoteLen(e.target.value.length);
+                                            }}
+                                            onFocus={onFocus} onBlur={onBlur}
+                                            maxLength={500}
+                                        />
+                                        <div style={{ textAlign: 'right', fontSize: 11, color: T.muted, marginTop: 4 }}>
+                                            {alumniNoteLen} / 500
+                                        </div>
+                                    </div>
+                                )}
+
+                                {activeNoteTab === 'internal' && (
+                                    <textarea
+                                        style={{ ...fieldBase, height: 'auto', padding: '10px 13px', resize: 'vertical', fontSize: 13, lineHeight: 1.5 }}
+                                        rows={3}
+                                        placeholder="Hasil review, kesimpulan tim HR, dll. — hanya terlihat di panel ini, tidak dikirim ke alumni."
+                                        value={statusForm.data.hr_notes}
+                                        onChange={e => statusForm.setData('hr_notes', e.target.value)}
+                                        onFocus={onFocus} onBlur={onBlur}
+                                    />
+                                )}
+                            </div>
+                        </div>
+
+                        {/* ── Footer ── */}
+                        <div className="modal-footer" style={{ padding: '14px 24px', borderTop: `1px solid ${T.borderSoft}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, background: T.bg }}>
+                            {/* hint notifikasi */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: T.muted }}>
+                                <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" /></svg>
+                                Email notifikasi dikirim otomatis
+                            </div>
+
+                            <div style={{ display: 'flex', gap: 10 }}>
+                                <button
+                                    type="button"
+                                    onClick={() => setModalOpen(false)}
+                                    style={{ height: 40, padding: '0 18px', borderRadius: 9, border: `1.5px solid ${T.border}`, background: '#fff', color: T.mutedDark, fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}
+                                    onMouseEnter={e => { e.currentTarget.style.borderColor = T.mutedDark; }}
+                                    onMouseLeave={e => { e.currentTarget.style.borderColor = T.border; }}
+                                >
+                                    Batal
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={statusForm.processing}
+                                    style={{ height: 40, padding: '0 20px', borderRadius: 9, border: 'none', background: statusForm.processing ? T.muted : T.orange, color: '#fff', fontSize: 13, fontWeight: 700, cursor: statusForm.processing ? 'not-allowed' : 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 8, boxShadow: statusForm.processing ? 'none' : '0 2px 10px rgba(249,115,22,0.3)', transition: 'all 0.15s' }}
+                                    onMouseEnter={e => { if (!statusForm.processing) { e.currentTarget.style.background = '#ea6c0a'; e.currentTarget.style.transform = 'translateY(-1px)'; } }}
+                                    onMouseLeave={e => { e.currentTarget.style.background = statusForm.processing ? T.muted : T.orange; e.currentTarget.style.transform = 'none'; }}
+                                >
+                                    {statusForm.processing ? (
+                                        <>
+                                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ animation: 'spin 0.8s linear infinite' }}><path strokeLinecap="round" d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83" /></svg>
+                                            Menyimpan...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                            Simpan &amp; Kirim Notifikasi
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+
+                    </form>
+                </DialogContent>
+            </Dialog>
+
         </AuthenticatedLayout>
     );
 }

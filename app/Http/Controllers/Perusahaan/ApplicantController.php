@@ -116,6 +116,7 @@ class ApplicantController extends Controller
 
         return Inertia::render('Perusahaan/Pelamar/Index', [
             'applications' => $sortedApps,
+            'company' => $company->only(['id', 'name', 'address', 'province', 'city', 'latitude', 'longitude']),
         ]);
     }
 
@@ -128,20 +129,56 @@ class ApplicantController extends Controller
 
         $validated = $request->validate([
             'status' => 'required|in:pending,direview,wawancara,diterima,ditolak',
-            'notes' => 'nullable|string'
+            'notes' => 'nullable|string',
+            'hr_notes' => 'nullable|string',
+            'interview_details' => 'nullable|array',
+            'interview_details.scheduled_at' => 'nullable|date',
+            'interview_details.location' => 'nullable|string|max:255',
+            'interview_details.latitude' => 'nullable|numeric',
+            'interview_details.longitude' => 'nullable|numeric',
+            'interview_details.duration' => 'nullable|string|max:10',
+            'interview_details.notes' => 'nullable|string',
+            'interview_details.interview_mode' => 'nullable|in:online,offline',
         ]);
 
         $lamaran->update($validated);
 
         if ($lamaran->alumni && $lamaran->alumni->user) {
             $alumniUser = $lamaran->alumni->user;
+
+            $message = 'Status lamaran Anda untuk posisi ' . $lamaran->jobPosting->title . ' berubah menjadi: ' . strtoupper($validated['status']);
+
+            if (!empty($validated['notes'])) {
+                $message .= "\n\nPesan dari HRD:\n" . $validated['notes'];
+            }
+
+            if ($validated['status'] === 'wawancara' && !empty($validated['interview_details'])) {
+                $details = $validated['interview_details'];
+                $interviewMsg = "\n\n📅 Detail Panggilan Wawancara:";
+                if (!empty($details['scheduled_at'])) {
+                    $interviewMsg .= "\nJadwal: " . Carbon::parse($details['scheduled_at'])->translatedFormat('l, d F Y H:i');
+                }
+                if (!empty($details['location'])) {
+                    $interviewMsg .= "\nLokasi/Link: " . $details['location'];
+                }
+                if (!empty($details['notes'])) {
+                    $interviewMsg .= "\nCatatan: " . $details['notes'];
+                }
+                $message .= $interviewMsg;
+            }
+
             $alumniUser->notify(new SystemNotification(
                 'Status Lamaran Diperbarui!',
-                'Status lamaran Anda untuk posisi ' . $lamaran->jobPosting->title . ' berubah menjadi: ' . strtoupper($validated['status']),
-                route('alumni.lamaran')
+                $message,
+                route('alumni.lamaran'),
+                'application_status'
             ));
         }
 
-        return back()->with('message', 'Status pelamar berhasil diperbarui.');
+        $flashMessage = $validated['status'] === 'wawancara'
+            ? 'Status berhasil diperbarui dan panggilan wawancara telah dikirim ke alumni.'
+            : 'Status pelamar berhasil diperbarui.';
+
+        return back()->with('message', $flashMessage);
     }
 }

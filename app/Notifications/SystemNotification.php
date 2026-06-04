@@ -9,21 +9,26 @@ class SystemNotification extends Notification
 {
     use Queueable;
 
-    protected $title;
-    protected $message;
-    protected $url;
+    protected string $title;
+    protected string $message;
+    protected string $url;
+    protected string $type;
 
-    // Kita passing Judul, Pesan, dan URL tujuan saat notifikasi di-klik
-    public function __construct($title, $message, $url = '#')
-    {
+    public function __construct(
+        string $title,
+        string $message,
+        string $url = '#',
+        string $type = 'system'
+    ) {
         $this->title = $title;
         $this->message = $message;
         $this->url = $url;
+        $this->type = $type;
     }
 
     public function via(object $notifiable): array
     {
-        return ['database']; // Kita simpan ke database
+        return ['database'];
     }
 
     public function toDatabase(object $notifiable): array
@@ -31,7 +36,8 @@ class SystemNotification extends Notification
         return [
             'title' => $this->title,
             'message' => $this->message,
-            'url' => $this->url,
+            'type' => $this->type,
+            'url_redirect' => $this->url,
         ];
     }
 }

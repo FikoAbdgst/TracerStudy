@@ -54,6 +54,28 @@ const EditMode = ({ data, setData, errors, processing, submit, industries, compa
     const [detailAlamat, setDetailAlamat] = useState('');
     const [isResolvingAddress, setIsResolvingAddress] = useState(false);
 
+    const matchWilayah = (cityName, provinceName) => {
+        // coba cocokkan nama kota/provinsi dari Nominatim ke wilayahData
+        let matchedProv = provinceName || '';
+        let matchedCity = cityName || '';
+
+        if (matchedProv) {
+            const foundProv = Object.keys(wilayahData).find(
+                p => p.toLowerCase().includes(matchedProv.toLowerCase()) || matchedProv.toLowerCase().includes(p.toLowerCase())
+            );
+            if (foundProv) matchedProv = foundProv;
+        }
+
+        if (matchedCity && matchedProv && wilayahData[matchedProv]) {
+            const foundCity = wilayahData[matchedProv].find(
+                k => k.toLowerCase().includes(matchedCity.toLowerCase()) || matchedCity.toLowerCase().includes(k.toLowerCase())
+            );
+            if (foundCity) matchedCity = foundCity;
+        }
+
+        return { matchedProv, matchedCity };
+    };
+
     const listProvinsi = Object.keys(wilayahData);
     const listKota = selectedProvinsi ? (wilayahData[selectedProvinsi] || []) : [];
 
@@ -62,33 +84,49 @@ const EditMode = ({ data, setData, errors, processing, submit, industries, compa
         setData('address', parts.join(', '));
     };
 
+    const handleAddressResolve = (lat, lng, address) => {
+        setDetailAlamat(address);
+        setData({ address, latitude: lat, longitude: lng });
+    };
+
+    const handleAddressData = (addr) => {
+        const cityFromMap = addr.city || addr.town || addr.village || addr.county || '';
+        const provFromMap = addr.state || '';
+        const { matchedProv, matchedCity } = matchWilayah(cityFromMap, provFromMap);
+        setSelectedProvinsi(matchedProv);
+        setSelectedKota(matchedCity);
+        setData('province', matchedProv);
+        setData('city', matchedCity);
+    };
+
     const onProvinsiChange = (prov) => {
         setSelectedProvinsi(prov);
         setSelectedKota('');
         setData('province', prov);
         setData('city', '');
+        setData('latitude', null);
+        setData('longitude', null);
         updateAddressInForm(detailAlamat, '', prov);
     };
 
     const onKotaChange = (kota) => {
         setSelectedKota(kota);
         setData('city', kota);
+        setData('latitude', null);
+        setData('longitude', null);
         updateAddressInForm(detailAlamat, kota, selectedProvinsi);
     };
 
     const onDetailChange = (val) => {
         setDetailAlamat(val);
+        setData('latitude', null);
+        setData('longitude', null);
         updateAddressInForm(val, selectedKota, selectedProvinsi);
     };
 
     const onLocationChange = (lat, lng) => {
         setData('latitude', lat);
         setData('longitude', lng);
-    };
-
-    const handleAddressResolve = (address) => {
-        setDetailAlamat(address);
-        updateAddressInForm(address, selectedKota, selectedProvinsi);
     };
 
     const safeIndustries = Array.isArray(industries) ? industries : [];
@@ -234,6 +272,7 @@ const EditMode = ({ data, setData, errors, processing, submit, industries, compa
                         longitude={data.longitude}
                         onLocationChange={onLocationChange}
                         onAddressResolve={handleAddressResolve}
+                        onAddressData={handleAddressData}
                         onResolvingChange={setIsResolvingAddress}
                         height={280}
                     />

@@ -346,7 +346,76 @@ export default function LowonganIndex({ jobs, company, isVerified, verificationS
     );
 
     const resetLocationState = () => { setSelectedProvinsi(''); setSelectedKota(''); setSameAsCompany(false); setIsRemoteAnywhere(false); };
-    const handleAddressResolve = (address) => setData({ ...data, location: address });
+
+    const normalizeProvince = (name) => {
+        if (!name) return name;
+        const common = {
+            'Daerah Khusus Ibukota Jakarta': 'DKI Jakarta',
+            'DKI Jakarta': 'DKI Jakarta',
+            'Jakarta Raya': 'DKI Jakarta',
+            'Daerah Istimewa Yogyakarta': 'DI Yogyakarta',
+            'Yogyakarta': 'DI Yogyakarta',
+        };
+        if (common[name]) return common[name];
+        return name;
+    };
+
+    const normalizeCity = (name) => {
+        if (!name) return name;
+        return name.replace(/^(Kota|Kabupaten|Kota Administrasi|Kecamatan)\s+/i, '').trim();
+    };
+
+    const matchWilayah = (cityName, provinceName) => {
+        const rawProv = normalizeProvince(provinceName || '');
+        const rawCity = normalizeCity(cityName || '');
+        let matchedProv = rawProv || '';
+        let matchedCity = rawCity || '';
+
+        if (matchedProv) {
+            const foundProv = Object.keys(wilayahData).find(
+                p => p.toLowerCase() === matchedProv.toLowerCase() ||
+                     p.toLowerCase().includes(matchedProv.toLowerCase()) ||
+                     matchedProv.toLowerCase().includes(p.toLowerCase())
+            );
+            if (foundProv) {
+                matchedProv = foundProv;
+            } else {
+                const words = matchedProv.split(' ').filter(w => w.length > 3);
+                for (const word of words) {
+                    const fp = Object.keys(wilayahData).find(
+                        p => p.toLowerCase().includes(word.toLowerCase())
+                    );
+                    if (fp) { matchedProv = fp; break; }
+                }
+            }
+        }
+
+        if (matchedCity && matchedProv && wilayahData[matchedProv]) {
+            const foundCity = wilayahData[matchedProv].find(
+                k => k.toLowerCase() === matchedCity.toLowerCase() ||
+                     k.toLowerCase().includes(matchedCity.toLowerCase()) ||
+                     matchedCity.toLowerCase().includes(k.toLowerCase())
+            );
+            if (foundCity) matchedCity = foundCity;
+        }
+
+        return { matchedProv, matchedCity };
+    };
+
+    const handleAddressResolve = (lat, lng, address) => setData({ location: address, latitude: lat, longitude: lng });
+
+    const handleAddressData = (addr) => {
+        const cityFromMap = addr.city || addr.town || addr.village || addr.county || '';
+        const provFromMap = addr.state || '';
+        const { matchedProv, matchedCity } = matchWilayah(cityFromMap, provFromMap);
+        setSelectedProvinsi(matchedProv);
+        setSelectedKota(matchedCity);
+        setData('province', matchedProv);
+        setData('city', matchedCity);
+        if (matchedCity && matchedProv) {
+            setData('location', [matchedCity, matchedProv].filter(Boolean).join(', '));
+        }
+    };
 
     const openCreate = () => {
         reset(); clearErrors(); setData('requirements', []);
@@ -612,7 +681,7 @@ export default function LowonganIndex({ jobs, company, isVerified, verificationS
                             <div>
                                 <FieldLabel required>Sistem Kerja</FieldLabel>
                                 <NativeSelect value={data.work_model} placeholder="Pilih Sistem Kerja..."
-                                    onChange={val => { setData({ ...data, work_model: val, province: '', city: '', latitude: null, longitude: null, location: '' }); resetLocationState(); }}>
+                                    onChange={val => { setData('work_model', val); setData('province', ''); setData('city', ''); setData('latitude', null); setData('longitude', null); setData('location', ''); resetLocationState(); }}>
                                     <option value="On-site">On-site (WFO)</option>
                                     <option value="Hybrid">Hybrid</option>
                                     <option value="Remote">Remote (WFH / WFA)</option>
@@ -639,7 +708,7 @@ export default function LowonganIndex({ jobs, company, isVerified, verificationS
                                         onChange={e => {
                                             const checked = e.target.checked;
                                             setIsRemoteAnywhere(checked);
-                                            if (checked) { setData({ ...data, province: '', city: '', latitude: null, longitude: null, location: '' }); setSelectedProvinsi(''); setSelectedKota(''); setSameAsCompany(false); }
+                                            if (checked) { setData('province', ''); setData('city', ''); setData('latitude', null); setData('longitude', null); setData('location', ''); setSelectedProvinsi(''); setSelectedKota(''); setSameAsCompany(false); }
                                         }}
                                         style={{ accentColor: T.orange, width: 16, height: 16, cursor: 'pointer' }} />
                                     Bebas dari mana saja (Seluruh Indonesia)
@@ -656,8 +725,12 @@ export default function LowonganIndex({ jobs, company, isVerified, verificationS
                                                     setSameAsCompany(checked);
                                                     if (checked && company) {
                                                         setSelectedProvinsi(company.province || ''); setSelectedKota(company.city || '');
-                                                        setData({ ...data, province: company.province || '', city: company.city || '', latitude: company.latitude ? parseFloat(company.latitude) : null, longitude: company.longitude ? parseFloat(company.longitude) : null, location: [company.city, company.province].filter(Boolean).join(', ') });
-                                                    } else { setSelectedProvinsi(''); setSelectedKota(''); setData({ ...data, province: '', city: '', latitude: null, longitude: null, location: '' }); }
+                                                        setData('province', company.province || '');
+                                                        setData('city', company.city || '');
+                                                        setData('latitude', company.latitude ? parseFloat(company.latitude) : null);
+                                                        setData('longitude', company.longitude ? parseFloat(company.longitude) : null);
+                                                        setData('location', [company.city, company.province].filter(Boolean).join(', '));
+                                                    } else { setSelectedProvinsi(''); setSelectedKota(''); setData('province', ''); setData('city', ''); setData('latitude', null); setData('longitude', null); setData('location', ''); }
                                                 }}
                                                 style={{ accentColor: T.orange, width: 16, height: 16, cursor: 'pointer' }} />
                                             Sama dengan alamat pusat perusahaan
@@ -666,19 +739,19 @@ export default function LowonganIndex({ jobs, company, isVerified, verificationS
 
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
                                         <NativeSelect value={selectedProvinsi} placeholder="Pilih Provinsi..."
-                                            onChange={prov => { setSelectedProvinsi(prov); setSelectedKota(''); setSameAsCompany(false); setData({ ...data, province: prov, city: '', location: '' }); }}>
+                                            onChange={prov => { setSelectedProvinsi(prov); setSelectedKota(''); setSameAsCompany(false); setData('province', prov); setData('city', ''); setData('latitude', null); setData('longitude', null); setData('location', ''); }}>
                                             {listProvinsi.map(p => <option key={p} value={p}>{p}</option>)}
                                         </NativeSelect>
                                         <NativeSelect value={selectedKota} placeholder={selectedProvinsi ? 'Pilih Kota...' : 'Pilih Provinsi Dulu'} disabled={!selectedProvinsi}
-                                            onChange={kota => { setSelectedKota(kota); setSameAsCompany(false); setData({ ...data, city: kota, location: `${kota}, ${selectedProvinsi}` }); }}>
+                                            onChange={kota => { setSelectedKota(kota); setSameAsCompany(false); setData('city', kota); setData('latitude', null); setData('longitude', null); setData('location', `${kota}, ${selectedProvinsi}`); }}>
                                             {listKota.map(k => <option key={k} value={k}>{k}</option>)}
                                         </NativeSelect>
                                     </div>
 
                                     {isResolvingAddress && <div style={{ fontSize: 11, color: T.mutedDark, marginBottom: 6 }}>⏳ Mencari alamat dari peta...</div>}
                                     <LocationPicker latitude={data.latitude} longitude={data.longitude}
-                                        onLocationChange={(lat, lng) => setData({ ...data, latitude: lat, longitude: lng })}
-                                        onAddressResolve={handleAddressResolve} onResolvingChange={setIsResolvingAddress} height={200} />
+                                        onLocationChange={(lat, lng) => { setData('latitude', lat); setData('longitude', lng); if (sameAsCompany) setSameAsCompany(false); }}
+                                        onAddressResolve={handleAddressResolve} onAddressData={handleAddressData} onResolvingChange={setIsResolvingAddress} height={200} />
                                 </>
                             )}
                         </FormSection>

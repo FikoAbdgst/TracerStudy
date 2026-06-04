@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, usePage } from '@inertiajs/react';
+import NotificationDropdown from '@/Components/NotificationDropdown';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -392,51 +393,7 @@ export default function AuthenticatedLayout({ header, children }) {
 
                     {/* Right side */}
                     <div className="al-nav-right">
-                        {/* Notification bell */}
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <button className="al-icon-btn">
-                                    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                                    </svg>
-                                    {auth.user?.notifications?.length > 0 && (
-                                        <span className="notif-dot" />
-                                    )}
-                                </button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-80 p-0 bg-white border border-gray-100 shadow-2xl rounded-xl overflow-hidden z-[999]">
-                                <div className="bg-slate-50 border-b border-gray-100 px-4 py-2.5 flex justify-between items-center">
-                                    <span className="font-bold text-sm text-slate-700">Notifikasi</span>
-                                    <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
-                                        {auth.user?.notifications?.length || 0} Baru
-                                    </span>
-                                </div>
-                                <div className="max-h-72 overflow-y-auto">
-                                    {auth.user?.notifications?.length > 0 ? (
-                                        auth.user.notifications.map((notif) => (
-                                            <Link
-                                                key={notif.id}
-                                                href={notif.data.url}
-                                                onClick={(e) => {
-                                                    e.preventDefault();
-                                                    window.axios.post(route('notifications.read', notif.id)).then(() => {
-                                                        window.location.href = notif.data.url;
-                                                    });
-                                                }}
-                                                className="block px-4 py-3 border-b border-slate-50 hover:bg-slate-50 transition"
-                                            >
-                                                <p className="text-sm font-semibold text-slate-800">{notif.data.title}</p>
-                                                <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{notif.data.message}</p>
-                                            </Link>
-                                        ))
-                                    ) : (
-                                        <div className="px-4 py-10 text-center text-sm text-slate-400">
-                                            Tidak ada notifikasi baru.
-                                        </div>
-                                    )}
-                                </div>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+                        <NotificationDropdown />
 
                         {/* User dropdown */}
                         <DropdownMenu>

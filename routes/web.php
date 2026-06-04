@@ -26,21 +26,17 @@ use App\Http\Controllers\Perusahaan\JobPostingController;
 Route::get('/', function () {
     return Inertia::render('Welcome');
 });
-// Rute Notifikasi Universal (Bisa diakses semua role yang login)
-Route::post('/notifications/{id}/read', function ($id) {
-    $notification = auth()->user()->notifications()->find($id);
-    if ($notification) {
-        $notification->markAsRead();
-    }
-    return back();
-})->name('notifications.read');
-Route::get('/test-notif', function () {
-    auth()->user()->notify(new \App\Notifications\SystemNotification(
-        'Test Notifikasi Berhasil!',
-        'Jika kamu melihat ini, berarti sistem notifikasi berfungsi 100%.',
-        '/dashboard'
-    ));
-    return "Notifikasi berhasil disuntikkan! Silakan kembali ke aplikasi dan cek icon lonceng.";
+
+Route::middleware('auth')->group(function () {
+    Route::post('/notifications/{id}/read', function ($id) {
+        $notification = auth()->user()->notifications()->find($id);
+        if ($notification) {
+            $notification->markAsRead();
+            $url = $notification->data['url_redirect'] ?? route('dashboard');
+            return redirect($url);
+        }
+        return back();
+    })->name('notifications.read');
 });
 
 // Rute Global untuk Menambah Master Data Item (Keahlian) secara dinamis
@@ -118,6 +114,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/dashboard', [AdminPTDashboard::class, 'index'])->name('dashboard');
         Route::get('/profil', [CompanyProfileController::class, 'edit'])->name('profile.edit');
         Route::post('/profil', [CompanyProfileController::class, 'update'])->name('profile.update');
+        Route::get('/profil/alamat-kantor', [CompanyProfileController::class, 'getAddress'])->name('profile.company-address');
 
         // --- HAPUS ROUTE DUMMY LAMA, GANTI DENGAN INI ---
         Route::get('/lowongan', [JobPostingController::class, 'index'])->name('lowongan');

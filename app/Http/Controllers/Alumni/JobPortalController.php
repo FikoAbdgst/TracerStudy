@@ -78,7 +78,8 @@ class JobPortalController extends Controller
             $hrdUser->notify(new SystemNotification(
                 'Lamaran Baru Masuk!',
                 $alumniProfile->user->name . ' telah melamar untuk posisi ' . $job->title,
-                route('perusahaan.pelamar')
+                route('perusahaan.pelamar'),
+                'job_application'
             ));
         }
 

@@ -11,6 +11,19 @@ use Illuminate\Support\Facades\Storage;
 
 class CompanyProfileController extends Controller
 {
+    public function getAddress()
+    {
+        $company = Auth::user()->company;
+
+        if (!$company) {
+            return response()->json(null, 404);
+        }
+
+        return response()->json(
+            $company->only(['address', 'province', 'city', 'latitude', 'longitude'])
+        );
+    }
+
     public function edit()
     {
         $company = Auth::user()->company;

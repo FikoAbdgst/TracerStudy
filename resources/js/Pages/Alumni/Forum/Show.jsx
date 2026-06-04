@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import InputError from '@/Components/InputError';
@@ -134,12 +134,13 @@ export default function ForumShow({ topic }) {
 
     const [toastMsg, setToastMsg] = useState(null);
     const [toastType, setToastType] = useState('success');
+    const [replyTo, setReplyTo] = useState(null);
 
-    const replyForm = useForm({ content: '', attachment: null });
+    const replyForm = useForm({ content: '', attachments: [], parent_id: null });
 
     /* --- Topic edit --- */
     const [editTopic, setEditTopic] = useState(false);
-    const topicForm = useForm({ title: topic.title, content: topic.content, attachment: null });
+    const topicForm = useForm({ title: topic.title, content: topic.content, attachments: [], deleted_attachments: [] });
 
     /* --- Topic delete --- */
     const [deleteTopic, setDeleteTopic] = useState(false);
@@ -147,7 +148,7 @@ export default function ForumShow({ topic }) {
 
     /* --- Reply edit --- */
     const [editReplyId, setEditReplyId] = useState(null);
-    const replyEditForm = useForm({ content: '', attachment: null });
+    const replyEditForm = useForm({ content: '', attachments: [], deleted_attachments: [] });
 
     /* --- Reply delete --- */
     const [deleteReplyId, setDeleteReplyId] = useState(null);
@@ -163,7 +164,7 @@ export default function ForumShow({ topic }) {
     const handleReply = e => {
         e.preventDefault();
         replyForm.post(route('alumni.forum.reply', topic.id), {
-            onSuccess: () => replyForm.reset('content'),
+            onSuccess: () => { replyForm.reset('content', 'attachments', 'parent_id'); setReplyTo(null); },
         });
     };
 
@@ -182,7 +183,7 @@ export default function ForumShow({ topic }) {
 
     const openReplyEdit = reply => {
         setEditReplyId(reply.id);
-        replyEditForm.setData({ content: reply.content });
+        replyEditForm.setData({ content: reply.content, attachments: [], deleted_attachments: [] });
         replyEditForm.clearErrors();
     };
 
@@ -201,7 +202,158 @@ export default function ForumShow({ topic }) {
         });
     };
 
+    const formRef = useRef(null);
+    const isFormActive = replyTo || replyForm.data.content.trim() || (replyForm.data.attachments?.length > 0);
+
+    useEffect(() => {
+        if (replyTo && formRef.current) {
+            formRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        }
+    }, [replyTo]);
+
     const getInitials = name => name ? name.charAt(0).toUpperCase() : '?';
+
+    const renderReplyCard = (reply, depth = 0) => {
+        const isReplyOwner = userId && reply.user_id === userId;
+        const isEditing = editReplyId === reply.id;
+        const childReplies = (topic.replies || []).filter(r => r.parent_id === reply.id);
+        return (
+            <div key={reply.id} style={{
+                background: '#fff', borderRadius: 12, border: `1px solid ${T.borderSoft}`,
+                padding: '14px 18px', boxShadow: '0 1px 4px rgba(15,31,61,0.04)',
+                animation: `slideIn 0.26s ${depth * 0.03}s cubic-bezier(0.22,1,0.36,1) both`,
+            }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                    <div style={{ width: 32, height: 32, borderRadius: 8, background: T.orangeLight, color: T.orange, fontSize: 13, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        {getInitials(reply.user?.name)}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
+                            <span style={{ fontSize: 13, fontWeight: 700, color: T.navy }}>{reply.user?.name}</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <span style={{ fontSize: 11.5, color: T.muted, flexShrink: 0 }}>{formatShort(reply.created_at)}</span>
+                                {!isEditing && (
+                                    <div style={{ display: 'flex', gap: 2 }}>
+                                        <button onClick={() => { setReplyTo({ id: reply.id, name: reply.user?.name, content: reply.content }); replyForm.setData('parent_id', reply.id); }}
+                                            style={{ width: 26, height: 26, borderRadius: 6, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.mutedDark, transition: 'all 0.15s' }}
+                                            onMouseEnter={e => e.currentTarget.style.color = T.navyMid}
+                                            onMouseLeave={e => e.currentTarget.style.color = T.mutedDark}
+                                            title="Balas">
+                                            <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" /></svg>
+                                        </button>
+                                        {isReplyOwner && (
+                                            <>
+                                                <button onClick={() => openReplyEdit(reply)}
+                                                    style={{ width: 26, height: 26, borderRadius: 6, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.mutedDark, transition: 'all 0.15s' }}
+                                                    onMouseEnter={e => e.currentTarget.style.color = T.navyMid}
+                                                    onMouseLeave={e => e.currentTarget.style.color = T.mutedDark}
+                                                    title="Edit">
+                                                    <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" /></svg>
+                                                </button>
+                                                <button onClick={() => setDeleteReplyId(reply.id)}
+                                                    style={{ width: 26, height: 26, borderRadius: 6, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.mutedDark, transition: 'all 0.15s' }}
+                                                    onMouseEnter={e => e.currentTarget.style.color = T.red}
+                                                    onMouseLeave={e => e.currentTarget.style.color = T.mutedDark}
+                                                    title="Hapus">
+                                                    <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
+                                                </button>
+                                            </>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                        {isEditing ? (
+                            <form onSubmit={handleReplyEdit} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                <textarea style={{ ...fieldBase, minHeight: 72 }}
+                                    value={replyEditForm.data.content}
+                                    onChange={e => replyEditForm.setData('content', e.target.value)}
+                                    onFocus={onFocus} onBlur={onBlur} />
+                                <InputError message={replyEditForm.errors.content} />
+                                <label style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', border: `1.5px dashed ${T.border}`, borderRadius: 7, background: T.bg, cursor: 'pointer', fontSize: 11.5, color: T.mutedDark }}
+                                    onMouseEnter={e => e.currentTarget.style.borderColor = T.navyMid}
+                                    onMouseLeave={e => e.currentTarget.style.borderColor = T.border}
+                                >
+                                    <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke={T.mutedDark} strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" /></svg>
+                                    <span style={{ flex: 1 }}>{replyEditForm.data.attachments?.length > 0 ? `${replyEditForm.data.attachments.length} gambar baru dipilih` : 'Tambah gambar'}</span>
+                                    <input type="file" multiple accept="image/png,image/jpeg,image/jpg,image/gif,image/webp" style={{ display: 'none' }}
+                                        onChange={e => {
+                                            const newFiles = Array.from(e.target.files);
+                                            if (newFiles.length === 0) return;
+                                            const current = replyEditForm.data.attachments || [];
+                                            replyEditForm.setData('attachments', [...current, ...newFiles]);
+                                            e.target.value = null;
+                                        }} />
+                                </label>
+                                {replyEditForm.data.attachments?.length > 0 && (
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                                        {replyEditForm.data.attachments.map((file, i) => (
+                                            <div key={i} style={{ position: 'relative', width: 60, height: 60, borderRadius: 6, overflow: 'hidden', border: `1px solid ${T.border}`, background: T.bg }}>
+                                                <img src={URL.createObjectURL(file)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                <button type="button" onClick={() => {
+                                                    const updated = replyEditForm.data.attachments.filter((_, idx) => idx !== i);
+                                                    replyEditForm.setData('attachments', updated);
+                                                }} style={{ position: 'absolute', top: 1, right: 1, width: 16, height: 16, borderRadius: '50%', border: 'none', background: 'rgba(0,0,0,0.55)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, padding: 0, lineHeight: 1 }}>
+                                                    ×
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                                <InputError message={replyEditForm.errors.attachments} />
+                                {reply.attachment?.length > 0 && reply.attachment.filter(p => !(replyEditForm.data.deleted_attachments || []).includes(p)).length > 0 && (
+                                    <div style={{ marginTop: 6 }}>
+                                        <div style={{ fontSize: 10.5, color: T.muted, marginBottom: 4 }}>Gambar saat ini (klik × untuk hapus):</div>
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                                            {reply.attachment.map((path, i) => {
+                                                if ((replyEditForm.data.deleted_attachments || []).includes(path)) return null;
+                                                return (
+                                                    <div key={i} style={{ position: 'relative', width: 60, height: 60, borderRadius: 6, overflow: 'hidden', border: `1px solid ${T.border}`, background: T.bg }}>
+                                                        <img src={reply.attachment_urls[i]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                        <button type="button" onClick={() => {
+                                                            replyEditForm.setData('deleted_attachments', [...(replyEditForm.data.deleted_attachments || []), path]);
+                                                        }} style={{ position: 'absolute', top: 1, right: 1, width: 16, height: 16, borderRadius: '50%', border: 'none', background: 'rgba(220,38,38,0.8)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, padding: 0, lineHeight: 1 }}>
+                                                            ×
+                                                        </button>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+                                <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                                    <button type="button" onClick={() => setEditReplyId(null)}
+                                        style={{ height: 30, padding: '0 12px', borderRadius: 6, border: `1px solid ${T.border}`, background: 'transparent', color: T.mutedDark, fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                                        Batal
+                                    </button>
+                                    <button type="submit" disabled={replyEditForm.processing}
+                                        style={{ height: 30, padding: '0 12px', borderRadius: 6, border: 'none', background: replyEditForm.processing ? T.muted : T.navyMid, color: '#fff', fontSize: 11, fontWeight: 700, cursor: replyEditForm.processing ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
+                                        {replyEditForm.processing ? 'Menyimpan...' : 'Simpan'}
+                                    </button>
+                                </div>
+                            </form>
+                        ) : (
+                            <>
+                                <RichContent text={reply.content} />
+                                {reply.attachment_urls?.length > 0 && (
+                                    <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                                        {reply.attachment_urls.map((url, i) => (
+                                            <img key={i} src={url} alt={`Lampiran ${i + 1}`} style={{ maxWidth: '100%', maxHeight: 240, borderRadius: 8, border: `1px solid ${T.borderSoft}`, objectFit: 'cover' }} />
+                                        ))}
+                                    </div>
+                                )}
+                            </>
+                        )}
+                    </div>
+                </div>
+                {childReplies.length > 0 && (
+                    <div style={{ marginTop: 10, borderLeft: `2px solid ${T.border}`, paddingLeft: 14 }}>
+                        {childReplies.map(child => renderReplyCard(child, depth + 1))}
+                    </div>
+                )}
+            </div>
+        );
+    };
 
     return (
         <AuthenticatedLayout
@@ -246,7 +398,7 @@ export default function ForumShow({ topic }) {
                             <h1 style={{ fontSize: 18, fontWeight: 800, color: T.navy, margin: '0 0 14px', letterSpacing: '-0.01em', lineHeight: 1.4, flex: 1 }}>{topic.title}</h1>
                             {isTopicOwner && (
                                 <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-                                    <button onClick={() => { topicForm.setData({ title: topic.title, content: topic.content }); setEditTopic(true); }}
+                                    <button onClick={() => { topicForm.setData({ title: topic.title, content: topic.content, attachments: [], deleted_attachments: [] }); setEditTopic(true); }}
                                         style={{ width: 32, height: 32, borderRadius: 8, border: `1px solid ${T.border}`, background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s', color: T.mutedDark }}
                                         onMouseEnter={e => { e.currentTarget.style.background = T.navyLight; e.currentTarget.style.color = T.navyMid; }}
                                         onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = T.mutedDark; }}
@@ -278,9 +430,11 @@ export default function ForumShow({ topic }) {
                     </div>
                     <div style={{ padding: '18px 20px' }}>
                         <RichContent text={topic.content} />
-                        {topic.attachment_url && (
-                            <div style={{ marginTop: 14 }}>
-                                <img src={topic.attachment_url} alt="Lampiran" style={{ maxWidth: '100%', maxHeight: 320, borderRadius: 10, border: `1px solid ${T.borderSoft}`, objectFit: 'cover' }} />
+                        {topic.attachment_urls?.length > 0 && (
+                            <div style={{ marginTop: 14, display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                                {topic.attachment_urls.map((url, i) => (
+                                    <img key={i} src={url} alt={`Lampiran ${i + 1}`} style={{ maxWidth: '100%', maxHeight: 320, borderRadius: 10, border: `1px solid ${T.borderSoft}`, objectFit: 'cover' }} />
+                                ))}
                             </div>
                         )}
                     </div>
@@ -296,105 +450,47 @@ export default function ForumShow({ topic }) {
 
                 {/* Replies list */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
-                    {topic.replies?.map((reply, i) => {
-                        const isReplyOwner = userId && reply.user_id === userId;
-                        const isEditing = editReplyId === reply.id;
-                        return (
-                            <div key={reply.id} style={{
-                                background: '#fff', borderRadius: 12, border: `1px solid ${T.borderSoft}`,
-                                padding: '14px 18px', boxShadow: '0 1px 4px rgba(15,31,61,0.04)',
-                                animation: `slideIn 0.26s ${i * 0.05}s cubic-bezier(0.22,1,0.36,1) both`,
-                            }}>
-                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                                    <div style={{ width: 32, height: 32, borderRadius: 8, background: T.orangeLight, color: T.orange, fontSize: 13, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                        {getInitials(reply.user?.name)}
-                                    </div>
-                                    <div style={{ flex: 1, minWidth: 0 }}>
-                                        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
-                                            <span style={{ fontSize: 13, fontWeight: 700, color: T.navy }}>{reply.user?.name}</span>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                                <span style={{ fontSize: 11.5, color: T.muted, flexShrink: 0 }}>{formatShort(reply.created_at)}</span>
-                                                {isReplyOwner && !isEditing && (
-                                                    <div style={{ display: 'flex', gap: 2 }}>
-                                                        <button onClick={() => openReplyEdit(reply)}
-                                                            style={{ width: 26, height: 26, borderRadius: 6, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.mutedDark, transition: 'all 0.15s' }}
-                                                            onMouseEnter={e => e.currentTarget.style.color = T.navyMid}
-                                                            onMouseLeave={e => e.currentTarget.style.color = T.mutedDark}
-                                                            title="Edit">
-                                                            <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" /></svg>
-                                                        </button>
-                                                        <button onClick={() => setDeleteReplyId(reply.id)}
-                                                            style={{ width: 26, height: 26, borderRadius: 6, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.mutedDark, transition: 'all 0.15s' }}
-                                                            onMouseEnter={e => e.currentTarget.style.color = T.red}
-                                                            onMouseLeave={e => e.currentTarget.style.color = T.mutedDark}
-                                                            title="Hapus">
-                                                            <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
-                                                        </button>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                        {isEditing ? (
-                                            <form onSubmit={handleReplyEdit} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                                                <textarea style={{ ...fieldBase, minHeight: 72 }}
-                                                    value={replyEditForm.data.content}
-                                                    onChange={e => replyEditForm.setData('content', e.target.value)}
-                                                    onFocus={onFocus} onBlur={onBlur} />
-                                                <InputError message={replyEditForm.errors.content} />
-                                                <label style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', border: `1.5px dashed ${T.border}`, borderRadius: 7, background: T.bg, cursor: 'pointer', fontSize: 11.5, color: T.mutedDark }}
-                                                    onMouseEnter={e => e.currentTarget.style.borderColor = T.navyMid}
-                                                    onMouseLeave={e => e.currentTarget.style.borderColor = T.border}
-                                                >
-                                                    <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke={T.mutedDark} strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" /></svg>
-                                                    <span style={{ flex: 1 }}>{replyEditForm.data.attachment?.name ? replyEditForm.data.attachment.name : (reply.attachment_url ? 'Ganti gambar' : 'Lampirkan gambar')}</span>
-                                                    <input type="file" accept="image/png,image/jpeg,image/jpg,image/gif,image/webp" style={{ display: 'none' }}
-                                                        onChange={e => { const file = e.target.files[0]; if (file) replyEditForm.setData('attachment', file); }} />
-                                                </label>
-                                                <InputError message={replyEditForm.errors.attachment} />
-                                                <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
-                                                    <button type="button" onClick={() => setEditReplyId(null)}
-                                                        style={{ height: 30, padding: '0 12px', borderRadius: 6, border: `1px solid ${T.border}`, background: 'transparent', color: T.mutedDark, fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-                                                        Batal
-                                                    </button>
-                                                    <button type="submit" disabled={replyEditForm.processing}
-                                                        style={{ height: 30, padding: '0 12px', borderRadius: 6, border: 'none', background: replyEditForm.processing ? T.muted : T.navyMid, color: '#fff', fontSize: 11, fontWeight: 700, cursor: replyEditForm.processing ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
-                                                        {replyEditForm.processing ? 'Menyimpan...' : 'Simpan'}
-                                                    </button>
-                                                </div>
-                                            </form>
-                                        ) : (
-                                            <>
-                                                <RichContent text={reply.content} />
-                                                {reply.attachment_url && (
-                                                    <div style={{ marginTop: 10 }}>
-                                                        <img src={reply.attachment_url} alt="Lampiran" style={{ maxWidth: '100%', maxHeight: 240, borderRadius: 8, border: `1px solid ${T.borderSoft}`, objectFit: 'cover' }} />
-                                                    </div>
-                                                )}
-                                            </>
-                                        )}
-                                    </div>
+                    {(() => {
+                        const roots = (topic.replies || []).filter(r => !r.parent_id);
+                        if (roots.length === 0) {
+                            return (
+                                <div style={{ padding: '32px 20px', textAlign: 'center', background: T.bg, borderRadius: 12, border: `1.5px dashed ${T.border}` }}>
+                                    <div style={{ fontSize: 28, marginBottom: 8 }}>💬</div>
+                                    <div style={{ fontSize: 13, color: T.muted }}>Belum ada balasan. Jadilah yang pertama membalas!</div>
                                 </div>
-                            </div>
-                        );
-                    })}
-                    {(!topic.replies || topic.replies.length === 0) && (
-                        <div style={{ padding: '32px 20px', textAlign: 'center', background: T.bg, borderRadius: 12, border: `1.5px dashed ${T.border}` }}>
-                            <div style={{ fontSize: 28, marginBottom: 8 }}>💬</div>
-                            <div style={{ fontSize: 13, color: T.muted }}>Belum ada balasan. Jadilah yang pertama membalas!</div>
-                        </div>
-                    )}
+                            );
+                        }
+                        return roots.map(reply => renderReplyCard(reply));
+                    })()}
                 </div>
 
                 {/* Reply form */}
-                <div style={{
+                <div ref={formRef} style={{
                     background: '#fff', borderRadius: 14, border: `1px solid ${T.borderSoft}`,
-                    padding: '18px 20px', boxShadow: '0 2px 8px rgba(15,31,61,0.05)',
+                    padding: '18px 20px',
+                    boxShadow: isFormActive ? '0 -8px 30px rgba(15,31,61,0.12)' : '0 2px 8px rgba(15,31,61,0.05)',
                     animation: 'cardIn 0.38s 0.2s cubic-bezier(0.22,1,0.36,1) both',
+                    ...(isFormActive ? { position: 'sticky', bottom: 0, zIndex: 20 } : {}),
                 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
                         <div style={{ width: 3, height: 16, background: T.orange, borderRadius: 2 }} />
                         <span style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: T.navy }}>Tulis Balasan</span>
                     </div>
+                    {replyTo && (
+                        <div style={{ marginBottom: 10, border: `1.5px dashed ${T.border}`, borderRadius: 10, background: T.bg, overflow: 'hidden' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 11px', borderBottom: `1px solid ${T.borderSoft}`, fontSize: 11.5, color: T.muted }}>
+                                <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke={T.muted} strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" /></svg>
+                                <span style={{ flex: 1 }}>Membalas <strong style={{ color: T.navyMid }}>{replyTo.name}</strong></span>
+                                <button type="button" onClick={() => { setReplyTo(null); replyForm.setData('parent_id', null); }}
+                                    style={{ width: 20, height: 20, borderRadius: 5, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.mutedDark, fontSize: 16, fontWeight: 700, padding: 0, lineHeight: 1 }}>
+                                    ×
+                                </button>
+                            </div>
+                            <div style={{ padding: '8px 11px', fontSize: 13, color: T.mutedDark, lineHeight: 1.6, maxHeight: 80, overflowY: 'auto' }}>
+                                {replyTo.content}
+                            </div>
+                        </div>
+                    )}
                     <form onSubmit={handleReply} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                         <div>
                             <textarea style={{ ...fieldBase, minHeight: 96 }} rows={4}
@@ -409,11 +505,32 @@ export default function ForumShow({ topic }) {
                                 onMouseLeave={e => e.currentTarget.style.borderColor = T.border}
                             >
                                 <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke={T.mutedDark} strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" /></svg>
-                                <span style={{ flex: 1 }}>{replyForm.data.attachment ? replyForm.data.attachment.name : 'Lampirkan gambar (opsional, max 2MB)'}</span>
-                                <input type="file" accept="image/png,image/jpeg,image/jpg,image/gif,image/webp" style={{ display: 'none' }}
-                                    onChange={e => { const file = e.target.files[0]; if (file) replyForm.setData('attachment', file); }} />
+                                <span style={{ flex: 1 }}>{replyForm.data.attachments?.length > 0 ? `${replyForm.data.attachments.length} gambar dipilih` : 'Lampirkan gambar (opsional, max 2MB per gambar)'}</span>
+                                <input type="file" multiple accept="image/png,image/jpeg,image/jpg,image/gif,image/webp" style={{ display: 'none' }}
+                                    onChange={e => {
+                                        const newFiles = Array.from(e.target.files);
+                                        if (newFiles.length === 0) return;
+                                        const current = replyForm.data.attachments || [];
+                                        replyForm.setData('attachments', [...current, ...newFiles]);
+                                        e.target.value = null;
+                                    }} />
                             </label>
-                            <InputError message={replyForm.errors.attachment} className="mt-1.5" />
+                            {replyForm.data.attachments?.length > 0 && (
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
+                                    {replyForm.data.attachments.map((file, i) => (
+                                        <div key={i} style={{ position: 'relative', width: 68, height: 68, borderRadius: 8, overflow: 'hidden', border: `1px solid ${T.border}`, background: T.bg }}>
+                                            <img src={URL.createObjectURL(file)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                            <button type="button" onClick={() => {
+                                                const updated = replyForm.data.attachments.filter((_, idx) => idx !== i);
+                                                replyForm.setData('attachments', updated);
+                                            }} style={{ position: 'absolute', top: 2, right: 2, width: 18, height: 18, borderRadius: '50%', border: 'none', background: 'rgba(0,0,0,0.55)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, padding: 0, lineHeight: 1 }}>
+                                                ×
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                            <InputError message={replyForm.errors.attachments} className="mt-1.5" />
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                             <button type="submit" disabled={replyForm.processing || !replyForm.data.content.trim()} style={{
@@ -474,13 +591,51 @@ export default function ForumShow({ topic }) {
                             onMouseLeave={e => e.currentTarget.style.borderColor = T.border}
                         >
                             <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke={T.mutedDark} strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" /></svg>
-                            <span style={{ flex: 1 }}>{topicForm.data.attachment?.name ? topicForm.data.attachment.name : (topic.attachment_url ? 'Ganti gambar' : 'Pilih gambar (opsional, max 2MB)')}</span>
-                            <input type="file" accept="image/png,image/jpeg,image/jpg,image/gif,image/webp" style={{ display: 'none' }}
-                                onChange={e => { const file = e.target.files[0]; if (file) topicForm.setData('attachment', file); }} />
+                            <span style={{ flex: 1 }}>{topicForm.data.attachments?.length > 0 ? `${topicForm.data.attachments.length} gambar baru dipilih` : 'Tambah gambar (opsional, max 2MB per gambar)'}</span>
+                            <input type="file" multiple accept="image/png,image/jpeg,image/jpg,image/gif,image/webp" style={{ display: 'none' }}
+                                onChange={e => {
+                                    const newFiles = Array.from(e.target.files);
+                                    if (newFiles.length === 0) return;
+                                    const current = topicForm.data.attachments || [];
+                                    topicForm.setData('attachments', [...current, ...newFiles]);
+                                    e.target.value = null;
+                                }} />
                         </label>
-                        <InputError message={topicForm.errors.attachment} />
-                        {topic.attachment_url && !topicForm.data.attachment && (
-                            <div style={{ marginTop: 6, fontSize: 11.5, color: T.muted, fontStyle: 'italic' }}>Gambar sebelumnya akan tetap digunakan jika tidak memilih gambar baru.</div>
+                        {topicForm.data.attachments?.length > 0 && (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
+                                {topicForm.data.attachments.map((file, i) => (
+                                    <div key={i} style={{ position: 'relative', width: 68, height: 68, borderRadius: 8, overflow: 'hidden', border: `1px solid ${T.border}`, background: T.bg }}>
+                                        <img src={URL.createObjectURL(file)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        <button type="button" onClick={() => {
+                                            const updated = topicForm.data.attachments.filter((_, idx) => idx !== i);
+                                            topicForm.setData('attachments', updated);
+                                        }} style={{ position: 'absolute', top: 2, right: 2, width: 18, height: 18, borderRadius: '50%', border: 'none', background: 'rgba(0,0,0,0.55)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, padding: 0, lineHeight: 1 }}>
+                                            ×
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        <InputError message={topicForm.errors.attachments} />
+                        {topic.attachment?.length > 0 && topic.attachment.filter(p => !(topicForm.data.deleted_attachments || []).includes(p)).length > 0 && (
+                            <div style={{ marginTop: 8 }}>
+                                <div style={{ fontSize: 11, color: T.muted, marginBottom: 6 }}>Gambar saat ini (klik × untuk hapus):</div>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                                    {topic.attachment.map((path, i) => {
+                                        if ((topicForm.data.deleted_attachments || []).includes(path)) return null;
+                                        return (
+                                            <div key={i} style={{ position: 'relative', width: 68, height: 68, borderRadius: 8, overflow: 'hidden', border: `1px solid ${T.border}`, background: T.bg }}>
+                                                <img src={topic.attachment_urls[i]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                <button type="button" onClick={() => {
+                                                    topicForm.setData('deleted_attachments', [...(topicForm.data.deleted_attachments || []), path]);
+                                                }} style={{ position: 'absolute', top: 2, right: 2, width: 18, height: 18, borderRadius: '50%', border: 'none', background: 'rgba(220,38,38,0.8)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, padding: 0, lineHeight: 1 }}>
+                                                    ×
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
                         )}
                     </div>
                 </form>

@@ -38,14 +38,19 @@ class ForumController extends Controller
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'content' => 'required|string',
-            'attachment' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'attachments' => 'nullable|array',
+            'attachments.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:2048',
         ]);
 
-        if ($request->hasFile('attachment')) {
-            $validated['attachment'] = $request->file('attachment')
-                ->store('forum_attachments', 'public');
+        if ($request->hasFile('attachments')) {
+            $paths = [];
+            foreach ($request->file('attachments') as $file) {
+                $paths[] = $file->store('forum_attachments', 'public');
+            }
+            $validated['attachment'] = $paths;
         }
 
+        unset($validated['attachments']);
         Auth::user()->forumTopics()->create($validated);
 
         return back()->with('message', 'Topik diskusi berhasil dibuat.');
@@ -53,7 +58,7 @@ class ForumController extends Controller
 
     public function show(ForumTopic $forum)
     {
-        $forum->load(['user', 'replies.user']);
+        $forum->load(['user', 'replies.user', 'replies.parent.user']);
 
         return Inertia::render('Alumni/Forum/Show', [
             'topic' => $forum,
@@ -69,19 +74,32 @@ class ForumController extends Controller
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'content' => 'required|string',
-            'attachment' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'attachments' => 'nullable|array',
+            'attachments.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'deleted_attachments' => 'nullable|array',
+            'deleted_attachments.*' => 'string',
         ]);
 
-        if ($request->hasFile('attachment')) {
-            if ($forum->attachment) {
-                Storage::disk('public')->delete($forum->attachment);
+        $remaining = $forum->attachment ?? [];
+
+        if ($request->deleted_attachments) {
+            foreach ($request->deleted_attachments as $delPath) {
+                Storage::disk('public')->delete($delPath);
             }
-            $validated['attachment'] = $request->file('attachment')
-                ->store('forum_attachments', 'public');
-        } else {
-            unset($validated['attachment']);
+            $remaining = array_values(array_diff($remaining, $request->deleted_attachments));
         }
 
+        if ($request->hasFile('attachments')) {
+            $paths = [];
+            foreach ($request->file('attachments') as $file) {
+                $paths[] = $file->store('forum_attachments', 'public');
+            }
+            $validated['attachment'] = array_merge($remaining, $paths);
+        } else {
+            $validated['attachment'] = $remaining;
+        }
+
+        unset($validated['attachments'], $validated['deleted_attachments']);
         $forum->update($validated);
 
         return back()->with('message', 'Topik diskusi berhasil diperbarui.');
@@ -94,12 +112,16 @@ class ForumController extends Controller
         }
 
         if ($forum->attachment) {
-            Storage::disk('public')->delete($forum->attachment);
+            foreach ($forum->attachment as $path) {
+                Storage::disk('public')->delete($path);
+            }
         }
 
         foreach ($forum->replies as $reply) {
             if ($reply->attachment) {
-                Storage::disk('public')->delete($reply->attachment);
+                foreach ($reply->attachment as $path) {
+                    Storage::disk('public')->delete($path);
+                }
             }
         }
 
@@ -113,7 +135,9 @@ class ForumController extends Controller
     {
         $validated = $request->validate([
             'content' => 'required|string',
-            'attachment' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'attachments' => 'nullable|array',
+            'attachments.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'parent_id' => 'nullable|exists:forum_replies,id',
         ]);
 
         $data = [
@@ -121,9 +145,16 @@ class ForumController extends Controller
             'content' => $validated['content'],
         ];
 
-        if ($request->hasFile('attachment')) {
-            $data['attachment'] = $request->file('attachment')
-                ->store('forum_attachments', 'public');
+        if ($request->hasFile('attachments')) {
+            $paths = [];
+            foreach ($request->file('attachments') as $file) {
+                $paths[] = $file->store('forum_attachments', 'public');
+            }
+            $data['attachment'] = $paths;
+        }
+
+        if ($request->parent_id) {
+            $data['parent_id'] = $request->parent_id;
         }
 
         $forum->replies()->create($data);
@@ -143,19 +174,32 @@ class ForumController extends Controller
 
         $validated = $request->validate([
             'content' => 'required|string',
-            'attachment' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'attachments' => 'nullable|array',
+            'attachments.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'deleted_attachments' => 'nullable|array',
+            'deleted_attachments.*' => 'string',
         ]);
 
-        if ($request->hasFile('attachment')) {
-            if ($reply->attachment) {
-                Storage::disk('public')->delete($reply->attachment);
+        $remaining = $reply->attachment ?? [];
+
+        if ($request->deleted_attachments) {
+            foreach ($request->deleted_attachments as $delPath) {
+                Storage::disk('public')->delete($delPath);
             }
-            $validated['attachment'] = $request->file('attachment')
-                ->store('forum_attachments', 'public');
-        } else {
-            unset($validated['attachment']);
+            $remaining = array_values(array_diff($remaining, $request->deleted_attachments));
         }
 
+        if ($request->hasFile('attachments')) {
+            $paths = [];
+            foreach ($request->file('attachments') as $file) {
+                $paths[] = $file->store('forum_attachments', 'public');
+            }
+            $validated['attachment'] = array_merge($remaining, $paths);
+        } else {
+            $validated['attachment'] = $remaining;
+        }
+
+        unset($validated['attachments'], $validated['deleted_attachments']);
         $reply->update($validated);
 
         return back()->with('message', 'Balasan berhasil diperbarui.');
@@ -172,7 +216,9 @@ class ForumController extends Controller
         }
 
         if ($reply->attachment) {
-            Storage::disk('public')->delete($reply->attachment);
+            foreach ($reply->attachment as $path) {
+                Storage::disk('public')->delete($path);
+            }
         }
 
         $reply->delete();

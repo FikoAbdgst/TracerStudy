@@ -10,15 +10,17 @@ class ForumTopic extends Model
 {
     protected $fillable = ['user_id', 'title', 'slug', 'content', 'last_reply_at', 'attachment'];
 
-    protected $appends = ['attachment_url'];
+    protected $appends = ['attachment_urls'];
 
     protected $casts = [
         'last_reply_at' => 'datetime',
+        'attachment' => 'array',
     ];
 
-    public function getAttachmentUrlAttribute()
+    public function getAttachmentUrlsAttribute(): array
     {
-        return $this->attachment ? Storage::url('forum_attachments/' . $this->attachment) : null;
+        if (!$this->attachment || !is_array($this->attachment)) return [];
+        return array_map(fn($path) => Storage::url($path), $this->attachment);
     }
 
     protected static function booted()

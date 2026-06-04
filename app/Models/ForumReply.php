@@ -7,13 +7,18 @@ use Illuminate\Support\Facades\Storage;
 
 class ForumReply extends Model
 {
-    protected $fillable = ['forum_topic_id', 'user_id', 'content', 'attachment'];
+    protected $fillable = ['forum_topic_id', 'user_id', 'content', 'attachment', 'parent_id'];
 
-    protected $appends = ['attachment_url'];
+    protected $appends = ['attachment_urls'];
 
-    public function getAttachmentUrlAttribute()
+    protected $casts = [
+        'attachment' => 'array',
+    ];
+
+    public function getAttachmentUrlsAttribute(): array
     {
-        return $this->attachment ? Storage::url('forum_attachments/' . $this->attachment) : null;
+        if (!$this->attachment || !is_array($this->attachment)) return [];
+        return array_map(fn($path) => Storage::url($path), $this->attachment);
     }
 
     protected static function booted()
@@ -31,5 +36,15 @@ class ForumReply extends Model
     public function topic()
     {
         return $this->belongsTo(ForumTopic::class, 'forum_topic_id');
+    }
+
+    public function parent()
+    {
+        return $this->belongsTo(ForumReply::class, 'parent_id');
+    }
+
+    public function children()
+    {
+        return $this->hasMany(ForumReply::class, 'parent_id');
     }
 }

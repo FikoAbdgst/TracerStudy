@@ -125,8 +125,8 @@ export default function ForumIndex({ topics, filters }) {
     const [editTarget, setEditTarget] = useState(null);
     const [deleteTarget, setDeleteTarget] = useState(null);
 
-    const createForm = useForm({ title: '', content: '', attachment: null });
-    const editForm = useForm({ title: '', content: '', attachment: null });
+    const createForm = useForm({ title: '', content: '', attachments: [] });
+    const editForm = useForm({ title: '', content: '', attachments: [] });
     const deleteForm = useForm({});
 
     const topicList = topics?.data || [];
@@ -166,7 +166,7 @@ export default function ForumIndex({ topics, filters }) {
         e.preventDefault();
         e.stopPropagation();
         setEditTarget(topic);
-        editForm.setData({ title: topic.title, content: topic.content });
+        editForm.setData({ title: topic.title, content: topic.content, attachments: [] });
         editForm.clearErrors();
     };
 
@@ -264,7 +264,7 @@ export default function ForumIndex({ topics, filters }) {
                                             <span style={{ fontWeight: 600, color: T.mutedDark }}>{topic.user?.name}</span>
                                             <span>·</span>
                                             <span>{formatDate(topic.created_at)}</span>
-                                            {topic.attachment_url && (
+                                            {topic.attachment_urls?.length > 0 && (
                                                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, color: T.mutedDark }}>
                                                     <span>·</span>
                                                     <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" /></svg>
@@ -372,11 +372,32 @@ export default function ForumIndex({ topics, filters }) {
                             onMouseLeave={e => e.currentTarget.style.borderColor = T.border}
                         >
                             <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke={T.mutedDark} strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" /></svg>
-                            <span style={{ fontSize: 12.5, color: T.mutedDark, flex: 1 }}>{createForm.data.attachment ? createForm.data.attachment.name : 'Pilih gambar (opsional, max 2MB)'}</span>
-                            <input type="file" accept="image/png,image/jpeg,image/jpg,image/gif,image/webp" style={{ display: 'none' }}
-                                onChange={e => { const file = e.target.files[0]; if (file) createForm.setData('attachment', file); }} />
+                            <span style={{ fontSize: 12.5, color: T.mutedDark, flex: 1 }}>{createForm.data.attachments?.length > 0 ? `${createForm.data.attachments.length} gambar dipilih` : 'Pilih gambar (opsional, max 2MB per gambar)'}</span>
+                            <input type="file" multiple accept="image/png,image/jpeg,image/jpg,image/gif,image/webp" style={{ display: 'none' }}
+                                onChange={e => {
+                                    const newFiles = Array.from(e.target.files);
+                                    if (newFiles.length === 0) return;
+                                    const current = createForm.data.attachments || [];
+                                    createForm.setData('attachments', [...current, ...newFiles]);
+                                    e.target.value = null;
+                                }} />
                         </label>
-                        <InputError message={createForm.errors.attachment} className="mt-1.5" />
+                        {createForm.data.attachments?.length > 0 && (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
+                                {createForm.data.attachments.map((file, i) => (
+                                    <div key={i} style={{ position: 'relative', width: 68, height: 68, borderRadius: 8, overflow: 'hidden', border: `1px solid ${T.border}`, background: T.bg }}>
+                                        <img src={URL.createObjectURL(file)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        <button type="button" onClick={() => {
+                                            const updated = createForm.data.attachments.filter((_, idx) => idx !== i);
+                                            createForm.setData('attachments', updated);
+                                        }} style={{ position: 'absolute', top: 2, right: 2, width: 18, height: 18, borderRadius: '50%', border: 'none', background: 'rgba(0,0,0,0.55)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, padding: 0, lineHeight: 1 }}>
+                                            ×
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        <InputError message={createForm.errors.attachments} className="mt-1.5" />
                     </div>
                 </form>
             </Modal>
@@ -422,14 +443,32 @@ export default function ForumIndex({ topics, filters }) {
                             onMouseLeave={e => e.currentTarget.style.borderColor = T.border}
                         >
                             <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke={T.mutedDark} strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" /></svg>
-                            <span style={{ fontSize: 12.5, color: T.mutedDark, flex: 1 }}>{editForm.data.attachment?.name ? editForm.data.attachment.name : (editTarget?.attachment_url ? 'Ganti gambar' : 'Pilih gambar (opsional, max 2MB)')}</span>
-                            <input type="file" accept="image/png,image/jpeg,image/jpg,image/gif,image/webp" style={{ display: 'none' }}
-                                onChange={e => { const file = e.target.files[0]; if (file) editForm.setData('attachment', file); }} />
+                            <span style={{ fontSize: 12.5, color: T.mutedDark, flex: 1 }}>{editForm.data.attachments?.length > 0 ? `${editForm.data.attachments.length} gambar dipilih` : (editTarget?.attachment_urls?.length > 0 ? 'Ganti gambar' : 'Pilih gambar (opsional, max 2MB per gambar)')}</span>
+                            <input type="file" multiple accept="image/png,image/jpeg,image/jpg,image/gif,image/webp" style={{ display: 'none' }}
+                                onChange={e => {
+                                    const newFiles = Array.from(e.target.files);
+                                    if (newFiles.length === 0) return;
+                                    const current = editForm.data.attachments || [];
+                                    editForm.setData('attachments', [...current, ...newFiles]);
+                                    e.target.value = null;
+                                }} />
                         </label>
-                        <InputError message={editForm.errors.attachment} className="mt-1.5" />
-                        {editTarget?.attachment_url && !editForm.data.attachment && (
-                            <div style={{ marginTop: 8, fontSize: 12, color: T.muted, fontStyle: 'italic' }}>Gambar sebelumnya akan tetap digunakan jika tidak memilih gambar baru.</div>
+                        {editForm.data.attachments?.length > 0 && (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
+                                {editForm.data.attachments.map((file, i) => (
+                                    <div key={i} style={{ position: 'relative', width: 68, height: 68, borderRadius: 8, overflow: 'hidden', border: `1px solid ${T.border}`, background: T.bg }}>
+                                        <img src={URL.createObjectURL(file)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        <button type="button" onClick={() => {
+                                            const updated = editForm.data.attachments.filter((_, idx) => idx !== i);
+                                            editForm.setData('attachments', updated);
+                                        }} style={{ position: 'absolute', top: 2, right: 2, width: 18, height: 18, borderRadius: '50%', border: 'none', background: 'rgba(0,0,0,0.55)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, padding: 0, lineHeight: 1 }}>
+                                            ×
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
                         )}
+                        <InputError message={editForm.errors.attachments} className="mt-1.5" />
                     </div>
                 </form>
             </Modal>

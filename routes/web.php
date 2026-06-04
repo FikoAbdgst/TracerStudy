@@ -37,6 +37,9 @@ Route::middleware('auth')->group(function () {
         }
         return back();
     })->name('notifications.read');
+
+    Route::get('/notifications', [\App\Http\Controllers\NotificationController::class, 'index'])->name('notifications.index');
+    Route::post('/notifications/read-all', [\App\Http\Controllers\NotificationController::class, 'readAll'])->name('notifications.read-all');
 });
 
 // Rute Global untuk Menambah Master Data Item (Keahlian) secara dinamis
@@ -151,8 +154,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/loker/{job}/update-cv', [JobPortalController::class, 'updateCv'])->name('loker.update-cv');
 
         Route::get('/lamaran', [JobPortalController::class, 'applications'])->name('lamaran');
+    });
 
-        // 5. Forum Diskusi
+    // --- FORUM DISKUSI (Alumni + Super Admin + Admin Kampus) ---
+    Route::middleware(['auth', 'verified', 'role:Alumni|Super Admin|Admin Kampus'])->prefix('alumni')->name('alumni.')->group(function () {
         Route::get('/forum', [ForumController::class, 'index'])->name('forum.index');
         Route::post('/forum', [ForumController::class, 'store'])->name('forum.store')->middleware('throttle:3,10');
         Route::get('/forum/{forum}', [ForumController::class, 'show'])->name('forum.show');

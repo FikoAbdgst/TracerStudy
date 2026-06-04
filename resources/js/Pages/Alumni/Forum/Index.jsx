@@ -3,6 +3,16 @@ import { Head, Link, useForm, usePage, router } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import InputError from '@/Components/InputError';
 
+const DELETION_REASONS = [
+    'Konten mengandung spam atau promosi tidak relevan',
+    'Konten mengandung ujaran kebencian atau SARA',
+    'Konten mengandung informasi palsu atau menyesatkan',
+    'Konten melanggar aturan forum',
+    'Konten mengandung unsur pelecehan atau perundungan',
+    'Topik ganda atau duplikat',
+    'Lainnya',
+];
+
 const T = {
     navy: '#0f1f3d', navyMid: '#1a3560', navyLight: '#e8f0fb',
     orange: '#f97316', orangeLight: '#fff3eb',
@@ -53,7 +63,7 @@ function Modal({ open, onClose, title, children, footer }) {
     );
 }
 
-function ConfirmModal({ open, onClose, onConfirm, title, message, processing }) {
+function ConfirmModal({ open, onClose, onConfirm, title, message, processing, children }) {
     return (
         <Modal open={open} onClose={onClose} title={title || 'Konfirmasi'}
             footer={<>
@@ -70,9 +80,38 @@ function ConfirmModal({ open, onClose, onConfirm, title, message, processing }) 
             </>}
         >
             <p style={{ fontSize: 14, color: '#374151', lineHeight: 1.6, margin: 0 }}>{message || 'Apakah Anda yakin ingin menghapus?'}</p>
+            {children}
         </Modal>
     );
 }
+
+const selectStyle = {
+    width: '100%', padding: '8px 10px', borderRadius: 8, border: `1.5px solid ${T.border}`,
+    background: T.bg, fontSize: 13, color: T.navy, outline: 'none',
+    fontFamily: 'inherit', marginTop: 8, cursor: 'pointer',
+};
+
+const DeletionReasonSelector = ({ reason, setReason, custom, setCustom }) => (
+    <div style={{ marginTop: 12 }}>
+        <label style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#374151', marginBottom: 4, display: 'block' }}>
+            Alasan Penghapusan
+        </label>
+        <select value={reason} onChange={e => setReason(e.target.value)}
+            onFocus={e => { e.target.style.borderColor = T.navyMid; e.target.style.background = '#fff'; }}
+            onBlur={e => { e.target.style.borderColor = T.border; e.target.style.background = T.bg; }}
+            style={selectStyle}>
+            {DELETION_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
+        </select>
+        {reason === 'Lainnya' && (
+            <textarea value={custom} onChange={e => setCustom(e.target.value)}
+                placeholder="Tulis alasan penghapusan..."
+                rows={2}
+                onFocus={e => { e.target.style.borderColor = T.navyMid; e.target.style.background = '#fff'; }}
+                onBlur={e => { e.target.style.borderColor = T.border; e.target.style.background = T.bg; }}
+                style={{ ...fieldBase2, marginTop: 6, minHeight: 56, padding: '8px 10px' }} />
+        )}
+    </div>
+);
 
 const BtnGhost = ({ children, onClick, style }) => (
     <button type="button" onClick={onClick} style={{ height: 36, padding: '0 14px', borderRadius: 8, border: `1.5px solid ${T.border}`, background: 'transparent', color: T.mutedDark, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s', ...style }}
@@ -82,6 +121,7 @@ const BtnGhost = ({ children, onClick, style }) => (
 );
 
 const fieldBase = { padding: '0 13px', border: `1.5px solid ${T.border}`, borderRadius: 9, background: T.bg, color: T.navy, fontSize: 13.5, outline: 'none', width: '100%', transition: 'all 0.18s', fontFamily: 'inherit', boxSizing: 'border-box' };
+const fieldBase2 = { ...fieldBase, padding: '8px 10px', resize: 'vertical' };
 const onFocus = e => { e.target.style.borderColor = T.navyMid; e.target.style.background = '#fff'; e.target.style.boxShadow = '0 0 0 3px rgba(26,53,96,0.09)'; };
 const onBlur = e => { e.target.style.borderColor = T.border; e.target.style.background = T.bg; e.target.style.boxShadow = 'none'; };
 
@@ -114,6 +154,24 @@ function Toast({ message, type, onClose }) {
     );
 }
 
+const hasModeratorRole = (user) => {
+    if (!user?.roles) return false;
+    return user.roles.some(r => r === 'Super Admin' || r === 'Admin Kampus');
+};
+
+const BadgeModerator = ({ user }) => {
+    if (!hasModeratorRole(user)) return null;
+    return (
+        <span style={{
+            fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 8,
+            background: '#dbeafe', color: '#1d4ed8', border: '1px solid #93c5fd',
+            marginLeft: 5, whiteSpace: 'nowrap', letterSpacing: '0.02em',
+        }}>
+            {user.roles.some(r => r === 'Super Admin') ? 'Super Admin' : 'Admin Kampus'}
+        </span>
+    );
+};
+
 export default function ForumIndex({ topics, filters }) {
     const { auth, flash } = usePage().props;
     const [searchInput, setSearchInput] = useState(filters?.search || '');
@@ -124,14 +182,18 @@ export default function ForumIndex({ topics, filters }) {
 
     const [editTarget, setEditTarget] = useState(null);
     const [deleteTarget, setDeleteTarget] = useState(null);
+    const [deleteReason, setDeleteReason] = useState(DELETION_REASONS[0]);
+    const [deleteCustom, setDeleteCustom] = useState('');
+    const [announcementCreate, setAnnouncementCreate] = useState(false);
 
-    const createForm = useForm({ title: '', content: '', attachments: [] });
-    const editForm = useForm({ title: '', content: '', attachments: [] });
+    const createForm = useForm({ title: '', content: '', attachments: [], is_announcement: false });
+    const editForm = useForm({ title: '', content: '', attachments: [], is_announcement: false });
     const deleteForm = useForm({});
 
     const topicList = topics?.data || [];
     const total = topics?.total || topics?.meta?.total || 0;
     const userId = auth?.user?.id;
+    const isModerator = hasModeratorRole(auth.user);
 
     useEffect(() => {
         if (flash?.message) {
@@ -140,9 +202,11 @@ export default function ForumIndex({ topics, filters }) {
         }
     }, [flash]);
 
-    const openCreate = () => { createForm.reset(); createForm.clearErrors(); setModalOpen(true); };
+    const openCreate = () => { createForm.reset(); createForm.clearErrors(); setAnnouncementCreate(false); setModalOpen(true); };
     const handleCreate = e => {
         e.preventDefault();
+        const is_announcement = isModerator && announcementCreate;
+        createForm.setData('is_announcement', is_announcement);
         createForm.post(route('alumni.forum.store'), {
             onSuccess: () => { setModalOpen(false); setToastMsg('Topik diskusi berhasil dibuat.'); setToastType('success'); },
         });
@@ -163,11 +227,14 @@ export default function ForumIndex({ topics, filters }) {
     const goToPage = url => { if (url) router.get(url, {}, { preserveState: true, replace: true }); };
 
     const openEdit = (topic, e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setEditTarget(topic);
-        editForm.setData({ title: topic.title, content: topic.content, attachments: [] });
+        e?.stopPropagation?.();
+        editForm.reset();
         editForm.clearErrors();
+        editForm.setData('title', topic.title);
+        editForm.setData('content', topic.content);
+        editForm.setData('attachments', []);
+        editForm.setData('is_announcement', topic.is_announcement);
+        setEditTarget(topic);
     };
 
     const handleEdit = e => {
@@ -178,15 +245,24 @@ export default function ForumIndex({ topics, filters }) {
         });
     };
 
+    const isDeleteOwner = deleteTarget && userId && deleteTarget.user_id === userId;
+
     const openDelete = (topic, e) => {
         e.preventDefault();
         e.stopPropagation();
         setDeleteTarget(topic);
+        setDeleteReason(DELETION_REASONS[0]);
+        setDeleteCustom('');
     };
 
     const handleDelete = () => {
         if (!deleteTarget) return;
+        const data = {};
+        if (deleteTarget.user_id !== userId) {
+            data.deletion_reason = deleteReason === 'Lainnya' ? deleteCustom : deleteReason;
+        }
         deleteForm.delete(route('alumni.forum.destroy', deleteTarget.id), {
+            data,
             onSuccess: () => { setDeleteTarget(null); },
         });
     };
@@ -228,40 +304,51 @@ export default function ForumIndex({ topics, filters }) {
                         <input style={{ ...fieldBase, height: 42, paddingLeft: 32 }} placeholder="Cari topik diskusi..."
                             value={searchInput} onChange={e => handleSearch(e.target.value)} onFocus={onFocus} onBlur={onBlur} />
                     </div>
-                    <button onClick={openCreate} style={{
-                        height: 42, padding: '0 18px', borderRadius: 9, border: 'none',
-                        background: T.orange, color: '#fff', fontSize: 13, fontWeight: 700,
-                        cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s',
-                        display: 'flex', alignItems: 'center', gap: 7,
-                        boxShadow: '0 2px 8px rgba(249,115,22,0.28)',
-                    }}
-                        onMouseEnter={e => { e.currentTarget.style.background = '#ea6c0a'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = T.orange; e.currentTarget.style.transform = 'none'; }}
-                    >
-                        <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
-                        Buat Topik
-                    </button>
+                    <div style={{ display: 'flex', gap: 8 }}>
+
+                        <button onClick={openCreate} style={{
+                            height: 42, padding: '0 18px', borderRadius: 9, border: 'none',
+                            background: T.orange, color: '#fff', fontSize: 13, fontWeight: 700,
+                            cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s',
+                            display: 'flex', alignItems: 'center', gap: 7,
+                            boxShadow: '0 2px 8px rgba(249,115,22,0.28)',
+                        }}
+                            onMouseEnter={e => { e.currentTarget.style.background = '#ea6c0a'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = T.orange; e.currentTarget.style.transform = 'none'; }}
+                        >
+                            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                            Buat Topik
+                        </button>
+                    </div>
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                     {topicList.map((topic, i) => {
                         const isOwner = userId && topic.user_id === userId;
+                        const announcement = topic.is_announcement;
                         return (
                             <div key={topic.id} className="forum-card" style={{
-                                background: '#fff', borderRadius: 14,
-                                border: `1px solid ${T.borderSoft}`,
+                                background: announcement ? '#fffbeb' : '#fff', borderRadius: 14,
+                                border: `1px solid ${announcement ? '#fcd34d' : T.borderSoft}`,
+                                borderLeft: announcement ? `4px solid #f59e0b` : `1px solid ${T.borderSoft}`,
                                 padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14,
-                                boxShadow: '0 1px 4px rgba(15,31,61,0.05)',
+                                boxShadow: announcement ? '0 1px 6px rgba(245,158,11,0.12)' : '0 1px 4px rgba(15,31,61,0.05)',
                                 animation: `rowIn 0.28s ${i * 0.05}s cubic-bezier(0.22,1,0.36,1) both`,
                             }}>
                                 <Link href={route('alumni.forum.show', topic.id)} style={{ display: 'flex', alignItems: 'center', gap: 14, flex: 1, minWidth: 0, textDecoration: 'none' }}>
-                                    <div style={{ width: 42, height: 42, borderRadius: 12, background: T.navyLight, color: T.navyMid, fontSize: 16, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                        {topic.user?.name?.charAt(0)?.toUpperCase() ?? '?'}
+                                    <div style={{ width: 42, height: 42, borderRadius: 12, background: announcement ? '#fef3c7' : T.navyLight, color: announcement ? '#d97706' : T.navyMid, fontSize: 16, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                        {announcement ? '📢' : (topic.user?.name?.charAt(0)?.toUpperCase() ?? '?')}
                                     </div>
                                     <div style={{ flex: 1, minWidth: 0 }}>
-                                        <div style={{ fontSize: 14, fontWeight: 700, color: T.navy, marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{topic.title}</div>
+                                        <div style={{ fontSize: 14, fontWeight: 700, color: T.navy, marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                            {announcement && <span style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#d97706', background: '#fef3c7', borderRadius: 4, padding: '1px 7px' }}>PENGUMUMAN</span>}
+                                            {topic.title}
+                                        </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: T.muted }}>
-                                            <span style={{ fontWeight: 600, color: T.mutedDark }}>{topic.user?.name}</span>
+                                            <span style={{ fontWeight: 600, color: T.mutedDark, display: 'inline-flex', alignItems: 'center' }}>
+                                                {topic.user?.name}
+                                                <BadgeModerator user={topic.user} />
+                                            </span>
                                             <span>·</span>
                                             <span>{formatDate(topic.created_at)}</span>
                                             {topic.attachment_urls?.length > 0 && (
@@ -277,22 +364,24 @@ export default function ForumIndex({ topics, filters }) {
                                         <span style={{ fontSize: 12, fontWeight: 700, color: T.mutedDark }}>{topic.replies_count ?? 0}</span>
                                     </div>
                                 </Link>
-                                {isOwner && (
-                                    <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                                <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                                    {(isOwner || isModerator) && (
                                         <button onClick={e => openEdit(topic, e)} style={{ width: 32, height: 32, borderRadius: 8, border: `1px solid ${T.border}`, background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s', color: T.mutedDark }}
                                             onMouseEnter={e => { e.currentTarget.style.background = T.navyLight; e.currentTarget.style.color = T.navyMid; e.currentTarget.style.borderColor = T.navyMid; }}
                                             onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = T.mutedDark; e.currentTarget.style.borderColor = T.border; }}
                                             title="Edit">
                                             <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" /></svg>
                                         </button>
+                                    )}
+                                    {(isOwner || isModerator) && (
                                         <button onClick={e => openDelete(topic, e)} style={{ width: 32, height: 32, borderRadius: 8, border: `1px solid ${T.border}`, background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s', color: T.mutedDark }}
                                             onMouseEnter={e => { e.currentTarget.style.background = T.redLight; e.currentTarget.style.color = T.red; e.currentTarget.style.borderColor = T.red; }}
                                             onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = T.mutedDark; e.currentTarget.style.borderColor = T.border; }}
                                             title="Hapus">
                                             <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
                                         </button>
-                                    </div>
-                                )}
+                                    )}
+                                </div>
                             </div>
                         );
                     })}
@@ -399,6 +488,26 @@ export default function ForumIndex({ topics, filters }) {
                         )}
                         <InputError message={createForm.errors.attachments} className="mt-1.5" />
                     </div>
+                    {isModerator && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0' }}>
+                            <label style={{ position: 'relative', width: 40, height: 22, cursor: 'pointer' }}>
+                                <input type="checkbox" checked={announcementCreate} onChange={e => setAnnouncementCreate(e.target.checked)}
+                                    style={{ opacity: 0, position: 'absolute', width: '100%', height: '100%', margin: 0, cursor: 'pointer' }} />
+                                <div style={{
+                                    width: 40, height: 22, borderRadius: 11,
+                                    background: announcementCreate ? '#059669' : '#d1d5db',
+                                    transition: 'all 0.2s', position: 'relative',
+                                }}>
+                                    <div style={{
+                                        width: 18, height: 18, borderRadius: '50%', background: '#fff',
+                                        position: 'absolute', top: 2, left: announcementCreate ? 20 : 2,
+                                        transition: 'all 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
+                                    }} />
+                                </div>
+                            </label>
+                            <span style={{ fontSize: 12.5, fontWeight: 600, color: T.navy }}>Jadikan sebagai Pengumuman (akan tampil di urutan atas)</span>
+                        </div>
+                    )}
                 </form>
             </Modal>
 
@@ -470,18 +579,40 @@ export default function ForumIndex({ topics, filters }) {
                         )}
                         <InputError message={editForm.errors.attachments} className="mt-1.5" />
                     </div>
+                    {isModerator && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0' }}>
+                            <label style={{ position: 'relative', width: 40, height: 22, cursor: 'pointer' }}>
+                                <input type="checkbox" checked={editForm.data.is_announcement} onChange={e => editForm.setData('is_announcement', e.target.checked)}
+                                    style={{ opacity: 0, position: 'absolute', width: '100%', height: '100%', margin: 0, cursor: 'pointer' }} />
+                                <div style={{
+                                    width: 40, height: 22, borderRadius: 11,
+                                    background: editForm.data.is_announcement ? '#059669' : '#d1d5db',
+                                    transition: 'all 0.2s', position: 'relative',
+                                }}>
+                                    <div style={{
+                                        width: 18, height: 18, borderRadius: '50%', background: '#fff',
+                                        position: 'absolute', top: 2, left: editForm.data.is_announcement ? 20 : 2,
+                                        transition: 'all 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
+                                    }} />
+                                </div>
+                            </label>
+                            <span style={{ fontSize: 12.5, fontWeight: 600, color: T.navy }}>Jadikan sebagai Pengumuman (akan tampil di urutan atas)</span>
+                        </div>
+                    )}
                 </form>
             </Modal>
 
             {/* Modal Hapus Topik */}
             <ConfirmModal
                 open={!!deleteTarget}
-                onClose={() => setDeleteTarget(null)}
+                onClose={() => { setDeleteTarget(null); setDeleteReason(DELETION_REASONS[0]); setDeleteCustom(''); }}
                 onConfirm={handleDelete}
                 title="Hapus Topik"
                 message={`Apakah Anda yakin ingin menghapus topik "${deleteTarget?.title}"? Semua balasan dalam topik ini juga akan dihapus.`}
                 processing={deleteForm.processing}
-            />
+            >
+                {!isDeleteOwner && <DeletionReasonSelector reason={deleteReason} setReason={setDeleteReason} custom={deleteCustom} setCustom={setDeleteCustom} />}
+            </ConfirmModal>
         </AuthenticatedLayout>
     );
 }

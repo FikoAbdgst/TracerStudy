@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Alumni;
 use App\Http\Controllers\Controller;
 use App\Models\ForumTopic;
 use App\Models\ForumReply;
+use App\Notifications\SystemNotification;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
@@ -14,7 +15,7 @@ class ForumController extends Controller
 {
     public function index(Request $request)
     {
-        $query = ForumTopic::with('user')->withCount('replies');
+        $query = ForumTopic::with('user.roles')->withCount('replies');
 
         if ($search = $request->search) {
             $query->where(function ($q) use ($search) {
@@ -23,7 +24,8 @@ class ForumController extends Controller
             });
         }
 
-        $topics = $query->orderBy('last_reply_at', 'desc')
+        $topics = $query->orderBy('is_announcement', 'desc')
+            ->orderBy('last_reply_at', 'desc')
             ->paginate(15)
             ->withQueryString();
 
@@ -40,6 +42,7 @@ class ForumController extends Controller
             'content' => 'required|string',
             'attachments' => 'nullable|array',
             'attachments.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'is_announcement' => 'nullable|boolean',
         ]);
 
         if ($request->hasFile('attachments')) {
@@ -50,6 +53,14 @@ class ForumController extends Controller
             $validated['attachment'] = $paths;
         }
 
+        // Only Admin Kampus & Super Admin can create announcements
+        if ($validated['is_announcement'] ?? false) {
+            $user = Auth::user();
+            if (!$user->hasAnyRole(['Admin Kampus', 'Super Admin'])) {
+                unset($validated['is_announcement']);
+            }
+        }
+
         unset($validated['attachments']);
         Auth::user()->forumTopics()->create($validated);
 
@@ -58,7 +69,7 @@ class ForumController extends Controller
 
     public function show(ForumTopic $forum)
     {
-        $forum->load(['user', 'replies.user', 'replies.parent.user']);
+        $forum->load(['user.roles', 'replies.user.roles', 'replies.parent.user.roles']);
 
         return Inertia::render('Alumni/Forum/Show', [
             'topic' => $forum,
@@ -67,9 +78,7 @@ class ForumController extends Controller
 
     public function update(Request $request, ForumTopic $forum)
     {
-        if (Auth::id() !== $forum->user_id && !Auth::user()->hasAnyRole(['Super Admin', 'Admin Kampus'])) {
-            abort(403, 'Anda tidak memiliki izin untuk mengedit topik ini.');
-        }
+        $this->authorize('update', $forum);
 
         $validated = $request->validate([
             'title' => 'required|string|max:255',
@@ -78,7 +87,16 @@ class ForumController extends Controller
             'attachments.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:2048',
             'deleted_attachments' => 'nullable|array',
             'deleted_attachments.*' => 'string',
+            'is_announcement' => 'nullable|boolean',
         ]);
+
+        // Only Admin Kampus & Super Admin can toggle announcement
+        if ($request->has('is_announcement')) {
+            $user = Auth::user();
+            if (!$user->hasAnyRole(['Admin Kampus', 'Super Admin'])) {
+                unset($validated['is_announcement']);
+            }
+        }
 
         $remaining = $forum->attachment ?? [];
 
@@ -105,10 +123,18 @@ class ForumController extends Controller
         return back()->with('message', 'Topik diskusi berhasil diperbarui.');
     }
 
-    public function destroy(ForumTopic $forum)
+    public function destroy(Request $request, ForumTopic $forum)
     {
-        if (Auth::id() !== $forum->user_id && !Auth::user()->hasAnyRole(['Super Admin', 'Admin Kampus'])) {
-            abort(403, 'Anda tidak memiliki izin untuk menghapus topik ini.');
+        $this->authorize('delete', $forum);
+
+        if (Auth::id() !== $forum->user_id) {
+            $reason = $request->input('deletion_reason', 'Melanggar aturan forum');
+            $forum->user->notify(new SystemNotification(
+                'Topik Dihapus oleh Moderator',
+                "Topik \"{$forum->title}\" telah dihapus oleh moderator.\nAlasan: {$reason}",
+                route('alumni.forum.index'),
+                'warning'
+            ));
         }
 
         if ($forum->attachment) {
@@ -164,13 +190,8 @@ class ForumController extends Controller
 
     public function updateReply(Request $request, ForumTopic $forum, ForumReply $reply)
     {
-        if ($reply->forum_topic_id !== $forum->id) {
-            abort(404);
-        }
-
-        if (Auth::id() !== $reply->user_id && !Auth::user()->hasAnyRole(['Super Admin', 'Admin Kampus'])) {
-            abort(403, 'Anda tidak memiliki izin untuk mengedit balasan ini.');
-        }
+        if ($reply->forum_topic_id !== $forum->id) abort(404);
+        $this->authorize('update', $reply);
 
         $validated = $request->validate([
             'content' => 'required|string',
@@ -205,14 +226,19 @@ class ForumController extends Controller
         return back()->with('message', 'Balasan berhasil diperbarui.');
     }
 
-    public function destroyReply(ForumTopic $forum, ForumReply $reply)
+    public function destroyReply(Request $request, ForumTopic $forum, ForumReply $reply)
     {
-        if ($reply->forum_topic_id !== $forum->id) {
-            abort(404);
-        }
+        if ($reply->forum_topic_id !== $forum->id) abort(404);
+        $this->authorize('delete', $reply);
 
-        if (Auth::id() !== $reply->user_id && !Auth::user()->hasAnyRole(['Super Admin', 'Admin Kampus'])) {
-            abort(403, 'Anda tidak memiliki izin untuk menghapus balasan ini.');
+        if (Auth::id() !== $reply->user_id) {
+            $reason = $request->input('deletion_reason', 'Melanggar aturan forum');
+            $reply->user->notify(new SystemNotification(
+                'Balasan Dihapus oleh Moderator',
+                "Balasan Anda pada topik \"{$forum->title}\" telah dihapus oleh moderator.\nAlasan: {$reason}",
+                route('alumni.forum.show', $forum->id),
+                'warning'
+            ));
         }
 
         if ($reply->attachment) {

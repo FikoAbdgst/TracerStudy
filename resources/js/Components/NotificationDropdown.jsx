@@ -1,4 +1,4 @@
-import { usePage, router } from '@inertiajs/react';
+import { usePage, router, Link } from '@inertiajs/react';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -6,12 +6,12 @@ import {
 } from '@/Components/ui/dropdown-menu';
 
 const typeConfig = {
-    job_application:       { dot: '#0e7490', bg: '#ecfeff', icon: '💼' },
-    application_status:    { dot: '#7c3aed', bg: '#f5f3ff', icon: '📋' },
-    company_verification:  { dot: '#b45309', bg: '#fffbeb', icon: '🏢' },
-    mou_approved:          { dot: '#15803d', bg: '#f0fdf4', icon: '📄' },
-    forum_reply:           { dot: '#0369a1', bg: '#f0f9ff', icon: '💬' },
-    system:                { dot: '#64748b', bg: '#f8fafc', icon: '🔔' },
+    job_application: { dot: '#0e7490', bg: '#ecfeff', icon: '💼' },
+    application_status: { dot: '#7c3aed', bg: '#f5f3ff', icon: '📋' },
+    company_verification: { dot: '#b45309', bg: '#fffbeb', icon: '🏢' },
+    mou_approved: { dot: '#15803d', bg: '#f0fdf4', icon: '📄' },
+    forum_reply: { dot: '#0369a1', bg: '#f0f9ff', icon: '💬' },
+    system: { dot: '#64748b', bg: '#f8fafc', icon: '🔔' },
 };
 
 export default function NotificationDropdown() {
@@ -65,6 +65,11 @@ export default function NotificationDropdown() {
                         </div>
                     )}
                 </div>
+                <Link href={route('notifications.index')}
+                    className="block w-full text-center text-xs font-semibold text-blue-600 bg-white hover:bg-blue-100 py-2.5 border-t border-gray-100 transition"
+                >
+                    Lihat Semua Notifikasi
+                </Link>
             </DropdownMenuContent>
         </DropdownMenu>
     );

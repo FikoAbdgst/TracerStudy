@@ -8,13 +8,14 @@ use Illuminate\Support\Facades\Storage;
 
 class ForumTopic extends Model
 {
-    protected $fillable = ['user_id', 'title', 'slug', 'content', 'last_reply_at', 'attachment'];
+    protected $fillable = ['user_id', 'title', 'slug', 'content', 'last_reply_at', 'attachment', 'is_announcement'];
 
     protected $appends = ['attachment_urls'];
 
     protected $casts = [
         'last_reply_at' => 'datetime',
         'attachment' => 'array',
+        'is_announcement' => 'boolean',
     ];
 
     public function getAttachmentUrlsAttribute(): array

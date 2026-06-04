@@ -15,6 +15,7 @@ const menuConfig = {
         { name: 'Dashboard', href: route('superadmin.dashboard') },
         { name: 'Hak Akses', href: route('superadmin.users.index') },
         { name: 'Master Data', href: route('superadmin.master-data') },
+        { name: 'Ruang Diskusi', href: route('alumni.forum.index') },
     ],
     'Admin Kampus': [
         { name: 'Dashboard', href: route('adminkampus.dashboard') },
@@ -23,6 +24,7 @@ const menuConfig = {
         { name: 'Verifikasi PT', href: route('adminkampus.verify-pt') },
         { name: 'Tinjau Lowongan', href: route('adminkampus.tinjau-lowongan') },
         { name: 'Dokumen MoU', href: route('adminkampus.mou.index') },
+        { name: 'Ruang Diskusi', href: route('alumni.forum.index') },
     ],
     'Admin PT': [
         { name: 'Dashboard', href: route('perusahaan.dashboard') },
@@ -46,7 +48,13 @@ export default function AuthenticatedLayout({ header, children }) {
     const navRef = useRef(null);
 
     const userRole = auth.user.roles?.[0] ?? 'Alumni';
-    const navigationMenu = menuConfig[userRole] ?? [];
+    let navigationMenu = menuConfig[userRole] ?? [];
+    // Pastikan "Ruang Diskusi" tidak muncul untuk role perusahaan/Admin PT
+    const forumRoles = ['Alumni', 'Super Admin', 'Admin Kampus'];
+    const canAccessForum = auth.user.roles?.some(r => forumRoles.includes(r));
+    if (!canAccessForum) {
+        navigationMenu = navigationMenu.filter(item => item.name !== 'Ruang Diskusi');
+    }
     const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
 
     const isActive = (href) => {

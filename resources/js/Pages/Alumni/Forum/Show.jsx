@@ -3,6 +3,16 @@ import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import InputError from '@/Components/InputError';
 
+const DELETION_REASONS = [
+    'Konten mengandung spam atau promosi tidak relevan',
+    'Konten mengandung ujaran kebencian atau SARA',
+    'Konten mengandung informasi palsu atau menyesatkan',
+    'Konten melanggar aturan forum',
+    'Konten mengandung unsur pelecehan atau perundungan',
+    'Topik ganda atau duplikat',
+    'Lainnya',
+];
+
 const T = {
     navy: '#0f1f3d', navyMid: '#1a3560', navyLight: '#e8f0fb',
     orange: '#f97316', orangeLight: '#fff3eb',
@@ -60,7 +70,7 @@ function Modal({ open, onClose, title, children, footer }) {
     );
 }
 
-function ConfirmModal({ open, onClose, onConfirm, title, message, processing }) {
+function ConfirmModal({ open, onClose, onConfirm, title, message, processing, children }) {
     return (
         <Modal open={open} onClose={onClose} title={title || 'Konfirmasi'}
             footer={<>
@@ -77,9 +87,38 @@ function ConfirmModal({ open, onClose, onConfirm, title, message, processing }) 
             </>}
         >
             <p style={{ fontSize: 14, color: '#374151', lineHeight: 1.6, margin: 0 }}>{message || 'Apakah Anda yakin ingin menghapus?'}</p>
+            {children}
         </Modal>
     );
 }
+
+const selectStyle = {
+    width: '100%', padding: '8px 10px', borderRadius: 8, border: `1.5px solid #e2e8f0`,
+    background: '#f8fafc', fontSize: 13, color: '#0f1f3d', outline: 'none',
+    fontFamily: 'inherit', marginTop: 8, cursor: 'pointer',
+};
+
+const DeletionReasonSelector = ({ reason, setReason, custom, setCustom }) => (
+    <div style={{ marginTop: 12 }}>
+        <label style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#374151', marginBottom: 4, display: 'block' }}>
+            Alasan Penghapusan
+        </label>
+        <select value={reason} onChange={e => setReason(e.target.value)}
+            onFocus={e => { e.target.style.borderColor = '#1a3560'; e.target.style.background = '#fff'; }}
+            onBlur={e => { e.target.style.borderColor = '#e2e8f0'; e.target.style.background = '#f8fafc'; }}
+            style={selectStyle}>
+            {DELETION_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
+        </select>
+        {reason === 'Lainnya' && (
+            <textarea value={custom} onChange={e => setCustom(e.target.value)}
+                placeholder="Tulis alasan penghapusan..."
+                rows={2}
+                onFocus={e => { e.target.style.borderColor = '#1a3560'; e.target.style.background = '#fff'; }}
+                onBlur={e => { e.target.style.borderColor = '#e2e8f0'; e.target.style.background = '#f8fafc'; }}
+                style={{ ...fieldBase, marginTop: 6, minHeight: 56, padding: '8px 10px' }} />
+        )}
+    </div>
+);
 
 function Toast({ message, type, onClose }) {
     useEffect(() => {
@@ -127,10 +166,29 @@ function RichContent({ text }) {
     );
 }
 
+const hasModeratorRole = (user) => {
+    if (!user?.roles) return false;
+    return user.roles.some(r => r === 'Super Admin' || r === 'Admin Kampus');
+};
+
+const BadgeModerator = ({ user }) => {
+    if (!hasModeratorRole(user)) return null;
+    return (
+        <span style={{
+            fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 10,
+            background: '#dbeafe', color: '#1d4ed8', border: '1px solid #93c5fd',
+            marginLeft: 6, whiteSpace: 'nowrap', letterSpacing: '0.02em',
+        }}>
+            {user.roles.some(r => r === 'Super Admin') ? 'Super Admin' : 'Admin Kampus'}
+        </span>
+    );
+};
+
 export default function ForumShow({ topic }) {
     const { auth, flash } = usePage().props;
     const userId = auth?.user?.id;
     const isTopicOwner = userId && topic.user_id === userId;
+    const isModerator = hasModeratorRole(auth.user);
 
     const [toastMsg, setToastMsg] = useState(null);
     const [toastType, setToastType] = useState('success');
@@ -144,6 +202,8 @@ export default function ForumShow({ topic }) {
 
     /* --- Topic delete --- */
     const [deleteTopic, setDeleteTopic] = useState(false);
+    const [deleteTopicReason, setDeleteTopicReason] = useState(DELETION_REASONS[0]);
+    const [deleteTopicCustom, setDeleteTopicCustom] = useState('');
     const topicDeleteForm = useForm({});
 
     /* --- Reply edit --- */
@@ -151,7 +211,9 @@ export default function ForumShow({ topic }) {
     const replyEditForm = useForm({ content: '', attachments: [], deleted_attachments: [] });
 
     /* --- Reply delete --- */
-    const [deleteReplyId, setDeleteReplyId] = useState(null);
+    const [deleteReplyTarget, setDeleteReplyTarget] = useState(null);
+    const [deleteReplyReason, setDeleteReplyReason] = useState(DELETION_REASONS[0]);
+    const [deleteReplyCustom, setDeleteReplyCustom] = useState('');
     const replyDeleteForm = useForm({});
 
     useEffect(() => {
@@ -176,7 +238,12 @@ export default function ForumShow({ topic }) {
     };
 
     const handleTopicDelete = () => {
+        const data = {};
+        if (topic.user_id !== userId) {
+            data.deletion_reason = deleteTopicReason === 'Lainnya' ? deleteTopicCustom : deleteTopicReason;
+        }
         topicDeleteForm.delete(route('alumni.forum.destroy', topic.id), {
+            data,
             onSuccess: () => { },
         });
     };
@@ -195,10 +262,17 @@ export default function ForumShow({ topic }) {
         });
     };
 
+    const isDeleteReplyOwner = deleteReplyTarget && userId && deleteReplyTarget.user_id === userId;
+
     const handleReplyDelete = () => {
-        if (!deleteReplyId) return;
-        replyDeleteForm.delete(route('alumni.forum.reply.destroy', [topic.id, deleteReplyId]), {
-            onSuccess: () => { setDeleteReplyId(null); },
+        if (!deleteReplyTarget) return;
+        const data = {};
+        if (deleteReplyTarget.user_id !== userId) {
+            data.deletion_reason = deleteReplyReason === 'Lainnya' ? deleteReplyCustom : deleteReplyReason;
+        }
+        replyDeleteForm.delete(route('alumni.forum.reply.destroy', [topic.id, deleteReplyTarget.id]), {
+            data,
+            onSuccess: () => { setDeleteReplyTarget(null); },
         });
     };
 
@@ -229,7 +303,10 @@ export default function ForumShow({ topic }) {
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
-                            <span style={{ fontSize: 13, fontWeight: 700, color: T.navy }}>{reply.user?.name}</span>
+                            <span style={{ fontSize: 13, fontWeight: 700, color: T.navy, display: 'flex', alignItems: 'center' }}>
+                                {reply.user?.name}
+                                <BadgeModerator user={reply.user} />
+                            </span>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                                 <span style={{ fontSize: 11.5, color: T.muted, flexShrink: 0 }}>{formatShort(reply.created_at)}</span>
                                 {!isEditing && (
@@ -241,23 +318,23 @@ export default function ForumShow({ topic }) {
                                             title="Balas">
                                             <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" /></svg>
                                         </button>
-                                        {isReplyOwner && (
-                                            <>
-                                                <button onClick={() => openReplyEdit(reply)}
-                                                    style={{ width: 26, height: 26, borderRadius: 6, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.mutedDark, transition: 'all 0.15s' }}
-                                                    onMouseEnter={e => e.currentTarget.style.color = T.navyMid}
-                                                    onMouseLeave={e => e.currentTarget.style.color = T.mutedDark}
-                                                    title="Edit">
-                                                    <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" /></svg>
-                                                </button>
-                                                <button onClick={() => setDeleteReplyId(reply.id)}
-                                                    style={{ width: 26, height: 26, borderRadius: 6, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.mutedDark, transition: 'all 0.15s' }}
-                                                    onMouseEnter={e => e.currentTarget.style.color = T.red}
-                                                    onMouseLeave={e => e.currentTarget.style.color = T.mutedDark}
-                                                    title="Hapus">
-                                                    <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
-                                                </button>
-                                            </>
+                                        {(isReplyOwner || isModerator) && (
+                                            <button onClick={() => openReplyEdit(reply)}
+                                                style={{ width: 26, height: 26, borderRadius: 6, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.mutedDark, transition: 'all 0.15s' }}
+                                                onMouseEnter={e => e.currentTarget.style.color = T.navyMid}
+                                                onMouseLeave={e => e.currentTarget.style.color = T.mutedDark}
+                                                title="Edit">
+                                                <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" /></svg>
+                                            </button>
+                                        )}
+                                        {(isReplyOwner || isModerator) && (
+                                            <button onClick={() => setDeleteReplyTarget(reply)}
+                                                style={{ width: 26, height: 26, borderRadius: 6, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.mutedDark, transition: 'all 0.15s' }}
+                                                onMouseEnter={e => e.currentTarget.style.color = T.red}
+                                                onMouseLeave={e => e.currentTarget.style.color = T.mutedDark}
+                                                title="Hapus">
+                                                <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
+                                            </button>
                                         )}
                                     </div>
                                 )}
@@ -396,8 +473,8 @@ export default function ForumShow({ topic }) {
                     <div style={{ padding: '18px 20px 16px', borderBottom: `1px solid ${T.borderSoft}`, background: `linear-gradient(to bottom, ${T.bg}, #fff)` }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
                             <h1 style={{ fontSize: 18, fontWeight: 800, color: T.navy, margin: '0 0 14px', letterSpacing: '-0.01em', lineHeight: 1.4, flex: 1 }}>{topic.title}</h1>
-                            {isTopicOwner && (
-                                <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                            <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                                {(isTopicOwner || isModerator) && (
                                     <button onClick={() => { topicForm.setData({ title: topic.title, content: topic.content, attachments: [], deleted_attachments: [] }); setEditTopic(true); }}
                                         style={{ width: 32, height: 32, borderRadius: 8, border: `1px solid ${T.border}`, background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s', color: T.mutedDark }}
                                         onMouseEnter={e => { e.currentTarget.style.background = T.navyLight; e.currentTarget.style.color = T.navyMid; }}
@@ -405,6 +482,8 @@ export default function ForumShow({ topic }) {
                                         title="Edit">
                                         <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" /></svg>
                                     </button>
+                                )}
+                                {(isTopicOwner || isModerator) && (
                                     <button onClick={() => setDeleteTopic(true)}
                                         style={{ width: 32, height: 32, borderRadius: 8, border: `1px solid ${T.border}`, background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s', color: T.mutedDark }}
                                         onMouseEnter={e => { e.currentTarget.style.background = T.redLight; e.currentTarget.style.color = T.red; }}
@@ -412,15 +491,18 @@ export default function ForumShow({ topic }) {
                                         title="Hapus">
                                         <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
                                     </button>
-                                </div>
-                            )}
+                                )}
+                            </div>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                             <div style={{ width: 36, height: 36, borderRadius: 10, background: T.navyMid, color: '#fff', fontSize: 14, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                                 {getInitials(topic.user?.name)}
                             </div>
                             <div>
-                                <div style={{ fontSize: 13.5, fontWeight: 700, color: T.navy }}>{topic.user?.name}</div>
+                                <div style={{ fontSize: 13.5, fontWeight: 700, color: T.navy, display: 'flex', alignItems: 'center' }}>
+                                    {topic.user?.name}
+                                    <BadgeModerator user={topic.user} />
+                                </div>
                                 <div style={{ fontSize: 11.5, color: T.muted }}>{formatDate(topic.created_at)}</div>
                             </div>
                             <div style={{ marginLeft: 'auto', padding: '3px 10px', borderRadius: 20, background: T.navyLight, border: `1px solid ${T.navyMid}22` }}>
@@ -644,22 +726,26 @@ export default function ForumShow({ topic }) {
             {/* Modal Hapus Topik */}
             <ConfirmModal
                 open={deleteTopic}
-                onClose={() => setDeleteTopic(false)}
+                onClose={() => { setDeleteTopic(false); setDeleteTopicReason(DELETION_REASONS[0]); setDeleteTopicCustom(''); }}
                 onConfirm={handleTopicDelete}
                 title="Hapus Topik"
                 message="Apakah Anda yakin ingin menghapus topik ini? Semua balasan juga akan dihapus."
                 processing={topicDeleteForm.processing}
-            />
+            >
+                {!isTopicOwner && <DeletionReasonSelector reason={deleteTopicReason} setReason={setDeleteTopicReason} custom={deleteTopicCustom} setCustom={setDeleteTopicCustom} />}
+            </ConfirmModal>
 
             {/* Modal Hapus Balasan */}
             <ConfirmModal
-                open={!!deleteReplyId}
-                onClose={() => setDeleteReplyId(null)}
+                open={!!deleteReplyTarget}
+                onClose={() => { setDeleteReplyTarget(null); setDeleteReplyReason(DELETION_REASONS[0]); setDeleteReplyCustom(''); }}
                 onConfirm={handleReplyDelete}
                 title="Hapus Balasan"
                 message="Apakah Anda yakin ingin menghapus balasan ini?"
                 processing={replyDeleteForm.processing}
-            />
+            >
+                {!isDeleteReplyOwner && <DeletionReasonSelector reason={deleteReplyReason} setReason={setDeleteReplyReason} custom={deleteReplyCustom} setCustom={setDeleteReplyCustom} />}
+            </ConfirmModal>
         </AuthenticatedLayout>
     );
 }

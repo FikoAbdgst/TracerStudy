@@ -11,7 +11,7 @@ class MouDocument extends Model
         'file_url',
         'status',
         'signed_at',
-        'expires_at'
+        'expires_at',
     ];
 
     public function company()

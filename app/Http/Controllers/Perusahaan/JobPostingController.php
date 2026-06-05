@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Perusahaan;
 
 use App\Http\Controllers\Controller;
 use App\Models\JobPosting;
+use App\Models\MasterCategory;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -12,14 +13,14 @@ class JobPostingController extends Controller
     public function index(Request $request)
     {
         $company = $request->user()->company;
-        if (!$company) {
+        if (! $company) {
             return redirect()->route('perusahaan.profile.edit')->with('message', 'Silakan lengkapi profil perusahaan Anda terlebih dahulu.');
         }
 
         $jobs = JobPosting::where('company_id', $company->id)->latest()->get();
 
         // 1. Ambil Master Data Keahlian
-        $keahlianCat = \App\Models\MasterCategory::with('items')->where('slug', 'keahlian')->first();
+        $keahlianCat = MasterCategory::with('items')->where('slug', 'keahlian')->first();
         $keahlianMaster = $keahlianCat ? $keahlianCat->items : [];
 
         return Inertia::render('Perusahaan/Lowongan/Index', [
@@ -66,7 +67,9 @@ class JobPostingController extends Controller
     {
         $company = $request->user()->company;
 
-        if ($job->company_id !== $company->id) abort(403);
+        if ($job->company_id !== $company->id) {
+            abort(403);
+        }
 
         if ($company->verification_status !== 'verified') {
             return back()->with('error', 'Izin posting dicabut. Anda tidak dapat mengubah status lowongan saat ini.');
@@ -95,12 +98,15 @@ class JobPostingController extends Controller
 
         ]);
         $job->update($validated);
+
         return back()->with('message', 'Lowongan berhasil diperbarui.');
     }
 
     public function destroy(JobPosting $job, Request $request)
     {
-        if ($job->company_id !== $request->user()->company->id) abort(403);
+        if ($job->company_id !== $request->user()->company->id) {
+            abort(403);
+        }
 
         $job->delete();
 
@@ -111,17 +117,20 @@ class JobPostingController extends Controller
     {
         $company = $request->user()->company;
 
-        if ($job->company_id !== $company->id) abort(403);
+        if ($job->company_id !== $company->id) {
+            abort(403);
+        }
 
         if ($company->verification_status !== 'verified') {
             return back()->with('error', 'Izin posting dicabut. Anda tidak dapat mengubah status lowongan saat ini.');
         }
 
         $job->update([
-            'is_active' => !$job->is_active
+            'is_active' => ! $job->is_active,
         ]);
 
         $statusMsg = $job->is_active ? 'dibuka' : 'ditutup';
+
         return back()->with('message', "Status lowongan berhasil {$statusMsg}.");
     }
 }

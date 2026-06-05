@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class AlumniProfile extends Model
 {
@@ -22,7 +22,7 @@ class AlumniProfile extends Model
         'experience',
         'skills',
         'cv_path',
-        'photo_path'
+        'photo_path',
     ];
 
     protected $casts = [

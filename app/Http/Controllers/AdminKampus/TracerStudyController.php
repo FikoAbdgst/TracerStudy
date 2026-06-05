@@ -13,8 +13,9 @@ class TracerStudyController extends Controller
     public function index()
     {
         $forms = TracerStudyForm::latest()->get();
+
         return Inertia::render('AdminKampus/TracerStudy/Index', [
-            'forms' => $forms
+            'forms' => $forms,
         ]);
     }
 
@@ -27,6 +28,7 @@ class TracerStudyController extends Controller
         ]);
 
         TracerStudyForm::create($validated);
+
         return back()->with('message', 'Form kuesioner berhasil dibuat.');
     }
 
@@ -39,18 +41,20 @@ class TracerStudyController extends Controller
         ]);
 
         $tracer->update($validated);
+
         return back()->with('message', 'Form kuesioner berhasil diperbarui.');
     }
 
     public function destroy(TracerStudyForm $tracer)
     {
         $tracer->delete();
+
         return back()->with('message', 'Form dihapus.');
     }
 
     public function toggleActive(TracerStudyForm $tracer)
     {
-        if (!$tracer->is_active) {
+        if (! $tracer->is_active) {
             TracerStudyForm::where('id', '!=', $tracer->id)->update(['is_active' => false]);
             $tracer->update(['is_active' => true]);
         } else {
@@ -59,6 +63,7 @@ class TracerStudyController extends Controller
 
         return back()->with('message', 'Status kuesioner berhasil diperbarui.');
     }
+
     public function responses(TracerStudyForm $tracer)
     {
         $responses = TracerStudyResponse::with('alumni.user')
@@ -68,7 +73,7 @@ class TracerStudyController extends Controller
 
         return Inertia::render('AdminKampus/TracerStudy/Responses', [
             'tracer' => $tracer,
-            'responses' => $responses
+            'responses' => $responses,
         ]);
     }
 }

@@ -5,10 +5,10 @@ namespace App\Http\Controllers\Perusahaan;
 use App\Http\Controllers\Controller;
 use App\Models\JobApplication;
 use App\Notifications\SystemNotification;
-use Illuminate\Http\Request;
-use Inertia\Inertia;
-use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
 
 class ApplicantController extends Controller
 {
@@ -16,7 +16,7 @@ class ApplicantController extends Controller
     {
         $company = Auth::user()->company;
 
-        if (!$company) {
+        if (! $company) {
             return redirect()->route('perusahaan.profile.edit')->with('error', 'Silakan lengkapi profil terlebih dahulu.');
         }
 
@@ -92,9 +92,9 @@ class ApplicantController extends Controller
             }
 
             $wSkill = ($job->weight_skill ?? 40) / 100;
-            $wEdu   = ($job->weight_education ?? 25) / 100;
-            $wExp   = ($job->weight_experience ?? 20) / 100;
-            $wAge   = ($job->weight_age ?? 15) / 100;
+            $wEdu = ($job->weight_education ?? 25) / 100;
+            $wExp = ($job->weight_experience ?? 20) / 100;
+            $wAge = ($job->weight_age ?? 15) / 100;
 
             $finalScore = ($skillScore * $wSkill) + ($eduScore * $wEdu) + ($expScore * $wExp) + ($ageScore * $wAge);
 
@@ -106,8 +106,9 @@ class ApplicantController extends Controller
                 'skill_match' => round($skillScore * 100),
                 'education' => round($eduScore * 100),
                 'experience' => round($expScore * 100),
-                'age' => round($ageScore * 100)
+                'age' => round($ageScore * 100),
             ];
+
             return $app;
         });
 
@@ -146,23 +147,23 @@ class ApplicantController extends Controller
         if ($lamaran->alumni && $lamaran->alumni->user) {
             $alumniUser = $lamaran->alumni->user;
 
-            $message = 'Status lamaran Anda untuk posisi ' . $lamaran->jobPosting->title . ' berubah menjadi: ' . strtoupper($validated['status']);
+            $message = 'Status lamaran Anda untuk posisi '.$lamaran->jobPosting->title.' berubah menjadi: '.strtoupper($validated['status']);
 
-            if (!empty($validated['notes'])) {
-                $message .= "\n\nPesan dari HRD:\n" . $validated['notes'];
+            if (! empty($validated['notes'])) {
+                $message .= "\n\nPesan dari HRD:\n".$validated['notes'];
             }
 
-            if ($validated['status'] === 'wawancara' && !empty($validated['interview_details'])) {
+            if ($validated['status'] === 'wawancara' && ! empty($validated['interview_details'])) {
                 $details = $validated['interview_details'];
                 $interviewMsg = "\n\n📅 Detail Panggilan Wawancara:";
-                if (!empty($details['scheduled_at'])) {
-                    $interviewMsg .= "\nJadwal: " . Carbon::parse($details['scheduled_at'])->translatedFormat('l, d F Y H:i');
+                if (! empty($details['scheduled_at'])) {
+                    $interviewMsg .= "\nJadwal: ".Carbon::parse($details['scheduled_at'])->translatedFormat('l, d F Y H:i');
                 }
-                if (!empty($details['location'])) {
-                    $interviewMsg .= "\nLokasi/Link: " . $details['location'];
+                if (! empty($details['location'])) {
+                    $interviewMsg .= "\nLokasi/Link: ".$details['location'];
                 }
-                if (!empty($details['notes'])) {
-                    $interviewMsg .= "\nCatatan: " . $details['notes'];
+                if (! empty($details['notes'])) {
+                    $interviewMsg .= "\nCatatan: ".$details['notes'];
                 }
                 $message .= $interviewMsg;
             }

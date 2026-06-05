@@ -19,6 +19,7 @@ class JobApplication extends Model
     {
         return $this->belongsTo(JobPosting::class);
     }
+
     public function alumni()
     {
         return $this->belongsTo(AlumniProfile::class, 'alumni_id');

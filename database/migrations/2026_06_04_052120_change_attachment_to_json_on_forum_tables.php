@@ -42,7 +42,9 @@ return new class extends Migration
         foreach ($rows as $row) {
             $value = $row->attachment;
             $decoded = json_decode($value, true);
-            if (is_array($decoded)) continue;
+            if (is_array($decoded)) {
+                continue;
+            }
             DB::table($table)
                 ->where('id', $row->id)
                 ->update(['attachment' => json_encode([$value])]);

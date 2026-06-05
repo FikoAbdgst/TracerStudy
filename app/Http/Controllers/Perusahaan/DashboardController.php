@@ -23,9 +23,9 @@ class DashboardController extends Controller
         ];
 
         return Inertia::render('Perusahaan/Dashboard', [
-            'company'          => $company,
-            'stats'            => $stats,
-            'recentApplicants' => [] // Nanti diisi dengan data pelamar dari database
+            'company' => $company,
+            'stats' => $stats,
+            'recentApplicants' => [], // Nanti diisi dengan data pelamar dari database
         ]);
     }
 }

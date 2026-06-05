@@ -10,8 +10,11 @@ class SystemNotification extends Notification
     use Queueable;
 
     protected string $title;
+
     protected string $message;
+
     protected string $url;
+
     protected string $type;
 
     public function __construct(

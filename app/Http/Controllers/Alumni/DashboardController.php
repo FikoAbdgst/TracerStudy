@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Alumni;
 
 use App\Http\Controllers\Controller;
-use App\Models\TracerStudyResponse;
 use App\Models\JobApplication;
+use App\Models\TracerStudyResponse;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 

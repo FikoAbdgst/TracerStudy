@@ -3,11 +3,12 @@
 namespace App\Http\Controllers\Alumni;
 
 use App\Http\Controllers\Controller;
+use App\Models\AlumniProfile;
+use App\Models\MasterCategory;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
-use Illuminate\Support\Facades\Auth;
-use App\Models\MasterCategory; // Pastikan import MasterCategory
+use Illuminate\Support\Facades\Auth; // Pastikan import MasterCategory
 use Illuminate\Support\Facades\Storage;
+use Inertia\Inertia;
 
 class AlumniProfileController extends Controller
 {
@@ -34,10 +35,10 @@ class AlumniProfileController extends Controller
         $validated = $request->validate([
             'nim' => 'required|string|max:50',
             'major' => 'nullable|string|max:255',
-            'graduation_year' => 'nullable|integer|min:1900|max:' . (date('Y') + 5),
+            'graduation_year' => 'nullable|integer|min:1900|max:'.(date('Y') + 5),
             'jenjang_pendidikan' => 'nullable|string|in:D3,S1,S2,S3',
 
-            'tanggal_lahir' => 'required|date|before_or_equal:' . $maxDate,
+            'tanggal_lahir' => 'required|date|before_or_equal:'.$maxDate,
 
             'phone_number' => 'nullable|string|max:20',
             'address' => 'required|string',
@@ -45,12 +46,12 @@ class AlumniProfileController extends Controller
             'experience' => 'required|integer|min:0',
             'skills' => 'nullable|array',
             'cv_file' => 'nullable|file|mimes:pdf|max:5120',
-            'photo_file' => 'nullable|file|mimes:png,jpg,jpeg|max:2048'
+            'photo_file' => 'nullable|file|mimes:png,jpg,jpeg|max:2048',
         ], [
             'tanggal_lahir.before_or_equal' => 'Maaf, usia Anda harus minimal 18 tahun untuk menggunakan sistem ini.',
             'tanggal_lahir.required' => 'Tanggal lahir wajib diisi.',
             'experience.required' => 'Pengalaman wajib diisi.',
-            'address.required' => 'Domisili wajib diisi.'
+            'address.required' => 'Domisili wajib diisi.',
         ]);
 
         $user = Auth::user();
@@ -77,7 +78,7 @@ class AlumniProfileController extends Controller
         } else {
             // Berjaga-jaga jika profil belum ada (meski harusnya sudah terbuat dari excel/register)
             $validated['user_id'] = $user->id;
-            \App\Models\AlumniProfile::create($validated);
+            AlumniProfile::create($validated);
         }
 
         return back()->with('message', 'Profil profesional berhasil diperbarui!');

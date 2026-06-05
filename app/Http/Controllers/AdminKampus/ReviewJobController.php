@@ -17,7 +17,7 @@ class ReviewJobController extends Controller
             ->get();
 
         return Inertia::render('AdminKampus/TinjauLowongan/Index', [
-            'jobs' => $jobs
+            'jobs' => $jobs,
         ]);
     }
 
@@ -25,6 +25,7 @@ class ReviewJobController extends Controller
     public function forceClose(JobPosting $job)
     {
         $job->update(['is_active' => false]);
+
         return back()->with('message', 'Lowongan kerja berhasil ditutup paksa.');
     }
 }

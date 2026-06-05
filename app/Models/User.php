@@ -14,7 +14,7 @@ use Spatie\Permission\Traits\HasRoles;
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable, HasRoles; // 2. WAJIB TAMBAHKAN 'HasRoles' DI SINI
+    use HasFactory, HasRoles, Notifiable; // 2. WAJIB TAMBAHKAN 'HasRoles' DI SINI
 
     /**
      * The attributes that are mass assignable.
@@ -34,6 +34,7 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
     // app/Models/User.php
     public function alumniProfile()
     {

@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\MasterCategory;
 use App\Models\MasterItem;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use Inertia\Inertia;
 
 class MasterDataController extends Controller
@@ -48,6 +47,7 @@ class MasterDataController extends Controller
         ]);
 
         MasterItem::create($validated);
+
         return back()->with('message', 'Data berhasil ditambahkan.');
     }
 
@@ -59,12 +59,14 @@ class MasterDataController extends Controller
         ]);
 
         $item->update($validated);
+
         return back()->with('message', 'Data berhasil diperbarui.');
     }
 
     public function destroyItem(MasterItem $item)
     {
         $item->delete();
+
         return back()->with('message', 'Data berhasil dihapus.');
     }
 
@@ -76,7 +78,7 @@ class MasterDataController extends Controller
 
         $category = MasterCategory::where('slug', 'keahlian')->first();
 
-        if (!$category) {
+        if (! $category) {
             return response()->json(['error' => 'Kategori Keahlian tidak ditemukan di Master Data.'], 404);
         }
 

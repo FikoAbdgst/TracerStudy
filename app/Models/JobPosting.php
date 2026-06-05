@@ -2,14 +2,14 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class JobPosting extends Model
 {
     use HasFactory;
-    protected $guarded = [];
 
+    protected $guarded = [];
 
     // File: app/Models/JobPosting.php
 
@@ -42,6 +42,7 @@ class JobPosting extends Model
         'is_active' => 'boolean',
         'requirements' => 'array', // Ubah menjadi array
     ];
+
     public function company()
     {
         return $this->belongsTo(Company::class);

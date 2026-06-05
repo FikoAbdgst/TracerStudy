@@ -3,10 +3,9 @@
 namespace App\Http\Controllers\AdminKampus;
 
 use App\Http\Controllers\Controller;
-use App\Models\MouDocument;
 use App\Models\Company;
+use App\Models\MouDocument;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 class MouController extends Controller
@@ -19,7 +18,7 @@ class MouController extends Controller
 
         return Inertia::render('AdminKampus/MoU/Index', [
             'mous' => $mous,
-            'companies' => $companies
+            'companies' => $companies,
         ]);
     }
 
@@ -53,6 +52,7 @@ class MouController extends Controller
     {
         // Ubah status menjadi terminated (Diakhiri)
         $mou->update(['status' => 'terminated']);
+
         return back()->with('message', 'Kerja sama (MoU) berhasil diakhiri.');
     }
 }

@@ -3,13 +3,13 @@
 namespace App\Http\Controllers\Alumni;
 
 use App\Http\Controllers\Controller;
-use App\Models\ForumTopic;
 use App\Models\ForumReply;
+use App\Models\ForumTopic;
 use App\Notifications\SystemNotification;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Inertia\Inertia;
 
 class ForumController extends Controller
 {
@@ -20,7 +20,7 @@ class ForumController extends Controller
         if ($search = $request->search) {
             $query->where(function ($q) use ($search) {
                 $q->where('title', 'like', "%{$search}%")
-                  ->orWhere('content', 'like', "%{$search}%");
+                    ->orWhere('content', 'like', "%{$search}%");
             });
         }
 
@@ -56,7 +56,7 @@ class ForumController extends Controller
         // Only Admin Kampus & Super Admin can create announcements
         if ($validated['is_announcement'] ?? false) {
             $user = Auth::user();
-            if (!$user->hasAnyRole(['Admin Kampus', 'Super Admin'])) {
+            if (! $user->hasAnyRole(['Admin Kampus', 'Super Admin'])) {
                 unset($validated['is_announcement']);
             }
         }
@@ -93,7 +93,7 @@ class ForumController extends Controller
         // Only Admin Kampus & Super Admin can toggle announcement
         if ($request->has('is_announcement')) {
             $user = Auth::user();
-            if (!$user->hasAnyRole(['Admin Kampus', 'Super Admin'])) {
+            if (! $user->hasAnyRole(['Admin Kampus', 'Super Admin'])) {
                 unset($validated['is_announcement']);
             }
         }
@@ -190,7 +190,9 @@ class ForumController extends Controller
 
     public function updateReply(Request $request, ForumTopic $forum, ForumReply $reply)
     {
-        if ($reply->forum_topic_id !== $forum->id) abort(404);
+        if ($reply->forum_topic_id !== $forum->id) {
+            abort(404);
+        }
         $this->authorize('update', $reply);
 
         $validated = $request->validate([
@@ -228,7 +230,9 @@ class ForumController extends Controller
 
     public function destroyReply(Request $request, ForumTopic $forum, ForumReply $reply)
     {
-        if ($reply->forum_topic_id !== $forum->id) abort(404);
+        if ($reply->forum_topic_id !== $forum->id) {
+            abort(404);
+        }
         $this->authorize('delete', $reply);
 
         if (Auth::id() !== $reply->user_id) {

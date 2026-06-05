@@ -1,27 +1,27 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
-use App\Http\Controllers\ProfileController;
-// Import Dashboard Controllers
-use App\Http\Controllers\SuperAdmin\MasterDataController;
-use App\Http\Controllers\SuperAdmin\DashboardController as SuperAdminDashboard;
-use App\Http\Controllers\SuperAdmin\UserController;
-use App\Http\Controllers\AdminKampus\DashboardController as AdminKampusDashboard;
 use App\Http\Controllers\AdminKampus\AlumniController;
-use App\Http\Controllers\AdminKampus\MouController;
+use App\Http\Controllers\AdminKampus\DashboardController as AdminKampusDashboard;
+use App\Http\Controllers\AdminKampus\MitraController;
+// Import Dashboard Controllers
 use App\Http\Controllers\AdminKampus\ReviewJobController;
 use App\Http\Controllers\AdminKampus\TracerStudyController;
-use App\Http\Controllers\AdminKampus\VerifyCompanyController;
 use App\Http\Controllers\Alumni\AlumniProfileController;
-use App\Http\Controllers\Alumni\TracerStudyController as AlumniTracerController;
 use App\Http\Controllers\Alumni\DashboardController as AlumniDashboard;
 use App\Http\Controllers\Alumni\ForumController;
 use App\Http\Controllers\Alumni\JobPortalController;
+use App\Http\Controllers\Alumni\TracerStudyController as AlumniTracerController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\Perusahaan\ApplicantController;
 use App\Http\Controllers\Perusahaan\CompanyProfileController;
 use App\Http\Controllers\Perusahaan\DashboardController as AdminPTDashboard;
 use App\Http\Controllers\Perusahaan\JobPostingController;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\SuperAdmin\DashboardController as SuperAdminDashboard;
+use App\Http\Controllers\SuperAdmin\MasterDataController;
+use App\Http\Controllers\SuperAdmin\UserController;
+use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
 
 Route::get('/', function () {
     return Inertia::render('Welcome');
@@ -33,13 +33,15 @@ Route::middleware('auth')->group(function () {
         if ($notification) {
             $notification->markAsRead();
             $url = $notification->data['url_redirect'] ?? route('dashboard');
+
             return redirect($url);
         }
+
         return back();
     })->name('notifications.read');
 
-    Route::get('/notifications', [\App\Http\Controllers\NotificationController::class, 'index'])->name('notifications.index');
-    Route::post('/notifications/read-all', [\App\Http\Controllers\NotificationController::class, 'readAll'])->name('notifications.read-all');
+    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::post('/notifications/read-all', [NotificationController::class, 'readAll'])->name('notifications.read-all');
 });
 
 // Rute Global untuk Menambah Master Data Item (Keahlian) secara dinamis
@@ -68,7 +70,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('/master-data/prodi/{prodi}', [MasterDataController::class, 'destroyProdi'])->name('master-data.prodi.destroy');
         Route::delete('/master-data/industry/{industry}', [MasterDataController::class, 'destroyIndustry'])->name('master-data.industry.destroy');
         Route::get('/master-data', [MasterDataController::class, 'index'])->name('master-data');
-        Route::put('/master-data/prodi/{prodi}',       [MasterDataController::class, 'updateProdi'])->name('master-data.prodi.update');
+        Route::put('/master-data/prodi/{prodi}', [MasterDataController::class, 'updateProdi'])->name('master-data.prodi.update');
         Route::put('/master-data/industry/{industry}', [MasterDataController::class, 'updateIndustry'])->name('master-data.industry.update');
         Route::get('/master-data', [MasterDataController::class, 'index'])->name('master-data');
 
@@ -100,15 +102,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::patch('/tracer-study/{tracer}/toggle', [TracerStudyController::class, 'toggleActive'])->name('tracer.toggle');
         Route::get('/tracer-study/{tracer}/responses', [TracerStudyController::class, 'responses'])->name('tracer.responses');
 
-        Route::get('/verifikasi-pt', [VerifyCompanyController::class, 'index'])->name('verify-pt');
-        Route::patch('/verifikasi-pt/{company}/status', [VerifyCompanyController::class, 'updateStatus'])->name('verify-pt.status');
-
         Route::get('/tinjau-lowongan', [ReviewJobController::class, 'index'])->name('tinjau-lowongan');
         Route::patch('/tinjau-lowongan/{job}/force-close', [ReviewJobController::class, 'forceClose'])->name('tinjau-lowongan.force-close');
 
-        Route::get('/mou', [MouController::class, 'index'])->name('mou.index');
-        Route::post('/mou', [MouController::class, 'store'])->name('mou.store');
-        Route::patch('/mou/{mou}/terminate', [MouController::class, 'terminate'])->name('mou.terminate');
+        Route::get('/mitra', [MitraController::class, 'index'])->name('mitra.index');
+        Route::post('/mitra', [MitraController::class, 'store'])->name('mitra.store');
+        Route::put('/mitra/{company}', [MitraController::class, 'update'])->name('mitra.update');
+        Route::delete('/mitra/{company}', [MitraController::class, 'destroy'])->name('mitra.destroy');
+        Route::patch('/mitra/{mou}/terminate', [MitraController::class, 'terminate'])->name('mitra.terminate');
     });
 
     // --- GRUP ADMIN PT (Perusahaan) ---
@@ -169,4 +170,4 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 });
 
-require __DIR__ . '/auth.php';
+require __DIR__.'/auth.php';

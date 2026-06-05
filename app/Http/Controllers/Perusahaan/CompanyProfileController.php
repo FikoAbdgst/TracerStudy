@@ -3,11 +3,12 @@
 namespace App\Http\Controllers\Perusahaan;
 
 use App\Http\Controllers\Controller;
+use App\Models\Company;
 use App\Models\MasterCategory;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Inertia\Inertia;
 
 class CompanyProfileController extends Controller
 {
@@ -15,7 +16,7 @@ class CompanyProfileController extends Controller
     {
         $company = Auth::user()->company;
 
-        if (!$company) {
+        if (! $company) {
             return response()->json(null, 404);
         }
 
@@ -80,7 +81,7 @@ class CompanyProfileController extends Controller
             $company->update($validated);
         } else {
             $validated['user_id'] = $request->user()->id;
-            \App\Models\Company::create($validated);
+            Company::create($validated);
         }
 
         return back()->with('message', 'Profil perusahaan dan logo berhasil diperbarui!');

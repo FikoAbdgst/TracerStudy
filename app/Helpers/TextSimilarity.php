@@ -7,8 +7,8 @@ class TextSimilarity
     /**
      * Menghitung Cosine Similarity menggunakan TF-IDF
      *
-     * @param string $text1 (Misal: Deskripsi Lowongan)
-     * @param string $text2 (Misal: Profil Kandidat)
+     * @param  string  $text1  (Misal: Deskripsi Lowongan)
+     * @param  string  $text2  (Misal: Profil Kandidat)
      * @return float Skor similarity (0.0 sampai 1.0)
      */
     public static function calculate(string $text1, string $text2): float
@@ -46,6 +46,7 @@ class TextSimilarity
         $text = strtolower($text);
         // Hapus karakter selain huruf dan spasi
         $text = preg_replace('/[^a-z\s]/', '', $text);
+
         // Hapus spasi berlebih
         return trim(preg_replace('/\s+/', ' ', $text));
     }
@@ -94,6 +95,7 @@ class TextSimilarity
         foreach ($tf as $word => $value) {
             $vector[$word] = $value * $idf[$word];
         }
+
         return $vector;
     }
 

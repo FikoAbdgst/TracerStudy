@@ -17,8 +17,11 @@ class ForumReply extends Model
 
     public function getAttachmentUrlsAttribute(): array
     {
-        if (!$this->attachment || !is_array($this->attachment)) return [];
-        return array_map(fn($path) => Storage::url($path), $this->attachment);
+        if (! $this->attachment || ! is_array($this->attachment)) {
+            return [];
+        }
+
+        return array_map(fn ($path) => Storage::url($path), $this->attachment);
     }
 
     protected static function booted()

@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class Company extends Model
 {
@@ -23,7 +23,7 @@ class Company extends Model
         'website',
         'logo_url',
         'verification_status',
-        'verified_at'
+        'verified_at',
     ];
 
     public function user()

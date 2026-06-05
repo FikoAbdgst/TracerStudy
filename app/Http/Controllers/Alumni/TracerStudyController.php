@@ -15,7 +15,7 @@ class TracerStudyController extends Controller
     {
         $alumniProfile = Auth::user()->alumniProfile;
 
-        if (!$alumniProfile) {
+        if (! $alumniProfile) {
             return redirect()->route('alumni.profile.edit')->with('error', 'Silakan lengkapi profil terlebih dahulu.');
         }
 
@@ -33,7 +33,7 @@ class TracerStudyController extends Controller
         // Lempar langsung ke halaman Kuesioner (Bypass)
         return Inertia::render('Alumni/Kuesioner/Index', [
             'kuesioner' => $activeForm,
-            'hasResponded' => $hasResponded
+            'hasResponded' => $hasResponded,
         ]);
     }
 
@@ -41,12 +41,12 @@ class TracerStudyController extends Controller
     {
         $alumniProfile = Auth::user()->alumniProfile;
 
-        if (!$kuesioner->is_active) {
+        if (! $kuesioner->is_active) {
             return back()->with('error', 'Kuesioner ini sudah tidak aktif.');
         }
 
         $request->validate([
-            'answers' => 'required|array'
+            'answers' => 'required|array',
         ]);
 
         TracerStudyResponse::updateOrCreate(
@@ -55,7 +55,7 @@ class TracerStudyController extends Controller
                 'tracer_study_form_id' => $kuesioner->id,
             ],
             [
-                'answers' => json_encode($request->answers)
+                'answers' => json_encode($request->answers),
             ]
         );
 

@@ -42,9 +42,9 @@ class HandleInertiaRequests extends Middleware
                 ] : null,
             ],
             'flash' => [
-                'message' => fn() => $request->session()->get('message'),
-                'error' => fn() => $request->session()->get('error'),
-                'duplicates' => fn() => $request->session()->get('duplicates'),
+                'message' => fn () => $request->session()->get('message'),
+                'error' => fn () => $request->session()->get('error'),
+                'duplicates' => fn () => $request->session()->get('duplicates'),
             ],
         ];
     }

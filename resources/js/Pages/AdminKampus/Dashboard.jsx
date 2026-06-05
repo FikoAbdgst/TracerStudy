@@ -144,7 +144,7 @@ const ActivityRow = ({ actor, action, time, type }) => {
 /* ─── Main ───────────────────────────────────────────────────────────────── */
 export default function Dashboard({ stats }) {
     const { auth } = usePage().props;
-    const metrics = stats ?? { totalAlumni: 0, pendingCompanies: 0, responseRate: 0, activeMoU: 0 };
+    const metrics = stats ?? { totalAlumni: 0, totalCompanies: 0, responseRate: 0, activeMoU: 0 };
     const today = new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
     return (
@@ -203,7 +203,7 @@ export default function Dashboard({ stats }) {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 14, marginBottom: 22 }}
                     className="lg:grid-cols-4">
                     <StatCard label="Total Alumni" value={metrics.totalAlumni} sub="Terdaftar aktif" icon="🎓" iconBg={T.orangeLight} iconColor={T.orange} accent delay={0.05} />
-                    <StatCard label="PT Belum Verifikasi" value={metrics.pendingCompanies} sub="Perlu ditinjau" icon="🏢" iconBg={T.navyLight} iconColor={T.navyMid} delay={0.10} />
+                    <StatCard label="Total Mitra" value={metrics.totalCompanies} sub="Perusahaan terdaftar" icon="🏢" iconBg={T.navyLight} iconColor={T.navyMid} delay={0.10} />
                     <StatCard label="Respons Kuesioner" value={`${metrics.responseRate}%`} sub="Dari total alumni" icon="📋" iconBg={T.orangeLight} iconColor={T.orange} delay={0.15} />
                     <StatCard label="MoU Aktif" value={metrics.activeMoU} sub="Kerja sama berjalan" icon="📄" iconBg={T.navyLight} iconColor={T.navyMid} delay={0.20} />
                 </div>
@@ -217,10 +217,10 @@ export default function Dashboard({ stats }) {
                             <div style={{ width: 22, height: 2.5, background: T.orange, borderRadius: 2 }} />
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-                            <QuickLink label="Verifikasi Perusahaan" desc="Tinjau PT menunggu persetujuan" href={route('adminkampus.verify-pt')} delay={0.25} />
+                            <QuickLink label="Manajemen Mitra" desc="Tambah & kelola perusahaan mitra" href={route('adminkampus.mitra.index')} delay={0.25} />
                             <QuickLink label="Data Alumni" desc="Lihat dan kelola data alumni" href={route('adminkampus.alumni.index')} delay={0.28} />
                             <QuickLink label="Kelola Kuesioner" desc="Buat & aktifkan tracer study" href={route('adminkampus.tracer')} delay={0.31} />
-                            <QuickLink label="Dokumen MoU" desc="Arsip kerja sama perusahaan" href={route('adminkampus.mou.index')} delay={0.34} />
+                            <QuickLink label="Tinjau Lowongan" desc="Review lowongan perusahaan" href={route('adminkampus.tinjau-lowongan')} delay={0.34} />
                         </div>
                     </div>
 
@@ -230,11 +230,11 @@ export default function Dashboard({ stats }) {
                             <span style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: T.navy }}>Aktivitas Terbaru</span>
                             <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20, background: T.orangeLight, color: T.orange }}>Hari ini</span>
                         </div>
-                        <ActivityRow actor="PT Teknologi Nusantara" action="mengajukan verifikasi perusahaan" time="1 jam lalu" type="create" />
-                        <ActivityRow actor="Admin Kampus" action="memverifikasi PT Solusi Digital" time="3 jam lalu" type="verify" />
+                        <ActivityRow actor="Mitra Baru" action="terdaftar melalui jalur kemitraan" time="1 jam lalu" type="create" />
+                        <ActivityRow actor="Admin Kampus" action="menambahkan perusahaan mitra baru" time="3 jam lalu" type="create" />
                         <ActivityRow actor="Alumni Baru" action="mendaftar ke sistem" time="4 jam lalu" type="create" />
                         <ActivityRow actor="Admin Kampus" action="mengupload dokumen MoU baru" time="kemarin" type="edit" />
-                        <ActivityRow actor="Admin Kampus" action="menolak PT yang tidak valid" time="kemarin" type="reject" />
+                        <ActivityRow actor="Admin Kampus" action="memperbarui data master" time="kemarin" type="edit" />
                         <div style={{ marginTop: 16, paddingTop: 14, borderTop: `1px solid ${T.borderSoft}`, textAlign: 'center', fontSize: 11, color: '#c8d5e3' }}>
                             Log aktivitas real tersedia setelah sistem aktif digunakan.
                         </div>

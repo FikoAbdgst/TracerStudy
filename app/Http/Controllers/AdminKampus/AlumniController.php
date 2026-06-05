@@ -15,8 +15,9 @@ class AlumniController extends Controller
     public function index()
     {
         $alumnis = AlumniProfile::with('user')->latest()->get();
+
         return Inertia::render('AdminKampus/Alumni/Index', [
-            'alumnis' => $alumnis
+            'alumnis' => $alumnis,
         ]);
     }
 
@@ -63,19 +64,24 @@ class AlumniController extends Controller
                 $tgl_lahir = $row[4] ?? null;
                 $graduation_year = $row[5] ?? null;
 
-                if (!$nim || !$name) continue;
+                if (! $nim || ! $name) {
+                    continue;
+                }
 
                 if (AlumniProfile::where('nim', $nim)->exists()) {
                     $duplicates[] = ['nim' => $nim, 'name' => $name, 'major' => $major];
+
                     continue;
                 }
 
                 $user = User::firstOrCreate(
-                    ['email' => $nim . '@alumni.kampus.ac.id'],
+                    ['email' => $nim.'@alumni.kampus.ac.id'],
                     ['name' => $name, 'password' => Hash::make($nim)]
                 );
 
-                if (!$user->hasRole('Alumni')) $user->assignRole('Alumni');
+                if (! $user->hasRole('Alumni')) {
+                    $user->assignRole('Alumni');
+                }
 
                 AlumniProfile::create([
                     'user_id' => $user->id,
@@ -95,11 +101,13 @@ class AlumniController extends Controller
             if (count($duplicates) > 0) {
                 return back()->with('message', "Import selesai. $count data berhasil ditambahkan.")->with('duplicates', $duplicates);
             }
+
             return back()->with('message', "Sukses! $count data alumni berhasil diimport.");
         } catch (\Exception $e) {
             DB::rollBack();
             fclose($fileHandle);
-            return back()->with('error', 'Terjadi kesalahan sistem: ' . $e->getMessage());
+
+            return back()->with('error', 'Terjadi kesalahan sistem: '.$e->getMessage());
         }
     }
 }

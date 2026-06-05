@@ -21,6 +21,7 @@ class NotificationController extends Controller
     public function readAll(Request $request)
     {
         $request->user()->unreadNotifications->markAsRead();
+
         return back()->with('message', 'Semua notifikasi telah ditandai dibaca.');
     }
 }

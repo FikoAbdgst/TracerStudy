@@ -21,9 +21,8 @@ const menuConfig = {
         { name: 'Dashboard', href: route('adminkampus.dashboard') },
         { name: 'Data Alumni', href: route('adminkampus.alumni.index') },
         { name: 'Tracer Study', href: route('adminkampus.tracer') },
-        { name: 'Verifikasi PT', href: route('adminkampus.verify-pt') },
+        { name: 'Manajemen Mitra', href: route('adminkampus.mitra.index') },
         { name: 'Tinjau Lowongan', href: route('adminkampus.tinjau-lowongan') },
-        { name: 'Dokumen MoU', href: route('adminkampus.mou.index') },
         { name: 'Ruang Diskusi', href: route('alumni.forum.index') },
     ],
     'Admin PT': [

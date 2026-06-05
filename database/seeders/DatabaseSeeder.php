@@ -2,27 +2,28 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
-use App\Models\Company;
-use App\Models\JobPosting;
 use App\Models\AlumniProfile;
-// Import Model Master Data Dinamis Baru
-use App\Models\MasterCategory;
-use App\Models\MasterItem;
-// Import Model untuk Ruang Diskusi Forum
-use App\Models\ForumTopic;
+use App\Models\Company;
 use App\Models\ForumReply;
+use App\Models\ForumTopic;
+// Import Model Master Data Dinamis Baru
+use App\Models\JobPosting;
+use App\Models\MasterCategory;
+// Import Model untuk Ruang Diskusi Forum
+use App\Models\MasterItem;
+use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str; // <-- Tambahkan Str
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 
 class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
         // 0. Bersihkan cache Spatie (Wajib saat seeding)
-        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+        app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
         // 1. Buat Role di sistem Spatie
         Role::firstOrCreate(['name' => 'Super Admin']);
@@ -31,20 +32,20 @@ class DatabaseSeeder extends Seeder
         Role::firstOrCreate(['name' => 'Alumni']);
 
         // 2. Buat Akun Super Admin & Admin Kampus
-        $superAdmin = User::create([
-            'name' => 'Super Administrator',
-            'email' => 'superadmin@sitami.ac.id',
-            'password' => Hash::make('password123'),
-            'role' => 'Super Admin',
-        ]);
+        $superAdmin = new User();
+        $superAdmin->name = 'Super Administrator';
+        $superAdmin->email = 'superadmin@sitami.ac.id';
+        $superAdmin->password = Hash::make('password123');
+        $superAdmin->role = 'Super Admin';
+        $superAdmin->save();
         $superAdmin->assignRole('Super Admin');
 
-        $adminKampus = User::create([
-            'name' => 'Biro Kemahasiswaan (Admin)',
-            'email' => 'adminkampus@sitami.ac.id',
-            'password' => Hash::make('password123'),
-            'role' => 'Admin Kampus',
-        ]);
+        $adminKampus = new User();
+        $adminKampus->name = 'Biro Kemahasiswaan (Admin)';
+        $adminKampus->email = 'adminkampus@sitami.ac.id';
+        $adminKampus->password = Hash::make('password123');
+        $adminKampus->role = 'Admin Kampus';
+        $adminKampus->save();
         $adminKampus->assignRole('Admin Kampus');
 
         // 3. Buat MASTER DATA DINAMIS (Sektor Industri & Program Studi)
@@ -76,7 +77,7 @@ class DatabaseSeeder extends Seeder
             'Digital Marketing',
             'Content Creation',
             'Inventory Management',
-            'Customer Service'
+            'Customer Service',
         ];
         foreach ($skills as $s) {
             MasterItem::create([
@@ -130,12 +131,12 @@ class DatabaseSeeder extends Seeder
         // 4. Buat Akun Perusahaan (Admin PT) & Lowongan Pekerjaan Bervariasi
 
         // --- PERUSAHAAN 1: Sektor IT ---
-        $hrdUser1 = User::create([
-            'name' => 'HRD PT Inovasi Dinamika Solusi',
-            'email' => 'hrd@inovasidinamika.com',
-            'password' => Hash::make('password123'),
-            'role' => 'Admin PT',
-        ]);
+        $hrdUser1 = new User();
+        $hrdUser1->name = 'HRD PT Inovasi Dinamika Solusi';
+        $hrdUser1->email = 'hrd@inovasidinamika.com';
+        $hrdUser1->password = Hash::make('password123');
+        $hrdUser1->role = 'Admin PT';
+        $hrdUser1->save();
         $hrdUser1->assignRole('Admin PT');
 
         $company1 = Company::create([
@@ -158,14 +159,13 @@ class DatabaseSeeder extends Seeder
             'is_active' => true,
         ]);
 
-
         // --- PERUSAHAAN 2: Sektor Perbankan & Keuangan (Non-IT) ---
-        $hrdUser2 = User::create([
-            'name' => 'HRD Bank Mandiri Sejahtera',
-            'email' => 'recruitment@mandirisejahtera.co.id',
-            'password' => Hash::make('password123'),
-            'role' => 'Admin PT',
-        ]);
+        $hrdUser2 = new User();
+        $hrdUser2->name = 'HRD Bank Mandiri Sejahtera';
+        $hrdUser2->email = 'recruitment@mandirisejahtera.co.id';
+        $hrdUser2->password = Hash::make('password123');
+        $hrdUser2->role = 'Admin PT';
+        $hrdUser2->save();
         $hrdUser2->assignRole('Admin PT');
 
         $company2 = Company::create([
@@ -188,14 +188,13 @@ class DatabaseSeeder extends Seeder
             'is_active' => true,
         ]);
 
-
         // --- PERUSAHAAN 3: Sektor Manufaktur / FMCG (Non-IT) ---
-        $hrdUser3 = User::create([
-            'name' => 'HRD PT Nusantara Food Industri',
-            'email' => 'career@nusantarafood.com',
-            'password' => Hash::make('password123'),
-            'role' => 'Admin PT',
-        ]);
+        $hrdUser3 = new User();
+        $hrdUser3->name = 'HRD PT Nusantara Food Industri';
+        $hrdUser3->email = 'career@nusantarafood.com';
+        $hrdUser3->password = Hash::make('password123');
+        $hrdUser3->role = 'Admin PT';
+        $hrdUser3->save();
         $hrdUser3->assignRole('Admin PT');
 
         $company3 = Company::create([
@@ -218,14 +217,13 @@ class DatabaseSeeder extends Seeder
             'is_active' => true,
         ]);
 
-
         // --- PERUSAHAAN 4: Sektor Media & Kreatif (Non-IT) ---
-        $hrdUser4 = User::create([
-            'name' => 'HRD Circle Media Group',
-            'email' => 'hr@circlemedia.id',
-            'password' => Hash::make('password123'),
-            'role' => 'Admin PT',
-        ]);
+        $hrdUser4 = new User();
+        $hrdUser4->name = 'HRD Circle Media Group';
+        $hrdUser4->email = 'hr@circlemedia.id';
+        $hrdUser4->password = Hash::make('password123');
+        $hrdUser4->role = 'Admin PT';
+        $hrdUser4->save();
         $hrdUser4->assignRole('Admin PT');
 
         $company4 = Company::create([
@@ -248,14 +246,13 @@ class DatabaseSeeder extends Seeder
             'is_active' => true,
         ]);
 
-
         // 5. Buat Akun & Profil Alumni
-        $alumni1 = User::create([
-            'name' => 'Fiko Abdigusti',
-            'email' => 'fiko@alumni.sitami.ac.id',
-            'password' => Hash::make('password123'),
-            'role' => 'Alumni',
-        ]);
+        $alumni1 = new User();
+        $alumni1->name = 'Fiko Abdigusti';
+        $alumni1->email = 'fiko@alumni.sitami.ac.id';
+        $alumni1->password = Hash::make('password123');
+        $alumni1->role = 'Alumni';
+        $alumni1->save();
         $alumni1->assignRole('Alumni');
 
         AlumniProfile::create([
@@ -271,12 +268,12 @@ class DatabaseSeeder extends Seeder
             'address' => 'Bandung, Jawa Barat',
         ]);
 
-        $alumni2 = User::create([
-            'name' => 'Zaky Hanif Testandy',
-            'email' => 'zaky@alumni.sitami.ac.id',
-            'password' => Hash::make('password123'),
-            'role' => 'Alumni',
-        ]);
+        $alumni2 = new User();
+        $alumni2->name = 'Zaky Hanif Testandy';
+        $alumni2->email = 'zaky@alumni.sitami.ac.id';
+        $alumni2->password = Hash::make('password123');
+        $alumni2->role = 'Alumni';
+        $alumni2->save();
         $alumni2->assignRole('Alumni');
 
         AlumniProfile::create([
@@ -291,7 +288,6 @@ class DatabaseSeeder extends Seeder
             'phone_number' => '089876543210',
             'address' => 'Jakarta Selatan',
         ]);
-
 
         // ==========================================
         // 6. SEED DATA: RUANG DISKUSI (FORUM)
@@ -318,7 +314,6 @@ class DatabaseSeeder extends Seeder
             'content' => 'Kombinasi yang bagus! Dari pihak kampus juga menyarankan untuk tetap melatih komunikasi verbal (mock interview) dan pastikan CV yang dikirimkan sinkron dengan apa yang diucapkan saat wawancara berlangsung. Semangat untuk para lulusan baru!',
         ]);
 
-
         // Diskusi 2: Topik Karier & Industri (Dibuat oleh Alumni 2)
         $topic2 = ForumTopic::create([
             'user_id' => $alumni2->id,
@@ -333,7 +328,6 @@ class DatabaseSeeder extends Seeder
             'user_id' => $alumni1->id,
             'content' => 'Kalau untuk tim kecil-menengah atau kejar target MVP (Minimum Viable Product), kombinasi Laravel + Inertia + React juara banget sih bang. Soalnya kita ga perlu pusing routing ganda dan handling state authentication yang ribet. Tapi kalau buat aplikasi mobile-ready ke depannya, emang mau ga mau harus dipisah ke pure REST API.',
         ]);
-
 
         // Diskusi 3: Informasi Umum tentang Sertifikasi (Dibuat oleh Admin Kampus)
         $topic3 = ForumTopic::create([

@@ -3,13 +3,13 @@
 namespace App\Http\Controllers\Alumni;
 
 use App\Http\Controllers\Controller;
-use App\Models\JobPosting;
 use App\Models\JobApplication;
+use App\Models\JobPosting;
 use App\Notifications\SystemNotification;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Inertia\Inertia;
 
 class JobPortalController extends Controller
 {
@@ -40,7 +40,7 @@ class JobPortalController extends Controller
     {
         $alumniProfile = Auth::user()->alumniProfile;
 
-        if (!$alumniProfile) {
+        if (! $alumniProfile) {
             return back()->with('error', 'Silakan lengkapi Profil Alumni Anda terlebih dahulu sebelum melamar.');
         }
 
@@ -60,7 +60,7 @@ class JobPortalController extends Controller
         if ($request->cv_option === 'upload') {
             $path = $request->file('cv_file')->store('cv_documents', 'public');
         } else {
-            if (!$alumniProfile->cv_path) {
+            if (! $alumniProfile->cv_path) {
                 return back()->with('error', 'Anda belum memiliki CV di profil. Silakan upload CV terlebih dahulu.');
             }
             $path = $alumniProfile->cv_path;
@@ -77,7 +77,7 @@ class JobPortalController extends Controller
             $hrdUser = $job->company->user;
             $hrdUser->notify(new SystemNotification(
                 'Lamaran Baru Masuk!',
-                $alumniProfile->user->name . ' telah melamar untuk posisi ' . $job->title,
+                $alumniProfile->user->name.' telah melamar untuk posisi '.$job->title,
                 route('perusahaan.pelamar'),
                 'job_application'
             ));
@@ -90,7 +90,7 @@ class JobPortalController extends Controller
     {
         $alumniProfile = Auth::user()->alumniProfile;
 
-        if (!$alumniProfile) {
+        if (! $alumniProfile) {
             return back()->with('error', 'Profil alumni tidak ditemukan.');
         }
 
@@ -103,7 +103,7 @@ class JobPortalController extends Controller
             ->where('alumni_id', $alumniProfile->id)
             ->first();
 
-        if (!$application) {
+        if (! $application) {
             return back()->with('error', 'Anda belum melamar untuk lowongan ini.');
         }
 
@@ -115,7 +115,7 @@ class JobPortalController extends Controller
             }
             $path = $request->file('cv_file')->store('cv_documents', 'public');
         } else {
-            if (!$alumniProfile->cv_path) {
+            if (! $alumniProfile->cv_path) {
                 return back()->with('error', 'Anda belum memiliki CV di profil.');
             }
             $path = $alumniProfile->cv_path;
@@ -134,7 +134,7 @@ class JobPortalController extends Controller
     {
         $alumniProfile = Auth::user()->alumniProfile;
 
-        if (!$alumniProfile) {
+        if (! $alumniProfile) {
             return redirect()->route('alumni.profile.edit')
                 ->with('message', 'Silakan lengkapi profil terlebih dahulu.');
         }

@@ -102,6 +102,9 @@ class ForumController extends Controller
 
         if ($request->deleted_attachments) {
             foreach ($request->deleted_attachments as $delPath) {
+                if (! in_array($delPath, $remaining)) {
+                    continue;
+                }
                 Storage::disk('public')->delete($delPath);
             }
             $remaining = array_values(array_diff($remaining, $request->deleted_attachments));
@@ -126,6 +129,8 @@ class ForumController extends Controller
     public function destroy(Request $request, ForumTopic $forum)
     {
         $this->authorize('delete', $forum);
+
+        $forum->load(['user', 'replies']);
 
         if (Auth::id() !== $forum->user_id) {
             $reason = $request->input('deletion_reason', 'Melanggar aturan forum');
@@ -207,6 +212,9 @@ class ForumController extends Controller
 
         if ($request->deleted_attachments) {
             foreach ($request->deleted_attachments as $delPath) {
+                if (! in_array($delPath, $remaining)) {
+                    continue;
+                }
                 Storage::disk('public')->delete($delPath);
             }
             $remaining = array_values(array_diff($remaining, $request->deleted_attachments));
@@ -234,6 +242,8 @@ class ForumController extends Controller
             abort(404);
         }
         $this->authorize('delete', $reply);
+
+        $reply->load('user');
 
         if (Auth::id() !== $reply->user_id) {
             $reason = $request->input('deletion_reason', 'Melanggar aturan forum');

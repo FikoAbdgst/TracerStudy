@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { Suspense, useState } from 'react';
 import { Head, useForm, usePage } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import InputError from '@/Components/InputError';
-import MapWidget from '@/Components/MapWidget';
 import { Badge } from '@/Components/ui/badge';
+
+const MapWidget = React.lazy(() => import('@/Components/MapWidget'));
 
 const T = {
     navy: '#0f1f3d', navyMid: '#1a3560', navyLight: '#e8f0fb',
@@ -226,11 +227,13 @@ export default function LokerIndex({ jobs, appliedJobIds, alumniProfile }) {
                                     )}
                                     {job.latitude && job.longitude && (
                                         <div style={{ marginTop: 8, borderRadius: 8, overflow: 'hidden' }}>
-                                            <MapWidget
-                                                latitude={parseFloat(job.latitude)}
-                                                longitude={parseFloat(job.longitude)}
-                                                height={120}
-                                            />
+                                            <Suspense fallback={<div style={{ height: 120, borderRadius: 8, background: '#f0f4f9' }} />}>
+                                                <MapWidget
+                                                    latitude={parseFloat(job.latitude)}
+                                                    longitude={parseFloat(job.longitude)}
+                                                    height={120}
+                                                />
+                                            </Suspense>
                                         </div>
                                     )}
                                 </div>

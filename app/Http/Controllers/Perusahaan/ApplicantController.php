@@ -123,6 +123,8 @@ class ApplicantController extends Controller
 
     public function updateStatus(Request $request, JobApplication $lamaran)
     {
+        $lamaran->load(['jobPosting', 'alumni.user']);
+
         $company = Auth::user()->company;
         if ($lamaran->jobPosting->company_id !== $company->id) {
             abort(403, 'Unauthorized action.');

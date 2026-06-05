@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { Suspense, useState } from 'react';
 import { Head } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Dialog, DialogContent } from '@/Components/ui/dialog';
-import LocationPicker from '@/Components/LocationPicker';
+
+const LocationPicker = React.lazy(() => import('@/Components/LocationPicker'));
 
 const T = {
     navy: '#0f1f3d', navyMid: '#1a3560', navyLight: '#e8f0fb',
@@ -236,13 +237,15 @@ export default function LamaranIndex({ applications }) {
                                     {/* Map */}
                                     {iv.interview_mode !== 'online' && (
                                         <>
-                                        <LocationPicker
-                                            latitude={iv.latitude ? parseFloat(iv.latitude) : null}
-                                            longitude={iv.longitude ? parseFloat(iv.longitude) : null}
-                                            label={iv.location || 'Lokasi Wawancara'}
-                                            height={180}
-                                            readOnly={true}
-                                        />
+                                        <Suspense fallback={<div style={{ height: 180, borderRadius: 9, background: '#f0f4f9' }} />}>
+                                            <LocationPicker
+                                                latitude={iv.latitude ? parseFloat(iv.latitude) : null}
+                                                longitude={iv.longitude ? parseFloat(iv.longitude) : null}
+                                                label={iv.location || 'Lokasi Wawancara'}
+                                                height={180}
+                                                readOnly={true}
+                                            />
+                                        </Suspense>
                                         {iv.latitude && iv.longitude && (
                                             <a href={`https://www.google.com/maps?q=${iv.latitude},${iv.longitude}`}
                                                 target="_blank" rel="noopener noreferrer"

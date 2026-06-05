@@ -1,10 +1,11 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { Suspense, useState, useRef, useEffect } from 'react';
 import { Head, useForm, router, usePage } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import InputError from '@/Components/InputError';
-import LocationPicker from '@/Components/LocationPicker';
 import axios from 'axios';
 import wilayahData from '@/Data/wilayah.json';
+
+const LocationPicker = React.lazy(() => import('@/Components/LocationPicker'));
 
 const T = {
     navy: '#0f1f3d', navyMid: '#1a3560', navyLight: '#e8f0fb',
@@ -749,9 +750,11 @@ export default function LowonganIndex({ jobs, company, isVerified, verificationS
                                     </div>
 
                                     {isResolvingAddress && <div style={{ fontSize: 11, color: T.mutedDark, marginBottom: 6 }}>⏳ Mencari alamat dari peta...</div>}
-                                    <LocationPicker latitude={data.latitude} longitude={data.longitude}
-                                        onLocationChange={(lat, lng) => { setData('latitude', lat); setData('longitude', lng); if (sameAsCompany) setSameAsCompany(false); }}
-                                        onAddressResolve={handleAddressResolve} onAddressData={handleAddressData} onResolvingChange={setIsResolvingAddress} height={200} />
+                                    <Suspense fallback={<div style={{ height: 200, borderRadius: 9, background: '#f0f4f9' }} />}>
+                                        <LocationPicker latitude={data.latitude} longitude={data.longitude}
+                                            onLocationChange={(lat, lng) => { setData('latitude', lat); setData('longitude', lng); if (sameAsCompany) setSameAsCompany(false); }}
+                                            onAddressResolve={handleAddressResolve} onAddressData={handleAddressData} onResolvingChange={setIsResolvingAddress} height={200} />
+                                    </Suspense>
                                 </>
                             )}
                         </FormSection>

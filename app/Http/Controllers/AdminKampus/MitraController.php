@@ -51,7 +51,7 @@ class MitraController extends Controller
             'verified_at' => now(),
         ]);
 
-        $path = $request->file('mou_document')->store('mou_documents', 'public');
+        $path = $request->file('mou_document')->store('mou_documents', 'local');
 
         MouDocument::create([
             'company_id' => $company->id,
@@ -87,7 +87,7 @@ class MitraController extends Controller
         $user->save();
 
         if ($request->hasFile('mou_document')) {
-            $path = $request->file('mou_document')->store('mou_documents', 'public');
+            $path = $request->file('mou_document')->store('mou_documents', 'local');
             MouDocument::create([
                 'company_id' => $company->id,
                 'file_url' => $path,

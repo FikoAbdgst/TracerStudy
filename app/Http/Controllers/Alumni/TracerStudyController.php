@@ -37,6 +37,33 @@ class TracerStudyController extends Controller
         ]);
     }
 
+    public function show(TracerStudyForm $kuesioner)
+    {
+        $alumniProfile = Auth::user()->alumniProfile;
+
+        if (! $alumniProfile) {
+            return redirect()->route('alumni.profile.edit')->with('error', 'Silakan lengkapi profil terlebih dahulu.');
+        }
+
+        $existingResponse = TracerStudyResponse::where('alumni_id', $alumniProfile->id)
+            ->where('tracer_study_form_id', $kuesioner->id)
+            ->value('answers');
+
+        $industries = [];
+        $category = \App\Models\MasterCategory::with('items')
+            ->where('slug', 'like', '%industri%')
+            ->first();
+        if ($category) {
+            $industries = $category->items;
+        }
+
+        return Inertia::render('Alumni/Kuesioner/Show', [
+            'tracerForm' => $kuesioner,
+            'industries' => $industries,
+            'existingResponse' => $existingResponse ? (is_string($existingResponse) ? json_decode($existingResponse, true) : $existingResponse) : null,
+        ]);
+    }
+
     public function store(Request $request, TracerStudyForm $kuesioner)
     {
         $alumniProfile = Auth::user()->alumniProfile;
@@ -60,5 +87,20 @@ class TracerStudyController extends Controller
         );
 
         return back()->with('message', 'Terima kasih telah mengisi Kuesioner Tracer Study!');
+    }
+
+    public function destroyResponse(TracerStudyForm $kuesioner)
+    {
+        $alumniProfile = Auth::user()->alumniProfile;
+
+        if (! $alumniProfile) {
+            return back()->with('error', 'Profil alumni tidak ditemukan.');
+        }
+
+        TracerStudyResponse::where('alumni_id', $alumniProfile->id)
+            ->where('tracer_study_form_id', $kuesioner->id)
+            ->delete();
+
+        return back()->with('message', 'Jawaban kuesioner berhasil dihapus.');
     }
 }

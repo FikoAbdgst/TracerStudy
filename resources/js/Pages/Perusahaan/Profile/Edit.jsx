@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
-import { Head, useForm, usePage } from '@inertiajs/react';
+import React, { Suspense, useState } from 'react';
+import { Head, useForm, router, usePage } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/Components/ui/select';
 import InputError from '@/Components/InputError';
-import LocationPicker from '@/Components/LocationPicker';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/Components/ui/select';
 
-import MapWidget from '@/Components/MapWidget';
+const LocationPicker = React.lazy(() => import('@/Components/LocationPicker'));
+const MapWidget = React.lazy(() => import('@/Components/MapWidget'));
 import wilayahData from '@/Data/wilayah.json';
 
 /* ─── Tokens ─────────────────────────────────────────────────────────────── */
@@ -267,15 +267,17 @@ const EditMode = ({ data, setData, errors, processing, submit, industries, compa
 
                 <div style={{ marginBottom: 14 }}>
                     <FieldLabel>Tandai Lokasi di Peta <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: '#94a3b8' }}>(opsional)</span></FieldLabel>
-                    <LocationPicker
-                        latitude={data.latitude}
-                        longitude={data.longitude}
-                        onLocationChange={onLocationChange}
-                        onAddressResolve={handleAddressResolve}
-                        onAddressData={handleAddressData}
-                        onResolvingChange={setIsResolvingAddress}
-                        height={280}
-                    />
+                    <Suspense fallback={<div style={{ height: 280, borderRadius: 9, background: '#f0f4f9' }} />}>
+                        <LocationPicker
+                            latitude={data.latitude}
+                            longitude={data.longitude}
+                            onLocationChange={onLocationChange}
+                            onAddressResolve={handleAddressResolve}
+                            onAddressData={handleAddressData}
+                            onResolvingChange={setIsResolvingAddress}
+                            height={280}
+                        />
+                    </Suspense>
                     <InputError message={errors.latitude} className="mt-1.5" />
                 </div>
 
@@ -356,12 +358,14 @@ const ViewMode = ({ profile }) => {
                 </div>
                 {profile?.latitude && profile?.longitude && (
                     <div style={{ marginTop: 16 }}>
-                        <MapWidget
-                            latitude={parseFloat(profile.latitude)}
-                            longitude={parseFloat(profile.longitude)}
-                            label={profile.name}
-                            height={220}
-                        />
+                        <Suspense fallback={<div style={{ height: 220, borderRadius: 9, background: '#f0f4f9' }} />}>
+                            <MapWidget
+                                latitude={parseFloat(profile.latitude)}
+                                longitude={parseFloat(profile.longitude)}
+                                label={profile.name}
+                                height={220}
+                            />
+                        </Suspense>
                     </div>
                 )}
             </Section>

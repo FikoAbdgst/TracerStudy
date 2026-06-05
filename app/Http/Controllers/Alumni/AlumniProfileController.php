@@ -67,9 +67,9 @@ class AlumniProfileController extends Controller
 
         if ($request->hasFile('cv_file')) {
             if ($alumni && $alumni->cv_path) {
-                Storage::disk('public')->delete($alumni->cv_path);
+                Storage::disk('local')->delete($alumni->cv_path);
             }
-            $validated['cv_path'] = $request->file('cv_file')->store('alumni_cvs', 'public');
+            $validated['cv_path'] = $request->file('cv_file')->store('alumni_cvs', 'local');
         }
         unset($validated['cv_file']);
 

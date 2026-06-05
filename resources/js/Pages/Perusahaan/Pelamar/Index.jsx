@@ -1,9 +1,10 @@
-import React, { useState, useMemo } from 'react';
+import React, { Suspense, useState, useMemo } from 'react';
 import { Head, useForm } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/Components/ui/select';
 import { Dialog, DialogContent } from '@/Components/ui/dialog';
-import LocationPicker from '@/Components/LocationPicker';
+
+const LocationPicker = React.lazy(() => import('@/Components/LocationPicker'));
 
 /* ─── Tokens ──────────────────────────────────────────────────────────────── */
 const T = {
@@ -912,16 +913,18 @@ export default function PelamarIndex({ applications, company }) {
                                             <div style={{ marginTop: 12 }}>
                                                 <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: T.mutedDark, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 7 }}>Pilih Lokasi di Peta</label>
                                                 <div className="location-picker-wrap">
-                                                    <LocationPicker
-                                                        latitude={statusForm.data.interview_details.latitude}
-                                                        longitude={statusForm.data.interview_details.longitude}
-                                                        onLocationChange={(lat, lng) => {
-                                                            setSameAsCompany(false);
-                                                            handleInterviewLocationChange(lat, lng);
-                                                        }}
-                                                        onAddressResolve={handleInterviewAddressResolve}
-                                                        height={180}
-                                                    />
+                                                    <Suspense fallback={<div style={{ height: 200, borderRadius: 9, background: '#f0f4f9' }} />}>
+                                                        <LocationPicker
+                                                            latitude={statusForm.data.interview_details.latitude}
+                                                            longitude={statusForm.data.interview_details.longitude}
+                                                            onLocationChange={(lat, lng) => {
+                                                                setSameAsCompany(false);
+                                                                handleInterviewLocationChange(lat, lng);
+                                                            }}
+                                                            onAddressResolve={handleInterviewAddressResolve}
+                                                            height={180}
+                                                        />
+                                                    </Suspense>
                                                 </div>
                                             </div>
                                         )}

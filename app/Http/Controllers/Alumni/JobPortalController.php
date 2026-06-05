@@ -38,6 +38,8 @@ class JobPortalController extends Controller
 
     public function apply(Request $request, JobPosting $job)
     {
+        $job->load('company.user');
+
         $alumniProfile = Auth::user()->alumniProfile;
 
         if (! $alumniProfile) {
@@ -58,7 +60,7 @@ class JobPortalController extends Controller
         }
 
         if ($request->cv_option === 'upload') {
-            $path = $request->file('cv_file')->store('cv_documents', 'public');
+            $path = $request->file('cv_file')->store('cv_documents', 'local');
         } else {
             if (! $alumniProfile->cv_path) {
                 return back()->with('error', 'Anda belum memiliki CV di profil. Silakan upload CV terlebih dahulu.');
@@ -110,10 +112,10 @@ class JobPortalController extends Controller
         $path = $application->cv_path;
 
         if ($request->cv_option === 'upload') {
-            if ($application->cv_path && Storage::disk('public')->exists($application->cv_path)) {
-                Storage::disk('public')->delete($application->cv_path);
+            if ($application->cv_path && Storage::disk('local')->exists($application->cv_path)) {
+                Storage::disk('local')->delete($application->cv_path);
             }
-            $path = $request->file('cv_file')->store('cv_documents', 'public');
+            $path = $request->file('cv_file')->store('cv_documents', 'local');
         } else {
             if (! $alumniProfile->cv_path) {
                 return back()->with('error', 'Anda belum memiliki CV di profil.');

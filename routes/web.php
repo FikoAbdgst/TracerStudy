@@ -16,6 +16,7 @@ use App\Http\Controllers\Perusahaan\ApplicantController;
 use App\Http\Controllers\Perusahaan\CompanyProfileController;
 use App\Http\Controllers\Perusahaan\DashboardController as AdminPTDashboard;
 use App\Http\Controllers\Perusahaan\JobPostingController;
+use App\Http\Controllers\PrivateFileController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SuperAdmin\DashboardController as SuperAdminDashboard;
 use App\Http\Controllers\SuperAdmin\MasterDataController;
@@ -28,6 +29,10 @@ Route::get('/', function () {
 });
 
 Route::middleware('auth')->group(function () {
+    Route::get('/storage/private/{path}', PrivateFileController::class)
+        ->where('path', '.*')
+        ->name('private-file');
+
     Route::post('/notifications/{id}/read', function ($id) {
         $notification = auth()->user()->notifications()->find($id);
         if ($notification) {

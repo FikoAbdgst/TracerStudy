@@ -6,11 +6,10 @@ use App\Models\AlumniProfile;
 use App\Models\Company;
 use App\Models\ForumReply;
 use App\Models\ForumTopic;
-// Import Model Master Data Dinamis Baru
 use App\Models\JobPosting;
 use App\Models\MasterCategory;
-// Import Model untuk Ruang Diskusi Forum
 use App\Models\MasterItem;
+use App\Models\MouDocument;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -246,6 +245,39 @@ class DatabaseSeeder extends Seeder
             'is_active' => true,
         ]);
 
+        // --- DOKUMEN MoU UNTUK MITRA AKTIF ---
+        MouDocument::create([
+            'company_id' => $company1->id,
+            'file_url' => 'mou/pt_inovasi_dinamika_solusi.pdf',
+            'status' => 'active',
+            'signed_at' => '2025-09-01',
+            'expires_at' => '2027-08-31',
+        ]);
+
+        MouDocument::create([
+            'company_id' => $company2->id,
+            'file_url' => 'mou/bank_mandiri_sejahtera.pdf',
+            'status' => 'active',
+            'signed_at' => '2025-10-15',
+            'expires_at' => '2027-10-14',
+        ]);
+
+        MouDocument::create([
+            'company_id' => $company3->id,
+            'file_url' => 'mou/nusantara_food_industri.pdf',
+            'status' => 'active',
+            'signed_at' => '2026-01-10',
+            'expires_at' => '2028-01-09',
+        ]);
+
+        MouDocument::create([
+            'company_id' => $company4->id,
+            'file_url' => 'mou/circle_media_group.pdf',
+            'status' => 'active',
+            'signed_at' => '2026-03-20',
+            'expires_at' => '2028-03-19',
+        ]);
+
         // 5. Buat Akun & Profil Alumni
         $alumni1 = new User();
         $alumni1->name = 'Fiko Abdigusti';
@@ -287,6 +319,70 @@ class DatabaseSeeder extends Seeder
             'skills' => ['System Analysis', 'ERP Development', 'PHP'],
             'phone_number' => '089876543210',
             'address' => 'Jakarta Selatan',
+        ]);
+
+        // --- ALUMNI TAMBAHAN AGAR DATA LEBIH BERVARIASI ---
+        $alumni3 = new User();
+        $alumni3->name = 'Rina Amalia';
+        $alumni3->email = 'rina@alumni.sitami.ac.id';
+        $alumni3->password = Hash::make('password123');
+        $alumni3->role = 'Alumni';
+        $alumni3->save();
+        $alumni3->assignRole('Alumni');
+
+        AlumniProfile::create([
+            'user_id' => $alumni3->id,
+            'nim' => '22020233',
+            'major' => 'Komputerisasi Akuntansi',
+            'jenjang_pendidikan' => 'D3',
+            'tanggal_lahir' => '2003-11-02',
+            'experience' => 1,
+            'graduation_year' => 2025,
+            'skills' => ['Microsoft Excel Advanced', 'Data Entry', 'Administrative Skills', 'MYOB'],
+            'phone_number' => '082145678901',
+            'address' => 'Bandung, Jawa Barat',
+        ]);
+
+        $alumni4 = new User();
+        $alumni4->name = 'Dimas Pratama';
+        $alumni4->email = 'dimas@alumni.sitami.ac.id';
+        $alumni4->password = Hash::make('password123');
+        $alumni4->role = 'Alumni';
+        $alumni4->save();
+        $alumni4->assignRole('Alumni');
+
+        AlumniProfile::create([
+            'user_id' => $alumni4->id,
+            'nim' => '21030078',
+            'major' => 'Teknik Informatika',
+            'jenjang_pendidikan' => 'S1',
+            'tanggal_lahir' => '2002-07-15',
+            'experience' => 3,
+            'graduation_year' => 2024,
+            'skills' => ['PHP', 'Laravel', 'System Analysis', 'ERP Development', 'React.js'],
+            'phone_number' => '085678901234',
+            'address' => 'Jakarta Selatan',
+        ]);
+
+        $alumni5 = new User();
+        $alumni5->name = 'Siti Nurhaliza';
+        $alumni5->email = 'siti@alumni.sitami.ac.id';
+        $alumni5->password = Hash::make('password123');
+        $alumni5->role = 'Alumni';
+        $alumni5->save();
+        $alumni5->assignRole('Alumni');
+
+        AlumniProfile::create([
+            'user_id' => $alumni5->id,
+            'nim' => '22040102',
+            'major' => 'Manajemen Informatika',
+            'jenjang_pendidikan' => 'D3',
+            'tanggal_lahir' => '2004-01-20',
+            'experience' => 1,
+            'graduation_year' => 2026,
+            'skills' => ['UI/UX Design', 'Digital Marketing', 'Content Creation', 'Tailwind CSS'],
+            'phone_number' => '081398765432',
+            'address' => 'Bandung, Jawa Barat',
         ]);
 
         // ==========================================

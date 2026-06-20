@@ -508,7 +508,6 @@ export default function TracerStudyIndex({ forms }) {
                                                 <SelectItem className="text-sm cursor-pointer px-3 py-2 outline-none data-[highlighted]:bg-slate-50" style={{ color: "#1e293b", background: "transparent" }} value="text">Teks Singkat</SelectItem>
                                                 <SelectItem className="text-sm cursor-pointer px-3 py-2 outline-none data-[highlighted]:bg-slate-50" style={{ color: "#1e293b", background: "transparent" }} value="textarea">Paragraf</SelectItem>
                                                 <SelectItem className="text-sm cursor-pointer px-3 py-2 outline-none data-[highlighted]:bg-slate-50" style={{ color: "#1e293b", background: "transparent" }} value="radio">Pilihan Ganda</SelectItem>
-                                                <SelectItem className="text-sm cursor-pointer px-3 py-2 outline-none data-[highlighted]:bg-slate-50" style={{ color: "#1e293b", background: "transparent" }} value="master_industry">Dropdown Industri</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>

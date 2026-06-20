@@ -11,6 +11,7 @@ use App\Http\Controllers\Alumni\DashboardController as AlumniDashboard;
 use App\Http\Controllers\Alumni\ForumController;
 use App\Http\Controllers\Alumni\JobPortalController;
 use App\Http\Controllers\Alumni\TracerStudyController as AlumniTracerController;
+use App\Http\Controllers\GuestController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\Perusahaan\ApplicantController;
 use App\Http\Controllers\Perusahaan\CompanyProfileController;
@@ -22,11 +23,8 @@ use App\Http\Controllers\SuperAdmin\DashboardController as SuperAdminDashboard;
 use App\Http\Controllers\SuperAdmin\MasterDataController;
 use App\Http\Controllers\SuperAdmin\UserController;
 use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
 
-Route::get('/', function () {
-    return Inertia::render('Welcome');
-});
+Route::get('/', [GuestController::class, 'index']);
 
 Route::middleware('auth')->group(function () {
     Route::get('/storage/private/{path}', PrivateFileController::class)

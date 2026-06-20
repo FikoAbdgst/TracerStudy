@@ -4,6 +4,7 @@ import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
 import GuestLayout from '@/Layouts/GuestLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
+import { Building2 } from 'lucide-react';
 
 export default function Register() {
     const { data, setData, post, processing, errors, reset } = useForm({
@@ -11,6 +12,7 @@ export default function Register() {
         email: '',
         password: '',
         password_confirmation: '',
+        company_name: '',
     });
 
     const submit = (e) => {
@@ -27,7 +29,7 @@ export default function Register() {
 
             <form onSubmit={submit}>
                 <div>
-                    <InputLabel htmlFor="name" value="Name" />
+                    <InputLabel htmlFor="name" value="Nama Lengkap" />
 
                     <TextInput
                         id="name"
@@ -61,6 +63,37 @@ export default function Register() {
                 </div>
 
                 <div className="mt-4">
+                    <InputLabel
+                        htmlFor="company_name"
+                        value="Nama Perusahaan"
+                    />
+
+                    <div className="relative mt-1">
+                        <TextInput
+                            id="company_name"
+                            name="company_name"
+                            value={data.company_name}
+                            className="block w-full pl-9"
+                            placeholder="Kosongkan jika alumni"
+                            autoComplete="organization"
+                            onChange={(e) =>
+                                setData('company_name', e.target.value)
+                            }
+                        />
+                        <Building2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                    </div>
+
+                    <p className="mt-1 text-xs text-gray-400">
+                        Isi jika mendaftar sebagai HRD perusahaan
+                    </p>
+
+                    <InputError
+                        message={errors.company_name}
+                        className="mt-2"
+                    />
+                </div>
+
+                <div className="mt-4">
                     <InputLabel htmlFor="password" value="Password" />
 
                     <TextInput
@@ -80,7 +113,7 @@ export default function Register() {
                 <div className="mt-4">
                     <InputLabel
                         htmlFor="password_confirmation"
-                        value="Confirm Password"
+                        value="Konfirmasi Password"
                     />
 
                     <TextInput
@@ -102,17 +135,20 @@ export default function Register() {
                     />
                 </div>
 
-                <div className="mt-4 flex items-center justify-end">
+                <div className="mt-6">
+                    <PrimaryButton className="w-full justify-center" disabled={processing}>
+                        {processing ? 'Mendaftarkan...' : 'Daftar'}
+                    </PrimaryButton>
+                </div>
+
+                <div className="mt-4 text-center text-sm text-gray-500">
+                    Sudah punya akun?{' '}
                     <Link
                         href={route('login')}
-                        className="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                        className="font-medium text-indigo-600 underline hover:text-indigo-500"
                     >
-                        Already registered?
+                        Masuk
                     </Link>
-
-                    <PrimaryButton className="ms-4" disabled={processing}>
-                        Register
-                    </PrimaryButton>
                 </div>
             </form>
         </GuestLayout>

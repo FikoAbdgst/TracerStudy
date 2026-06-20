@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\Company;
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
@@ -26,20 +27,42 @@ class RegisteredUserController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|lowercase|email|max:255|unique:'.User::class,
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
+            'company_name' => 'nullable|string|max:255',
         ]);
 
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-        ]);
+        $user = new User();
+        $user->name = $request->name;
+        $user->email = $request->email;
+        $user->password = Hash::make($request->password);
 
-        $user->assignRole('Alumni');
+        if ($request->filled('company_name')) {
+            $user->role = 'Admin PT';
+        } else {
+            $user->role = 'Alumni';
+        }
+
+        $user->save();
+
+        if ($request->filled('company_name')) {
+            $user->assignRole('Admin PT');
+
+            Company::create([
+                'user_id' => $user->id,
+                'name' => $request->company_name,
+                'verification_status' => 'pending',
+            ]);
+        } else {
+            $user->assignRole('Alumni');
+        }
 
         event(new Registered($user));
 
         Auth::login($user);
 
-        return redirect(route('dashboard', absolute: false));
+        if ($request->filled('company_name')) {
+            return redirect(route('perusahaan.dashboard'));
+        }
+
+        return redirect(route('alumni.dashboard'));
     }
 }

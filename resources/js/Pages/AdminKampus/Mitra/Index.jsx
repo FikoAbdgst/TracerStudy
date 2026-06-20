@@ -30,10 +30,10 @@ const statusLabel = {
 const formatDate = (d) =>
     d
         ? new Intl.DateTimeFormat('id-ID', {
-              day: '2-digit',
-              month: 'short',
-              year: 'numeric',
-          }).format(new Date(d))
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+        }).format(new Date(d))
         : '—';
 
 export default function MitraIndex({ companies }) {
@@ -163,7 +163,7 @@ export default function MitraIndex({ companies }) {
                                     Tambah Mitra Baru
                                 </Button>
                             </DialogTrigger>
-                            <DialogContent className="sm:max-w-md">
+                            <DialogContent className="sm:max-w-md bg-white">
                                 <DialogHeader>
                                     <DialogTitle>{editTarget ? 'Edit Mitra' : 'Tambah Mitra Baru'}</DialogTitle>
                                 </DialogHeader>

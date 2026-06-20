@@ -1,0 +1,267 @@
+import React, { useState } from 'react';
+import { Head, Link, router } from '@inertiajs/react';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/Components/ui/select';
+
+const T = {
+    navy: '#0f1f3d', navyMid: '#1a3560', navyLight: '#e8f0fb',
+    orange: '#f97316', orangeLight: '#fff7ed',
+    border: '#e2e8f0', borderSoft: '#f1f5f9', bg: '#f8fafc', bgAlt: '#f0f4f8',
+    muted: '#94a3b8', mutedDark: '#64748b',
+    green: '#16a34a', greenLight: '#f0fdf4',
+    red: '#dc2626', redLight: '#fff1f2',
+    purple: '#7c3aed', purpleLight: '#f5f3ff',
+};
+
+const AlumniCard = ({ alumni }) => {
+    const p = alumni;
+    const totalSkills = p.skills?.length ?? 0;
+
+    return (
+        <Link href={route('perusahaan.talent-pool.show', p.id)} style={{ textDecoration: 'none', color: 'inherit' }}>
+            <div style={{
+                background: '#fff', borderRadius: 14, border: `1px solid ${T.borderSoft}`,
+                padding: '20px', transition: 'all 0.2s', cursor: 'pointer', height: '100%',
+                boxShadow: '0 1px 4px rgba(26,53,96,0.05)',
+                display: 'flex', flexDirection: 'column', gap: 12,
+            }}
+                onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 16px rgba(26,53,96,0.12)'; e.currentTarget.style.borderColor = T.orange; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+                onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 1px 4px rgba(26,53,96,0.05)'; e.currentTarget.style.borderColor = T.borderSoft; e.currentTarget.style.transform = 'none'; }}
+            >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{
+                        width: 44, height: 44, borderRadius: 12,
+                        background: `linear-gradient(135deg, ${T.navyMid}, ${T.navy})`,
+                        color: '#fff', fontSize: 17, fontWeight: 800,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                    }}>
+                        {(p.user?.name || '?').charAt(0).toUpperCase()}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: T.navy, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {p.user?.name}
+                        </div>
+                        <div style={{ fontSize: 11.5, color: T.mutedDark, marginTop: 2 }}>
+                            {p.major || '—'}{p.jenjang_pendidikan ? ` (${p.jenjang_pendidikan})` : ''}
+                        </div>
+                    </div>
+                </div>
+
+                <div style={{ fontSize: 11.5, color: T.muted, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                    <span>🎓 {p.graduation_year || '—'}</span>
+                    <span>💼 {p.experience !== null ? `${p.experience} thn` : '—'}</span>
+                    {p.tanggal_lahir && <span>📅 {new Date(p.tanggal_lahir).toLocaleDateString('id-ID')}</span>}
+                </div>
+
+                {totalSkills > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                        {p.skills.slice(0, 4).map(s => (
+                            <span key={s} style={{
+                                fontSize: 10.5, fontWeight: 600, padding: '2px 8px', borderRadius: 12,
+                                background: T.navyLight, color: T.navyMid,
+                            }}>
+                                {s}
+                            </span>
+                        ))}
+                        {totalSkills > 4 && (
+                            <span style={{ fontSize: 10.5, fontWeight: 600, padding: '2px 8px', borderRadius: 12, background: T.borderSoft, color: T.mutedDark }}>
+                                +{totalSkills - 4}
+                            </span>
+                        )}
+                    </div>
+                )}
+
+                <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', gap: 6, paddingTop: 8, borderTop: `1px solid ${T.borderSoft}` }}>
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: T.green }} />
+                    <span style={{ fontSize: 11, fontWeight: 600, color: T.green }}>Open to Work</span>
+                </div>
+            </div>
+        </Link>
+    );
+};
+
+export default function TalentPoolIndex({ alumni, filters, skills, majors, company }) {
+    const [search, setSearch] = useState(filters?.search || '');
+    const [skill, setSkill] = useState(filters?.skill || '');
+    const [major, setMajor] = useState(filters?.major || '');
+
+    const applyFilters = () => {
+        router.get(route('perusahaan.talent-pool'), { search, skill, major }, { preserveState: true, replace: true });
+    };
+
+    const clearFilters = () => {
+        setSearch('');
+        setSkill('');
+        setMajor('');
+        router.get(route('perusahaan.talent-pool'), {}, { preserveState: true, replace: true });
+    };
+
+    const hasFilters = search || skill || major;
+
+    return (
+        <AuthenticatedLayout
+            header={
+                <div>
+                    <h2 style={{ fontSize: 17, fontWeight: 800, color: T.navy, margin: 0 }}>Bakat Potensial</h2>
+                    <p style={{ fontSize: 12, color: T.muted, margin: '3px 0 0' }}>Temukan kandidat alumni SITAMI yang membuka diri untuk peluang kerja</p>
+                </div>
+            }
+        >
+            <Head title="Bakat Potensial — SITAMI" />
+            <style>{`
+                @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+                .tp-root * { font-family: 'Plus Jakarta Sans', sans-serif; }
+
+                @keyframes cardIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+                @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+                .tp-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+                    gap: 16px;
+                }
+                @media (max-width: 640px) {
+                    .tp-grid { grid-template-columns: 1fr; }
+                }
+
+                .salary-thumb::-webkit-slider-thumb { appearance: none; width: 20px; height: 20px; border-radius: 50%; background: #f97316; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.2); cursor: pointer; }
+                .salary-thumb::-moz-range-thumb { width: 20px; height: 20px; border-radius: 50%; background: #f97316; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.2); cursor: pointer; }
+            `}</style>
+
+            <div className="tp-root" style={{ maxWidth: 1100, margin: '0 auto', padding: '0 2px' }}>
+
+                {/* ── Filter Bar ── */}
+                <div style={{
+                    background: '#fff', borderRadius: 14, border: `1px solid ${T.borderSoft}`,
+                    padding: '16px 20px', marginBottom: 18,
+                    boxShadow: '0 1px 4px rgba(26,53,96,0.05)',
+                }}>
+                    <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                        <div style={{ flex: '1 1 220px', minWidth: 160 }}>
+                            <label style={{ display: 'block', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: T.mutedDark, marginBottom: 4 }}>Cari Nama</label>
+                            <input value={search} onChange={e => setSearch(e.target.value)} onKeyDown={e => e.key === 'Enter' && applyFilters()}
+                                placeholder="Ketik nama alumni..."
+                                style={{
+                                    height: 38, padding: '0 12px', border: `1.5px solid ${T.border}`, borderRadius: 9,
+                                    background: T.bg, color: T.navy, fontSize: 13, outline: 'none',
+                                    width: '100%', boxSizing: 'border-box', fontFamily: 'inherit',
+                                }}
+                                onFocus={e => { e.target.style.borderColor = T.navyMid; e.target.style.background = '#fff'; }}
+                                onBlur={e => { e.target.style.borderColor = T.border; e.target.style.background = T.bg; }}
+                            />
+                        </div>
+
+                        <div style={{ minWidth: 150, flex: '0 1 180px' }}>
+                            <label style={{ display: 'block', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: T.mutedDark, marginBottom: 4 }}>Keahlian</label>
+                            <Select value={skill} onValueChange={v => setSkill(v === '__all__' ? '' : v)}>
+                                <SelectTrigger style={{ height: 38, fontSize: 13, borderRadius: 9, borderColor: T.border, background: T.bg, fontFamily: 'inherit' }}>
+                                    <SelectValue placeholder="Semua Keahlian" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="__all__">Semua Keahlian</SelectItem>
+                                    {skills.map(s => (
+                                        <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <div style={{ minWidth: 150, flex: '0 1 180px' }}>
+                            <label style={{ display: 'block', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: T.mutedDark, marginBottom: 4 }}>Program Studi</label>
+                            <Select value={major} onValueChange={v => setMajor(v === '__all__' ? '' : v)}>
+                                <SelectTrigger style={{ height: 38, fontSize: 13, borderRadius: 9, borderColor: T.border, background: T.bg, fontFamily: 'inherit' }}>
+                                    <SelectValue placeholder="Semua Prodi" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="__all__">Semua Prodi</SelectItem>
+                                    {majors.map(m => (
+                                        <SelectItem key={m} value={m}>{m}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: 8, paddingBottom: 1 }}>
+                            <button onClick={applyFilters}
+                                style={{
+                                    height: 38, padding: '0 18px', borderRadius: 9, border: 'none',
+                                    background: T.orange, color: '#fff', fontSize: 12.5, fontWeight: 700,
+                                    cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
+                                    boxShadow: '0 2px 6px rgba(249,115,22,0.2)',
+                                }}>
+                                Cari
+                            </button>
+                            {hasFilters && (
+                                <button onClick={clearFilters}
+                                    style={{
+                                        height: 38, padding: '0 14px', borderRadius: 9, border: `1.5px solid ${T.border}`,
+                                        background: '#fff', color: T.mutedDark, fontSize: 12.5, fontWeight: 600,
+                                        cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
+                                    }}>
+                                Reset
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* ── Results ── */}
+                {alumni.data?.length > 0 ? (
+                    <>
+                        <div style={{ fontSize: 12, color: T.muted, marginBottom: 12, fontWeight: 600 }}>
+                            Menampilkan {alumni.from}–{alumni.to} dari {alumni.total} kandidat
+                        </div>
+                        <div className="tp-grid" style={{ animation: 'cardIn 0.35s ease-out both' }}>
+                            {alumni.data.map(a => (
+                                <div key={a.id} style={{ animation: `cardIn 0.35s ${Math.random() * 0.1}s ease-out both` }}>
+                                    <AlumniCard alumni={a} />
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* ── Pagination ── */}
+                        {alumni.last_page > 1 && (
+                            <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 24 }}>
+                                {alumni.links.filter(l => !isNaN(l.label)).map((link, i) => (
+                                    <button key={i} onClick={() => link.url && router.get(link.url, {}, { preserveState: true, replace: true })}
+                                        disabled={!link.url}
+                                        style={{
+                                            height: 34, minWidth: 34, padding: '0 10px', borderRadius: 8, border: link.active ? 'none' : `1.5px solid ${T.border}`,
+                                            background: link.active ? T.orange : '#fff', color: link.active ? '#fff' : T.navyMid,
+                                            fontSize: 12.5, fontWeight: 700, cursor: link.url ? 'pointer' : 'default',
+                                            fontFamily: 'inherit', transition: 'all 0.15s',
+                                        }}>
+                                        {link.label}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </>
+                ) : (
+                    <div style={{
+                        textAlign: 'center', padding: '60px 20px', background: '#fff', borderRadius: 14,
+                        border: `1px solid ${T.borderSoft}`,
+                    }}>
+                        <div style={{ fontSize: 40, marginBottom: 12 }}>🔍</div>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: T.navy, marginBottom: 6 }}>Tidak ada kandidat ditemukan</div>
+                        <p style={{ fontSize: 12.5, color: T.mutedDark, lineHeight: 1.6, maxWidth: 360, margin: '0 auto' }}>
+                            {hasFilters
+                                ? 'Coba ubah kata kunci atau filter pencarian Anda untuk mendapatkan hasil yang lebih luas.'
+                                : 'Belum ada alumni yang mengaktifkan status Open to Work. Alumni perlu mengaktifkannya di profil mereka.'}
+                        </p>
+                        {hasFilters && (
+                            <button onClick={clearFilters}
+                                style={{
+                                    marginTop: 14, height: 38, padding: '0 20px', borderRadius: 9, border: 'none',
+                                    background: T.orange, color: '#fff', fontSize: 12.5, fontWeight: 700,
+                                    cursor: 'pointer', fontFamily: 'inherit',
+                                }}>
+                                Reset Filter
+                            </button>
+                        )}
+                    </div>
+                )}
+            </div>
+        </AuthenticatedLayout>
+    );
+}

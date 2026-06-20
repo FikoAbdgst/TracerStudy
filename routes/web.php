@@ -17,6 +17,7 @@ use App\Http\Controllers\Perusahaan\ApplicantController;
 use App\Http\Controllers\Perusahaan\CompanyProfileController;
 use App\Http\Controllers\Perusahaan\DashboardController as AdminPTDashboard;
 use App\Http\Controllers\Perusahaan\JobPostingController;
+use App\Http\Controllers\Perusahaan\TalentPoolController;
 use App\Http\Controllers\PrivateFileController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SuperAdmin\DashboardController as SuperAdminDashboard;
@@ -135,6 +136,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Rute untuk mengubah status lamaran
         Route::patch('/pelamar/{lamaran}/status', [ApplicantController::class, 'updateStatus'])->name('pelamar.status');
+
+        Route::get('/talent-pool', [TalentPoolController::class, 'index'])->name('talent-pool');
+        Route::get('/talent-pool/{alumni}', [TalentPoolController::class, 'show'])->name('talent-pool.show');
     });
 
     // --- GRUP ALUMNI ---
@@ -148,7 +152,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // 3. Kuesioner Tracer Study
         Route::get('/kuesioner', [AlumniTracerController::class, 'index'])->name('kuesioner');
-        Route::get('/kuesioner/{kuesioner}', [AlumniTracerController::class, 'show'])->name('kuesioner.show');
         Route::post('/kuesioner/{kuesioner}', [AlumniTracerController::class, 'store'])->name('kuesioner.store');
         Route::delete('/kuesioner/{kuesioner}/response', [AlumniTracerController::class, 'destroyResponse'])->name('kuesioner.destroy-response');
 

@@ -140,6 +140,24 @@ const ViewMode = ({ profile, data }) => {
                     )}
                 </div>
             </ViewSection>
+
+            <ViewSection title="Ketersediaan" icon="🔍" delay={0.16}>
+                <div style={{ padding: '14px 0 6px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div style={{
+                            width: 12, height: 12, borderRadius: '50%',
+                            background: data.is_open_to_work ? T.green : T.muted,
+                            flexShrink: 0,
+                        }} />
+                        <span style={{ fontSize: 13.5, fontWeight: 600, color: data.is_open_to_work ? T.green : T.mutedDark }}>
+                            {data.is_open_to_work ? 'Terbuka untuk peluang kerja (Open to Work)' : 'Tidak sedang mencari peluang kerja'}
+                        </span>
+                    </div>
+                    <div style={{ fontSize: 12, color: T.mutedDark, marginTop: 2 }}>
+                        Status pekerjaan: <strong>{data.employment_status || 'Belum diisi'}</strong>
+                    </div>
+                </div>
+            </ViewSection>
         </div>
     );
 };
@@ -472,6 +490,68 @@ const EditMode = ({ data, setData, errors, processing, submit, programStudis, ma
                 <InputError className="mt-2" message={errors.skills} />
             </Section>
 
+            {/* ── Status Pekerjaan ── */}
+            <Section title="Status Pekerjaan" icon="💼" delay={0.115}>
+                <div style={{ padding: '12px 0 4px' }}>
+                    <FieldLabel>Apa status Anda saat ini?</FieldLabel>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {[
+                            { value: 'Bekerja', label: 'Bekerja', icon: '💼' },
+                            { value: 'Mencari Kerja', label: 'Mencari Kerja', icon: '🔍' },
+
+                            { value: 'Wiraswasta', label: 'Wiraswasta', icon: '🚀' },
+                        ].map(opt => (
+                            <label key={opt.value} style={{
+                                display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
+                                padding: '10px 14px', borderRadius: 9,
+                                border: `1.5px solid ${data.employment_status === opt.value ? T.orange : T.border}`,
+                                background: data.employment_status === opt.value ? T.orangeLight : T.bg,
+                                transition: 'all 0.15s',
+                            }}>
+                                <input type="radio" name="employment_status" value={opt.value}
+                                    checked={data.employment_status === opt.value}
+                                    onChange={e => setData('employment_status', e.target.value)}
+                                    style={{ width: 16, height: 16, accentColor: T.orange, flexShrink: 0 }}
+                                />
+                                <span style={{ fontSize: 13, fontWeight: data.employment_status === opt.value ? 700 : 500, color: data.employment_status === opt.value ? T.orange : T.navy }}>
+                                    {opt.icon} {opt.label}
+                                </span>
+                            </label>
+                        ))}
+                    </div>
+                    <InputError className="mt-2" message={errors.employment_status} />
+                </div>
+            </Section>
+
+            {/* ── Open to Work Toggle ── */}
+            <Section title="Ketersediaan" icon="🔍" delay={0.12}>
+                <div style={{ padding: '12px 0 4px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+                    <div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: T.navy }}>Saya terbuka untuk tawaran pekerjaan</div>
+                        <div style={{ fontSize: 11.5, color: T.muted, marginTop: 3, lineHeight: 1.5 }}>
+                            Alumni yang mengaktifkan ini akan muncul di pencarian <strong>Bakat Potensial</strong> perusahaan mitra.
+                        </div>
+                    </div>
+                    <button type="button" onClick={() => setData('is_open_to_work', !data.is_open_to_work)}
+                        style={{
+                            position: 'relative', flexShrink: 0, width: 48, height: 26, borderRadius: 13, border: 'none',
+                            cursor: 'pointer', transition: 'all 0.25s',
+                            background: data.is_open_to_work ? T.green : T.border,
+                            padding: 0, fontFamily: 'inherit', outline: 'none',
+                        }}>
+                        <div style={{
+                            position: 'absolute', top: 3, left: data.is_open_to_work ? 24 : 3,
+                            width: 20, height: 20, borderRadius: '50%', background: '#fff',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
+                            transition: 'left 0.25s cubic-bezier(0.22,1,0.36,1)',
+                        }} />
+                    </button>
+                </div>
+                <div style={{ fontSize: 11, color: data.is_open_to_work ? T.green : T.muted, fontWeight: 600, marginTop: 2 }}>
+                    {data.is_open_to_work ? '✓ Aktif — profil Anda akan muncul di hasil pencarian perusahaan' : '— Tidak ditampilkan di pencarian perusahaan'}
+                </div>
+            </Section>
+
             {/* ── Dokumen Pelengkap ── */}
             <Section title="Dokumen Pelengkap" icon="📄" delay={0.13}>
                 <FieldLabel>Upload CV (PDF Maksimal 5MB)</FieldLabel>
@@ -552,6 +632,8 @@ export default function EditProfile({ profile, programStudis = [], keahlianMaste
         experience: profile?.experience || '',
         skills: profile?.skills || [],
         cv_file: null,
+        is_open_to_work: profile?.is_open_to_work ?? false,
+        employment_status: profile?.employment_status || '',
     });
 
     const isComplete = !!(

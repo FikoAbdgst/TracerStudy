@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AlumniProfile;
 use App\Models\MasterCategory;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth; // Pastikan import MasterCategory
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
@@ -17,7 +17,6 @@ class AlumniProfileController extends Controller
         $user = Auth::user();
         $alumni = $user->alumniProfile;
 
-        // Ambil Master Data untuk Program Studi dan Keahlian
         $prodiCategory = MasterCategory::with('items')->where('slug', 'program-studi')->first();
         $skillCategory = MasterCategory::with('items')->where('slug', 'keahlian')->first();
 
@@ -47,6 +46,8 @@ class AlumniProfileController extends Controller
             'skills' => 'nullable|array',
             'cv_file' => 'nullable|file|mimes:pdf|max:5120',
             'photo_file' => 'nullable|file|mimes:png,jpg,jpeg|max:2048',
+            'is_open_to_work' => 'boolean',
+            'employment_status' => 'nullable|string|in:Bekerja,Mencari Kerja,Wiraswasta',
         ], [
             'tanggal_lahir.before_or_equal' => 'Maaf, usia Anda harus minimal 18 tahun untuk menggunakan sistem ini.',
             'tanggal_lahir.required' => 'Tanggal lahir wajib diisi.',
@@ -76,7 +77,6 @@ class AlumniProfileController extends Controller
         if ($alumni) {
             $alumni->update($validated);
         } else {
-            // Berjaga-jaga jika profil belum ada (meski harusnya sudah terbuat dari excel/register)
             $validated['user_id'] = $user->id;
             AlumniProfile::create($validated);
         }

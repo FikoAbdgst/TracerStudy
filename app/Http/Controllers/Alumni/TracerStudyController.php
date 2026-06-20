@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Alumni;
 
 use App\Http\Controllers\Controller;
+use App\Models\AlumniProfile;
+use App\Models\MasterCategory;
 use App\Models\TracerStudyForm;
 use App\Models\TracerStudyResponse;
 use Illuminate\Http\Request;
@@ -19,48 +21,28 @@ class TracerStudyController extends Controller
             return redirect()->route('alumni.profile.edit')->with('error', 'Silakan lengkapi profil terlebih dahulu.');
         }
 
-        // Langsung tarik SATU-SATUNYA kuesioner yang statusnya Aktif
         $activeForm = TracerStudyForm::where('is_active', true)->latest()->first();
 
-        // Cek apakah alumni ini sudah pernah mengisi form tersebut
-        $hasResponded = false;
+        $existingResponse = null;
         if ($activeForm) {
-            $hasResponded = TracerStudyResponse::where('alumni_id', $alumniProfile->id)
+            $existingResponse = TracerStudyResponse::where('alumni_id', $alumniProfile->id)
                 ->where('tracer_study_form_id', $activeForm->id)
-                ->exists();
+                ->first();
         }
-
-        // Lempar langsung ke halaman Kuesioner (Bypass)
-        return Inertia::render('Alumni/Kuesioner/Index', [
-            'kuesioner' => $activeForm,
-            'hasResponded' => $hasResponded,
-        ]);
-    }
-
-    public function show(TracerStudyForm $kuesioner)
-    {
-        $alumniProfile = Auth::user()->alumniProfile;
-
-        if (! $alumniProfile) {
-            return redirect()->route('alumni.profile.edit')->with('error', 'Silakan lengkapi profil terlebih dahulu.');
-        }
-
-        $existingResponse = TracerStudyResponse::where('alumni_id', $alumniProfile->id)
-            ->where('tracer_study_form_id', $kuesioner->id)
-            ->value('answers');
 
         $industries = [];
-        $category = \App\Models\MasterCategory::with('items')
+        $category = MasterCategory::with('items')
             ->where('slug', 'like', '%industri%')
             ->first();
         if ($category) {
             $industries = $category->items;
         }
 
-        return Inertia::render('Alumni/Kuesioner/Show', [
-            'tracerForm' => $kuesioner,
+        return Inertia::render('Alumni/Kuesioner/Index', [
+            'kuesioner' => $activeForm,
+            'existingResponse' => $existingResponse,
+            'profile' => $alumniProfile,
             'industries' => $industries,
-            'existingResponse' => $existingResponse ? (is_string($existingResponse) ? json_decode($existingResponse, true) : $existingResponse) : null,
         ]);
     }
 
@@ -68,12 +50,27 @@ class TracerStudyController extends Controller
     {
         $alumniProfile = Auth::user()->alumniProfile;
 
+        if (! $alumniProfile) {
+            return back()->with('error', 'Profil alumni tidak ditemukan.');
+        }
+
         if (! $kuesioner->is_active) {
             return back()->with('error', 'Kuesioner ini sudah tidak aktif.');
         }
 
-        $request->validate([
-            'answers' => 'required|array',
+        $validated = $request->validate([
+            'status_pekerjaan' => 'required|string|in:Bekerja,Mencari Kerja,Wiraswasta',
+            'nama_perusahaan' => 'nullable|string|max:255',
+            'kesesuaian_bidang' => 'nullable|string|max:255',
+            'answers' => 'nullable|array',
+        ]);
+
+        $isOpen = $validated['status_pekerjaan'] === 'Mencari Kerja';
+
+        $alumniProfile->update([
+            'employment_status' => $validated['status_pekerjaan'],
+            'company_name' => $validated['nama_perusahaan'] ?? $alumniProfile->company_name,
+            'is_open_to_work' => $isOpen,
         ]);
 
         TracerStudyResponse::updateOrCreate(
@@ -82,11 +79,14 @@ class TracerStudyController extends Controller
                 'tracer_study_form_id' => $kuesioner->id,
             ],
             [
-                'answers' => json_encode($request->answers),
+                'status_pekerjaan' => $validated['status_pekerjaan'],
+                'nama_perusahaan' => $validated['nama_perusahaan'] ?? null,
+                'kesesuaian_bidang' => $validated['kesesuaian_bidang'] ?? null,
+                'answers' => $validated['answers'] ?? [],
             ]
         );
 
-        return back()->with('message', 'Terima kasih telah mengisi Kuesioner Tracer Study!');
+        return redirect()->route('alumni.kuesioner')->with('message', 'Terima kasih telah mengisi Kuesioner Tracer Study!');
     }
 
     public function destroyResponse(TracerStudyForm $kuesioner)

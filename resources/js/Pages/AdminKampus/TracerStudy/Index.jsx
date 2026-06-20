@@ -458,6 +458,34 @@ export default function TracerStudyIndex({ forms }) {
                         </div>
                     </div>
 
+                    {/* ── PERTANYAAN WAJIB SISTEM (LOCKED) ── */}
+                    <div style={{ marginBottom: 20, padding: '16px 18px', borderRadius: 10, background: '#fffbeb', border: `1.5px solid #fed7aa` }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+                            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#d97706" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" /></svg>
+                            <span style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em', color: '#92400e' }}>
+                                Preview Pertanyaan Wajib Sistem (Statis)
+                            </span>
+                            <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 12, background: '#fed7aa', color: '#92400e' }}>LOCKED</span>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                            <div style={{ padding: '10px 14px', borderRadius: 8, background: '#fff', border: `1px solid #fde68a` }}>
+                                <div style={{ fontSize: 11, fontWeight: 700, color: '#92400e', marginBottom: 2 }}>Q1 — Status Pekerjaan Saat Ini <span style={{ color: '#ef4444' }}>*</span></div>
+                                <div style={{ fontSize: 12.5, color: T.mutedDark }}>Pilihan: Bekerja / Mencari Kerja / Wiraswasta</div>
+                            </div>
+                            <div style={{ padding: '10px 14px', borderRadius: 8, background: '#fff', border: `1px solid #fde68a` }}>
+                                <div style={{ fontSize: 11, fontWeight: 700, color: '#92400e', marginBottom: 2 }}>Q2 — Nama Perusahaan / Instansi / Usaha</div>
+                                <div style={{ fontSize: 12.5, color: T.mutedDark }}>Input teks (opsional jika tidak bekerja)</div>
+                            </div>
+                            <div style={{ padding: '10px 14px', borderRadius: 8, background: '#fff', border: `1px solid #fde68a` }}>
+                                <div style={{ fontSize: 11, fontWeight: 700, color: '#92400e', marginBottom: 2 }}>Q3 — Kesesuaian Bidang Ilmu dengan Pekerjaan</div>
+                                <div style={{ fontSize: 12.5, color: T.mutedDark }}>Pilihan: Sesuai / Cukup Sesuai / Kurang Sesuai / Tidak Sesuai (muncul jika status = Bekerja/Wiraswasta)</div>
+                            </div>
+                        </div>
+                        <div style={{ fontSize: 11, color: '#b45309', marginTop: 10, fontStyle: 'italic' }}>
+                            ⚠️ Pertanyaan di atas bersifat bawaan sistem dan tidak dapat diubah. Jawaban alumni akan otomatis menyimpan ke profil alumni dan laporan.
+                        </div>
+                    </div>
+
                     <div>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

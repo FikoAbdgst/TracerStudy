@@ -552,6 +552,81 @@ const EditMode = ({ data, setData, errors, processing, submit, programStudis, ma
                 </div>
             </Section>
 
+            {/* ── Pengaturan Privasi ── */}
+            <Section title="Pengaturan Privasi" icon="🔒" delay={0.125}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: '4px 0' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+                        <div>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: T.navy }}>Sembunyikan Nomor Telepon WhatsApp</div>
+                            <div style={{ fontSize: 11.5, color: T.muted, marginTop: 3, lineHeight: 1.5 }}>
+                                Perusahaan tidak dapat melihat nomor WhatsApp Anda di halaman Bakat Potensial.
+                            </div>
+                        </div>
+                        <button type="button" onClick={() => setData('privacy_hide_phone', !data.privacy_hide_phone)}
+                            style={{
+                                position: 'relative', flexShrink: 0, width: 48, height: 26, borderRadius: 13, border: 'none',
+                                cursor: 'pointer', transition: 'all 0.25s',
+                                background: data.privacy_hide_phone ? T.orange : T.border,
+                                padding: 0, fontFamily: 'inherit', outline: 'none',
+                            }}>
+                            <div style={{
+                                position: 'absolute', top: 3, left: data.privacy_hide_phone ? 24 : 3,
+                                width: 20, height: 20, borderRadius: '50%', background: '#fff',
+                                boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
+                                transition: 'left 0.25s cubic-bezier(0.22,1,0.36,1)',
+                            }} />
+                        </button>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+                        <div>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: T.navy }}>Sembunyikan Alamat / Domisili Lengkap</div>
+                            <div style={{ fontSize: 11.5, color: T.muted, marginTop: 3, lineHeight: 1.5 }}>
+                                Perusahaan tidak dapat melihat alamat dan domisili Anda di halaman Bakat Potensial.
+                            </div>
+                        </div>
+                        <button type="button" onClick={() => setData('privacy_hide_address', !data.privacy_hide_address)}
+                            style={{
+                                position: 'relative', flexShrink: 0, width: 48, height: 26, borderRadius: 13, border: 'none',
+                                cursor: 'pointer', transition: 'all 0.25s',
+                                background: data.privacy_hide_address ? T.orange : T.border,
+                                padding: 0, fontFamily: 'inherit', outline: 'none',
+                            }}>
+                            <div style={{
+                                position: 'absolute', top: 3, left: data.privacy_hide_address ? 24 : 3,
+                                width: 20, height: 20, borderRadius: '50%', background: '#fff',
+                                boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
+                                transition: 'left 0.25s cubic-bezier(0.22,1,0.36,1)',
+                            }} />
+                        </button>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+                        <div>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: T.navy }}>Izinkan Dicari di Chat Percakapan Baru</div>
+                            <div style={{ fontSize: 11.5, color: T.muted, marginTop: 3, lineHeight: 1.5 }}>
+                                Alumni lain, Admin Kampus, dan HRD dapat menemukan dan memulai chat dengan Anda.
+                            </div>
+                        </div>
+                        <button type="button" onClick={() => setData('privacy_allow_search', !data.privacy_allow_search)}
+                            style={{
+                                position: 'relative', flexShrink: 0, width: 48, height: 26, borderRadius: 13, border: 'none',
+                                cursor: 'pointer', transition: 'all 0.25s',
+                                background: data.privacy_allow_search ? T.orange : T.border,
+                                padding: 0, fontFamily: 'inherit', outline: 'none',
+                            }}>
+                            <div style={{
+                                position: 'absolute', top: 3, left: data.privacy_allow_search ? 24 : 3,
+                                width: 20, height: 20, borderRadius: '50%', background: '#fff',
+                                boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
+                                transition: 'left 0.25s cubic-bezier(0.22,1,0.36,1)',
+                            }} />
+                        </button>
+                    </div>
+                </div>
+                <div style={{ fontSize: 11, color: T.muted, marginTop: 8, fontStyle: 'italic' }}>
+                    Pengaturan ini hanya berlaku untuk tampilan di halaman <strong>Bakat Potensial</strong> perusahaan mitra. Data Anda tetap aman di sistem.
+                </div>
+            </Section>
+
             {/* ── Dokumen Pelengkap ── */}
             <Section title="Dokumen Pelengkap" icon="📄" delay={0.13}>
                 <FieldLabel>Upload CV (PDF Maksimal 5MB)</FieldLabel>
@@ -634,6 +709,9 @@ export default function EditProfile({ profile, programStudis = [], keahlianMaste
         cv_file: null,
         is_open_to_work: profile?.is_open_to_work ?? false,
         employment_status: profile?.employment_status || '',
+        privacy_hide_phone: profile?.privacy_hide_phone ?? false,
+        privacy_hide_address: profile?.privacy_hide_address ?? false,
+        privacy_allow_search: profile?.privacy_allow_search ?? false,
     });
 
     const isComplete = !!(

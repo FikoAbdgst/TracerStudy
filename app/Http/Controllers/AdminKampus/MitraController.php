@@ -51,7 +51,7 @@ class MitraController extends Controller
             'verified_at' => now(),
         ]);
 
-        $path = $request->file('mou_document')->store('mou_documents', 'local');
+        $path = $request->file('mou_document')->storeAs('mou_documents', preg_replace('/[^a-zA-Z0-9._-]/', '_', $request->file('mou_document')->getClientOriginalName()), 'local');
 
         MouDocument::create([
             'company_id' => $company->id,
@@ -75,7 +75,7 @@ class MitraController extends Controller
     {
         $validated = $request->validate([
             'company_name' => 'required|string|max:255',
-            'hr_email' => 'required|string|email|max:255|unique:users,email,' . $company->user_id,
+            'hr_email' => 'required|string|email|max:255|unique:users,email,'.$company->user_id,
             'mou_document' => 'nullable|file|mimes:pdf|max:5120',
         ]);
 
@@ -87,7 +87,7 @@ class MitraController extends Controller
         $user->save();
 
         if ($request->hasFile('mou_document')) {
-            $path = $request->file('mou_document')->store('mou_documents', 'local');
+            $path = $request->file('mou_document')->storeAs('mou_documents', preg_replace('/[^a-zA-Z0-9._-]/', '_', $request->file('mou_document')->getClientOriginalName()), 'local');
             MouDocument::create([
                 'company_id' => $company->id,
                 'file_url' => $path,

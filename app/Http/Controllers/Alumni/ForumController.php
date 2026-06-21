@@ -48,7 +48,7 @@ class ForumController extends Controller
         if ($request->hasFile('attachments')) {
             $paths = [];
             foreach ($request->file('attachments') as $file) {
-                $paths[] = $file->store('forum_attachments', 'public');
+                $paths[] = $file->storeAs('forum_attachments', preg_replace('/[^a-zA-Z0-9._-]/', '_', $file->getClientOriginalName()), 'public');
             }
             $validated['attachment'] = $paths;
         }
@@ -113,7 +113,7 @@ class ForumController extends Controller
         if ($request->hasFile('attachments')) {
             $paths = [];
             foreach ($request->file('attachments') as $file) {
-                $paths[] = $file->store('forum_attachments', 'public');
+                $paths[] = $file->storeAs('forum_attachments', preg_replace('/[^a-zA-Z0-9._-]/', '_', $file->getClientOriginalName()), 'public');
             }
             $validated['attachment'] = array_merge($remaining, $paths);
         } else {
@@ -179,7 +179,7 @@ class ForumController extends Controller
         if ($request->hasFile('attachments')) {
             $paths = [];
             foreach ($request->file('attachments') as $file) {
-                $paths[] = $file->store('forum_attachments', 'public');
+                $paths[] = $file->storeAs('forum_attachments', preg_replace('/[^a-zA-Z0-9._-]/', '_', $file->getClientOriginalName()), 'public');
             }
             $data['attachment'] = $paths;
         }
@@ -223,7 +223,7 @@ class ForumController extends Controller
         if ($request->hasFile('attachments')) {
             $paths = [];
             foreach ($request->file('attachments') as $file) {
-                $paths[] = $file->store('forum_attachments', 'public');
+                $paths[] = $file->storeAs('forum_attachments', preg_replace('/[^a-zA-Z0-9._-]/', '_', $file->getClientOriginalName()), 'public');
             }
             $validated['attachment'] = array_merge($remaining, $paths);
         } else {

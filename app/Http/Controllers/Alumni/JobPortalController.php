@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Alumni;
 
 use App\Http\Controllers\Controller;
+use App\Models\Conversation;
 use App\Models\JobApplication;
 use App\Models\JobPosting;
 use App\Notifications\SystemNotification;
@@ -29,9 +30,18 @@ class JobPortalController extends Controller
             ? JobApplication::where('alumni_id', $alumniProfile->id)->pluck('job_posting_id')->toArray()
             : [];
 
+        // Ambil conversation IDs untuk lowongan yang sudah dilamar (untuk tombol "Lanjutkan Obrolan")
+        $appliedConversationIds = $alumniProfile
+            ? Conversation::whereIn('job_posting_id', $appliedJobIds)
+                ->whereHas('participants', fn ($q) => $q->where('user_id', $user->id))
+                ->pluck('id', 'job_posting_id')
+                ->toArray()
+            : [];
+
         return Inertia::render('Alumni/Loker/Index', [
             'jobs' => $jobs,
             'appliedJobIds' => $appliedJobIds,
+            'appliedConversationIds' => $appliedConversationIds,
             'alumniProfile' => $alumniProfile?->only(['id', 'nim', 'major', 'cv_path', 'jenjang_pendidikan']),
         ]);
     }
@@ -39,17 +49,12 @@ class JobPortalController extends Controller
     public function apply(Request $request, JobPosting $job)
     {
         $job->load('company.user');
-
-        $alumniProfile = Auth::user()->alumniProfile;
+        $user = Auth::user();
+        $alumniProfile = $user->alumniProfile;
 
         if (! $alumniProfile) {
             return back()->with('error', 'Silakan lengkapi Profil Alumni Anda terlebih dahulu sebelum melamar.');
         }
-
-        $request->validate([
-            'cv_option' => 'required|in:profile,upload',
-            'cv_file' => 'required_if:cv_option,upload|file|mimes:pdf|max:5120',
-        ]);
 
         $exists = JobApplication::where('job_posting_id', $job->id)
             ->where('alumni_id', $alumniProfile->id)
@@ -59,33 +64,78 @@ class JobPortalController extends Controller
             return back()->with('error', 'Anda sudah pernah melamar ke lowongan ini.');
         }
 
-        if ($request->cv_option === 'upload') {
-            $path = $request->file('cv_file')->store('cv_documents', 'local');
+        $company = $job->company;
+        if (! $company || ! $company->user) {
+            return back()->with('error', 'Data perusahaan tidak ditemukan.');
+        }
+
+        $companyUser = $company->user;
+
+        // Validasi opsi CV
+        $validated = $request->validate([
+            'cv_option' => 'required|in:profile,upload',
+            'cv_file' => 'required_if:cv_option,upload|file|mimes:pdf|max:5120',
+        ]);
+
+        // Tentukan path CV
+        if ($validated['cv_option'] === 'upload') {
+            $cvPath = $request->file('cv_file')->storeAs('cv_documents', preg_replace('/[^a-zA-Z0-9._-]/', '_', $request->file('cv_file')->getClientOriginalName()), 'local');
         } else {
             if (! $alumniProfile->cv_path) {
                 return back()->with('error', 'Anda belum memiliki CV di profil. Silakan upload CV terlebih dahulu.');
             }
-            $path = $alumniProfile->cv_path;
+            $cvPath = $alumniProfile->cv_path;
         }
 
+        // Cari percakapan yang sudah ada untuk lowongan ini (anti double-apply)
+        $conversation = Conversation::where('job_posting_id', $job->id)
+            ->whereHas('participants', fn ($q) => $q->where('user_id', $user->id))
+            ->first();
+
+        if (! $conversation) {
+            // Cari percakapan company yang sudah ada dengan perusahaan ini
+            $conversation = $user->conversations()
+                ->where('type', 'company')
+                ->whereHas('participants', fn ($q) => $q->where('user_id', $companyUser->id))
+                ->first();
+        }
+
+        if (! $conversation) {
+            $conversation = Conversation::create([
+                'type' => 'company',
+                'job_posting_id' => $job->id,
+            ]);
+            $conversation->users()->attach([$user->id, $companyUser->id]);
+        } elseif (! $conversation->job_posting_id) {
+            $conversation->update(['job_posting_id' => $job->id]);
+        }
+
+        // Buat record lamaran
         JobApplication::create([
             'job_posting_id' => $job->id,
             'alumni_id' => $alumniProfile->id,
-            'cv_path' => $path,
+            'cv_path' => $cvPath,
             'status' => 'pending',
         ]);
 
-        if ($job->company && $job->company->user) {
-            $hrdUser = $job->company->user;
-            $hrdUser->notify(new SystemNotification(
-                'Lamaran Baru Masuk!',
-                $alumniProfile->user->name.' telah melamar untuk posisi '.$job->title,
-                route('perusahaan.pelamar'),
-                'job_application'
-            ));
-        }
+        // Notifikasi perusahaan (tanpa auto-kirim pesan)
+        $companyUser->notify(new SystemNotification(
+            'Lamaran Baru Masuk!',
+            "{$user->name} melamar untuk posisi {$job->title} — buka chat untuk mengirim pesan lamaran.",
+            route('messages.index', ['conversation' => $conversation->id]),
+            'job_application'
+        ));
 
-        return back()->with('message', 'Lamaran dan CV Anda berhasil dikirim!');
+        // Siapkan draf teks lamaran
+        $draftBody = "Halo, saya {$user->name}".($alumniProfile->major ? " dari program studi {$alumniProfile->major}" : '')
+            .".\n\nSaya ingin melamar untuk posisi *{$job->title}* di {$company->name}.\n\n"
+            ."CV saya terlampir pada pesan ini.\n\n"
+            ."Mohon dapat dipertimbangkan.\n\nTerima kasih.";
+
+        return redirect()->route('messages.index', ['conversation' => $conversation->id])
+            ->with('draft_body', $draftBody)
+            ->with('draft_cv_path', $cvPath)
+            ->with('draft_cv_name', 'CV Lamaran - '.$job->title.'.pdf');
     }
 
     public function updateCv(Request $request, JobPosting $job)
@@ -115,7 +165,7 @@ class JobPortalController extends Controller
             if ($application->cv_path && Storage::disk('local')->exists($application->cv_path)) {
                 Storage::disk('local')->delete($application->cv_path);
             }
-            $path = $request->file('cv_file')->store('cv_documents', 'local');
+            $path = $request->file('cv_file')->storeAs('cv_documents', preg_replace('/[^a-zA-Z0-9._-]/', '_', $request->file('cv_file')->getClientOriginalName()), 'local');
         } else {
             if (! $alumniProfile->cv_path) {
                 return back()->with('error', 'Anda belum memiliki CV di profil.');

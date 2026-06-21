@@ -48,6 +48,9 @@ class AlumniProfileController extends Controller
             'photo_file' => 'nullable|file|mimes:png,jpg,jpeg|max:2048',
             'is_open_to_work' => 'boolean',
             'employment_status' => 'nullable|string|in:Bekerja,Mencari Kerja,Wiraswasta',
+            'privacy_hide_phone' => 'boolean',
+            'privacy_hide_address' => 'boolean',
+            'privacy_allow_search' => 'boolean',
         ], [
             'tanggal_lahir.before_or_equal' => 'Maaf, usia Anda harus minimal 18 tahun untuk menggunakan sistem ini.',
             'tanggal_lahir.required' => 'Tanggal lahir wajib diisi.',
@@ -62,7 +65,8 @@ class AlumniProfileController extends Controller
             if ($alumni && $alumni->photo_path) {
                 Storage::disk('public')->delete($alumni->photo_path);
             }
-            $validated['photo_path'] = $request->file('photo_file')->store('alumni_photos', 'public');
+            $file = $request->file('photo_file');
+            $validated['photo_path'] = $file->storeAs('alumni_photos', preg_replace('/[^a-zA-Z0-9._-]/', '_', $file->getClientOriginalName()), 'public');
         }
         unset($validated['photo_file']);
 
@@ -70,7 +74,8 @@ class AlumniProfileController extends Controller
             if ($alumni && $alumni->cv_path) {
                 Storage::disk('local')->delete($alumni->cv_path);
             }
-            $validated['cv_path'] = $request->file('cv_file')->store('alumni_cvs', 'local');
+            $file = $request->file('cv_file');
+            $validated['cv_path'] = $file->storeAs('alumni_cvs', preg_replace('/[^a-zA-Z0-9._-]/', '_', $file->getClientOriginalName()), 'local');
         }
         unset($validated['cv_file']);
 

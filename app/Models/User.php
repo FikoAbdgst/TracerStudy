@@ -50,4 +50,57 @@ class User extends Authenticatable
     {
         return $this->hasMany(ForumTopic::class);
     }
+
+    public function conversations()
+    {
+        return $this->belongsToMany(Conversation::class, 'conversation_participants')
+            ->withTimestamps();
+    }
+
+    public function sentMessages()
+    {
+        return $this->hasMany(Message::class, 'sender_id');
+    }
+
+    public function blockedUsers()
+    {
+        return $this->hasMany(BlockedUser::class, 'user_id');
+    }
+
+    public function blockedBy()
+    {
+        return $this->hasMany(BlockedUser::class, 'blocked_user_id');
+    }
+
+    public function isBlockedBy($userId)
+    {
+        return BlockedUser::where('user_id', $userId)
+            ->where('blocked_user_id', $this->id)
+            ->exists();
+    }
+
+    public function hasBlocked($userId)
+    {
+        return BlockedUser::where('user_id', $this->id)
+            ->where('blocked_user_id', $userId)
+            ->exists();
+    }
+
+    public function totalUnreadMessages()
+    {
+        $conversationIds = $this->conversations()->pluck('conversations.id');
+        if ($conversationIds->isEmpty()) {
+            return 0;
+        }
+
+        return Message::whereIn('conversation_id', $conversationIds)
+            ->where('sender_id', '!=', $this->id)
+            ->where('is_read', false)
+            ->count();
+    }
+
+    public function getRoleNameAttribute()
+    {
+        return $this->roles->first()?->name;
+    }
 }

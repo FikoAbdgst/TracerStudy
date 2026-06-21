@@ -24,6 +24,7 @@ const menuConfig = {
         { name: 'Manajemen Mitra', href: route('adminkampus.mitra.index') },
         { name: 'Tinjau Lowongan', href: route('adminkampus.tinjau-lowongan') },
         { name: 'Ruang Diskusi', href: route('alumni.forum.index') },
+        { name: 'Pesan', href: route('messages.index') },
     ],
     'Admin PT': [
         { name: 'Dashboard', href: route('perusahaan.dashboard') },
@@ -31,6 +32,7 @@ const menuConfig = {
         { name: 'Kelola Lowongan', href: route('perusahaan.lowongan') },
         { name: 'Daftar Pelamar', href: route('perusahaan.pelamar') },
         { name: 'Bakat Potensial', href: route('perusahaan.talent-pool') },
+        { name: 'Pesan', href: route('messages.index') },
     ],
     'Alumni': [
         { name: 'Dashboard', href: route('alumni.dashboard') },
@@ -39,6 +41,7 @@ const menuConfig = {
         { name: 'Bursa Kerja', href: route('alumni.loker') },
         { name: 'Status Lamaran', href: route('alumni.lamaran') },
         { name: 'Ruang Diskusi', href: route('alumni.forum.index') },
+        { name: 'Pesan', href: route('messages.index') },
     ],
 };
 

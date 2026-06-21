@@ -1,0 +1,562 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\AlumniProfile;
+use App\Models\BlockedUser;
+use App\Models\Conversation;
+use App\Models\JobPosting;
+use App\Models\Message;
+use App\Models\User;
+use App\Notifications\SystemNotification;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
+use Inertia\Inertia;
+
+class ChatController extends Controller
+{
+    protected function authorizeAccess()
+    {
+        if (Auth::user()->hasRole('Super Admin')) {
+            abort(403, 'Super Admin tidak memiliki akses ke fitur chat.');
+        }
+    }
+
+    protected function user()
+    {
+        return Auth::user();
+    }
+
+    protected function conversationData(Conversation $conv)
+    {
+        $user = $this->user();
+        $otherUser = $conv->otherUser($user->id);
+
+        return [
+            'id' => $conv->id,
+            'type' => $conv->type,
+            'status' => $conv->status,
+            'other_user' => $otherUser ? [
+                'id' => $otherUser->id,
+                'name' => $otherUser->name,
+                'email' => $otherUser->email,
+                'role' => $otherUser->getRoleNames()->first(),
+                'major' => $otherUser->alumniProfile?->major,
+                'company_name' => $otherUser->company?->name,
+                'photo_path' => $otherUser->alumniProfile?->photo_path,
+            ] : null,
+            'is_blocked' => $otherUser ? $user->hasBlocked($otherUser->id) : false,
+            'is_blocked_by' => $otherUser ? $user->isBlockedBy($otherUser->id) : false,
+            'alumni_msg_count' => $conv->alumni_msg_count,
+            'hr_replied' => $conv->hr_replied,
+            'last_message' => $conv->lastMessage ? [
+                'body' => $conv->lastMessage->body,
+                'sender_id' => $conv->lastMessage->sender_id,
+                'created_at' => $conv->lastMessage->created_at,
+            ] : null,
+            'unread_count' => $conv->messages()->unread($user->id)->count(),
+            'updated_at' => $conv->updated_at,
+        ];
+    }
+
+    protected function messageData(Message $msg, $userId = null)
+    {
+        $deletedForEveryone = $msg->is_deleted_for_everyone;
+
+        return [
+            'id' => $msg->id,
+            'body' => $deletedForEveryone ? 'Pesan ini telah dihapus.' : $msg->body,
+            'sender_id' => $msg->sender_id,
+            'sender_name' => $msg->sender->name,
+            'attachment_url' => $deletedForEveryone ? null : ($msg->attachment_url ? Storage::url($msg->attachment_url) : null),
+            'is_read' => $msg->is_read,
+            'is_deleted_for_everyone' => $msg->is_deleted_for_everyone,
+            'created_at' => $msg->created_at,
+        ];
+    }
+
+    protected function getParticipant(Conversation $conversation, $userId)
+    {
+        return $conversation->participants()->where('user_id', $userId)->first();
+    }
+
+    protected function loadMessages(Conversation $conversation, $userId)
+    {
+        $participant = $this->getParticipant($conversation, $userId);
+        $clearedAt = $participant?->cleared_at;
+
+        return $conversation->messages()
+            ->with('sender')
+            ->afterCleared($clearedAt)
+            ->orderBy('created_at')
+            ->get()
+            ->filter(fn ($m) => ! $m->isDeletedForUser($userId))
+            ->values()
+            ->map(fn ($m) => $this->messageData($m));
+    }
+
+    public function index(Request $request)
+    {
+        $this->authorizeAccess();
+        $user = $this->user();
+
+        $conversations = $user->conversations()
+            ->with(['lastMessage.sender', 'participants.user.alumniProfile', 'participants.user.company'])
+            ->latest('updated_at')
+            ->get()
+            ->map(fn ($c) => $this->conversationData($c))
+            ->values();
+
+        $selectedConversation = null;
+        $messages = [];
+        $jobList = [];
+
+        if ($request->conversation) {
+            $conv = Conversation::with([
+                'participants.user.alumniProfile',
+                'participants.user.company',
+            ])->findOrFail($request->conversation);
+
+            if (! $conv->users()->where('user_id', $user->id)->exists()) {
+                abort(403);
+            }
+
+            $selectedConversation = $this->conversationData($conv);
+
+            $messages = $this->loadMessages($conv, $user->id);
+
+            $conv->messages()->unread($user->id)->update(['is_read' => true]);
+        }
+
+        if ($user->hasRole('Admin PT') && $user->company) {
+            $jobList = $user->company->jobPostings()
+                ->where('is_active', true)
+                ->get(['id', 'title']);
+        }
+
+        return Inertia::render('Messages/Index', [
+            'conversations' => $conversations,
+            'selectedConversation' => $selectedConversation,
+            'messages' => $messages,
+            'jobList' => $jobList,
+        ]);
+    }
+
+    public function send(Request $request, Conversation $conversation)
+    {
+        $this->authorizeAccess();
+        $user = $this->user();
+
+        if (! $conversation->users()->where('user_id', $user->id)->exists()) {
+            abort(403);
+        }
+
+        $otherUser = $conversation->otherUser($user->id);
+
+        // Anti-spam: cek jika percakapan ditutup
+        if ($conversation->status === Conversation::STATUS_CLOSED) {
+            return back()->with('error', 'Ruang obrolan telah ditutup. Tidak dapat mengirim pesan.');
+        }
+
+        // Anti-spam: cek jika salah satu pihak memblokir
+        if ($otherUser && $user->hasBlocked($otherUser->id)) {
+            return back()->with('error', 'Anda telah memblokir pengguna ini.');
+        }
+
+        if ($otherUser && $user->isBlockedBy($otherUser->id)) {
+            return back()->with('error', 'Anda telah diblokir oleh pengguna ini.');
+        }
+
+        // Batasi pesan alumni: max 3 sebelum HR/Admin PT membalas
+        if ($user->hasRole('Alumni') && ! $conversation->hr_replied) {
+            if ($conversation->alumni_msg_count >= 3) {
+                return back()->with('error', 'Anda telah mencapai batas 3 pesan. Tunggu balasan dari HR untuk melanjutkan percakapan.');
+            }
+            $conversation->increment('alumni_msg_count');
+        }
+
+        // Jika pengirim adalah HR/Admin PT, tandai bahwa HR telah membalas
+        if ($user->hasRole('Admin PT')) {
+            if (! $conversation->hr_replied) {
+                $conversation->update(['hr_replied' => true]);
+            }
+        }
+
+        $validated = $request->validate([
+            'body' => 'nullable|string|max:10000',
+            'attachment' => 'nullable|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:10240',
+            'draft_cv_path' => 'nullable|string',
+        ]);
+
+        if (! $validated['body'] && ! $request->hasFile('attachment') && ! $validated['draft_cv_path']) {
+            return back()->withErrors(['body' => 'Pesan atau lampiran harus diisi.']);
+        }
+
+        $attachmentUrl = null;
+        if ($request->hasFile('attachment')) {
+            $attachmentUrl = $request->file('attachment')->storeAs('chat_attachments', preg_replace('/[^a-zA-Z0-9._-]/', '_', $request->file('attachment')->getClientOriginalName()), 'public');
+        } elseif ($validated['draft_cv_path']) {
+            $srcPath = $validated['draft_cv_path'];
+            $local = Storage::disk('local');
+            if ($local->exists($srcPath)) {
+                $destPath = 'chat_attachments/'.basename($srcPath);
+                $public = Storage::disk('public');
+                $public->put($destPath, $local->get($srcPath));
+                $attachmentUrl = $destPath;
+            }
+        }
+
+        $message = Message::create([
+            'conversation_id' => $conversation->id,
+            'sender_id' => $user->id,
+            'body' => $validated['body'] ?? '',
+            'attachment_url' => $attachmentUrl,
+        ]);
+
+        $conversation->touch();
+
+        $otherUser = $conversation->otherUser($user->id);
+        if ($otherUser && ! $otherUser->isBlockedBy($user->id)) {
+            $otherUser->notify(new SystemNotification(
+                'Pesan Baru dari '.$user->name,
+                mb_substr($validated['body'], 0, 100).(mb_strlen($validated['body']) > 100 ? '...' : ''),
+                route('messages.index', ['conversation' => $conversation->id]),
+                'chat'
+            ));
+        }
+
+        return redirect()->back();
+    }
+
+    public function markRead(Conversation $conversation)
+    {
+        $user = $this->user();
+        $conversation->messages()->unread($user->id)->update(['is_read' => true]);
+
+        return response()->json(['success' => true]);
+    }
+
+    public function poll(Conversation $conversation, Request $request)
+    {
+        $user = $this->user();
+        if (! $conversation->users()->where('user_id', $user->id)->exists()) {
+            abort(403);
+        }
+
+        $since = $request->input('since');
+
+        $participant = $this->getParticipant($conversation, $user->id);
+        $clearedAt = $participant?->cleared_at;
+
+        $messages = $conversation->messages()
+            ->with('sender')
+            ->afterCleared($clearedAt)
+            ->when($since, fn ($q) => $q->where('created_at', '>', $since))
+            ->orderBy('created_at')
+            ->get()
+            ->filter(fn ($m) => ! $m->isDeletedForUser($user->id))
+            ->values()
+            ->map(fn ($m) => $this->messageData($m));
+
+        $updatedConv = $this->conversationData($conversation->fresh(['lastMessage.sender', 'participants.user.alumniProfile', 'participants.user.company']));
+
+        return response()->json([
+            'messages' => $messages,
+            'conversation' => $updatedConv,
+        ]);
+    }
+
+    public function searchAlumni(Request $request)
+    {
+        $this->authorizeAccess();
+
+        $query = $request->input('q');
+
+        $alumni = AlumniProfile::where('privacy_allow_search', true)
+            ->when($query, function ($q) use ($query) {
+                $lowered = mb_strtolower($query);
+                $q->where(function ($sub) use ($lowered) {
+                    $sub->whereRaw('LOWER(major) LIKE ?', ["%{$lowered}%"])
+                        ->orWhereHas('user', fn ($u) => $u->whereRaw('LOWER(name) LIKE ?', ["%{$lowered}%"]));
+                });
+            })
+            ->with('user')
+            ->limit(20)
+            ->get()
+            ->map(fn ($p) => [
+                'id' => $p->user->id,
+                'name' => $p->user->name,
+                'major' => $p->major,
+                'nim' => $p->nim,
+            ]);
+
+        return response()->json(['alumni' => $alumni]);
+    }
+
+    public function startAlumni(Request $request)
+    {
+        $this->authorizeAccess();
+        $user = $this->user();
+
+        $targetId = (int) $request->input('user_id');
+        if ($targetId === $user->id) {
+            return back()->with('error', 'Tidak dapat memulai chat dengan diri sendiri.');
+        }
+
+        $targetUser = User::findOrFail($targetId);
+
+        if (! $targetUser->hasRole('Alumni') || ! $user->hasRole('Alumni')) {
+            abort(403, 'Hanya sesama alumni yang dapat memulai percakapan tipe ini.');
+        }
+
+        $profile = $targetUser->alumniProfile;
+        if (! $profile || ! $profile->privacy_allow_search) {
+            return back()->with('error', 'Alumni ini tidak mengizinkan ditemukan di pencarian.');
+        }
+
+        $existing = $user->conversations()
+            ->where('type', 'alumni')
+            ->whereHas('participants', fn ($q) => $q->where('user_id', $targetId))
+            ->first();
+
+        if ($existing) {
+            return redirect()->route('messages.index', ['conversation' => $existing->id]);
+        }
+
+        $conversation = Conversation::create(['type' => 'alumni']);
+        $conversation->users()->attach([$user->id, $targetId]);
+
+        return redirect()->route('messages.index', ['conversation' => $conversation->id]);
+    }
+
+    public function startAdmin()
+    {
+        $this->authorizeAccess();
+        $user = $this->user();
+
+        $adminUser = User::role('Admin Kampus')->first();
+        if (! $adminUser) {
+            return back()->with('error', 'Tidak ada Admin Kampus yang tersedia saat ini.');
+        }
+
+        $existing = $user->conversations()
+            ->where('type', 'admin')
+            ->whereHas('participants', fn ($q) => $q->where('user_id', $adminUser->id))
+            ->first();
+
+        if ($existing) {
+            return redirect()->route('messages.index', ['conversation' => $existing->id]);
+        }
+
+        $conversation = Conversation::create(['type' => 'admin']);
+        $conversation->users()->attach([$user->id, $adminUser->id]);
+
+        return redirect()->route('messages.index', ['conversation' => $conversation->id]);
+    }
+
+    public function startCompanyConversation(Request $request)
+    {
+        $this->authorizeAccess();
+        $user = $this->user();
+
+        $validated = $request->validate([
+            'alumni_id' => 'required|exists:users,id',
+            'job_id' => 'nullable|exists:job_postings,id',
+        ]);
+
+        $alumniUser = User::findOrFail($validated['alumni_id']);
+        $company = $user->company;
+
+        if ($user->hasRole('Alumni')) {
+            $alumniUser = $user;
+            $companyUser = User::findOrFail($validated['alumni_id']);
+            $company = $companyUser->company;
+        } else {
+            $companyUser = $user;
+        }
+
+        if (! $company) {
+            return back()->with('error', 'Data perusahaan tidak ditemukan.');
+        }
+
+        $existing = $user->conversations()
+            ->where('type', 'company')
+            ->whereHas('participants', fn ($q) => $q->where('user_id', $alumniUser->id))
+            ->first();
+
+        if ($existing) {
+            return redirect()->route('messages.index', ['conversation' => $existing->id]);
+        }
+
+        $conversation = Conversation::create(['type' => 'company']);
+        $conversation->users()->attach([$companyUser->id, $alumniUser->id]);
+
+        if ($validated['job_id']) {
+            $job = JobPosting::find($validated['job_id']);
+            $companyName = $company->name;
+
+            $draftBody = "Halo {$alumniUser->name},\n\n"
+                ."Kami dari *{$companyName}* mengundang Anda untuk melamar posisi *{$job->title}*.\n\n"
+                ."Silakan balas pesan ini jika Anda tertarik.\n\n"
+                ."Terima kasih.\nTim Rekrutmen {$companyName}";
+
+            return redirect()->route('messages.index', ['conversation' => $conversation->id])
+                ->with('draft_body', $draftBody);
+        }
+
+        return redirect()->route('messages.index', ['conversation' => $conversation->id]);
+    }
+
+    public function startFromForum(Request $request)
+    {
+        $this->authorizeAccess();
+        $user = $this->user();
+        $targetId = $request->input('user_id');
+        $targetUser = User::with('alumniProfile')->findOrFail($targetId);
+
+        if ($user->hasRole('Alumni') && $targetUser->hasRole('Alumni')) {
+            $profile = $targetUser->alumniProfile;
+            if (! $profile || ! $profile->privacy_allow_search) {
+                return back()->with('error', 'Alumni ini tidak mengizinkan ditemukan di chat.');
+            }
+            $type = 'alumni';
+        } elseif (($user->hasRole('Alumni') && $targetUser->hasRole('Admin Kampus')) ||
+                  ($user->hasRole('Admin Kampus') && $targetUser->hasRole('Alumni'))) {
+            $type = 'admin';
+        } else {
+            abort(403, 'Tidak dapat memulai percakapan dengan pengguna ini.');
+        }
+
+        $existing = $user->conversations()
+            ->where('type', $type)
+            ->whereHas('participants', fn ($q) => $q->where('user_id', $targetId))
+            ->first();
+
+        if ($existing) {
+            return redirect()->route('messages.index', ['conversation' => $existing->id]);
+        }
+
+        $conversation = Conversation::create(['type' => $type]);
+        $conversation->users()->attach([$user->id, $targetId]);
+
+        return redirect()->route('messages.index', ['conversation' => $conversation->id]);
+    }
+
+    public function openCompanyConversation(Request $request)
+    {
+        $this->authorizeAccess();
+        $user = $this->user();
+
+        $validated = $request->validate([
+            'company_user_id' => 'required|exists:users,id',
+        ]);
+
+        $companyUser = User::findOrFail($validated['company_user_id']);
+
+        $existing = $user->conversations()
+            ->where('type', 'company')
+            ->whereHas('participants', fn ($q) => $q->where('user_id', $companyUser->id))
+            ->first();
+
+        if ($existing) {
+            return redirect()->route('messages.index', ['conversation' => $existing->id]);
+        }
+
+        $conversation = Conversation::create(['type' => 'company']);
+        $conversation->users()->attach([$user->id, $companyUser->id]);
+
+        return redirect()->route('messages.index', ['conversation' => $conversation->id]);
+    }
+
+    public function blockUser(Request $request)
+    {
+        $this->authorizeAccess();
+        $user = $this->user();
+
+        $validated = $request->validate([
+            'user_id' => 'required|exists:users,id|different:user_id',
+        ]);
+
+        if ((int) $validated['user_id'] === $user->id) {
+            return back()->with('error', 'Tidak dapat memblokir diri sendiri.');
+        }
+
+        $exists = BlockedUser::where('user_id', $user->id)
+            ->where('blocked_user_id', $validated['user_id'])
+            ->exists();
+
+        if (! $exists) {
+            BlockedUser::create([
+                'user_id' => $user->id,
+                'blocked_user_id' => $validated['user_id'],
+            ]);
+        }
+
+        return back()->with('message', 'Pengguna berhasil diblokir.');
+    }
+
+    public function unblockUser(Request $request)
+    {
+        $this->authorizeAccess();
+        $user = $this->user();
+
+        $validated = $request->validate([
+            'user_id' => 'required|exists:users,id',
+        ]);
+
+        BlockedUser::where('user_id', $user->id)
+            ->where('blocked_user_id', $validated['user_id'])
+            ->delete();
+
+        return back()->with('message', 'Blokir berhasil dihapus.');
+    }
+
+    public function deleteMessage(Request $request, Message $message)
+    {
+        $this->authorizeAccess();
+        $user = $this->user();
+
+        $validated = $request->validate([
+            'type' => 'required|in:for_me,for_everyone',
+        ]);
+
+        if ($validated['type'] === 'for_everyone') {
+            if ((int) $message->sender_id !== $user->id) {
+                return back()->with('error', 'Hanya pengirim yang dapat menghapus pesan untuk semua orang.');
+            }
+
+            $message->update([
+                'is_deleted_for_everyone' => true,
+            ]);
+
+            if ($message->attachment_url) {
+                Storage::disk('public')->delete($message->attachment_url);
+            }
+        } else {
+            $deletedBy = $message->deleted_by ?? [];
+            if (! in_array($user->id, $deletedBy)) {
+                $deletedBy[] = $user->id;
+                $message->update(['deleted_by' => $deletedBy]);
+            }
+        }
+
+        return back()->with('message', 'Pesan berhasil dihapus.');
+    }
+
+    public function clearConversation(Request $request, Conversation $conversation)
+    {
+        $this->authorizeAccess();
+        $user = $this->user();
+
+        if (! $conversation->users()->where('user_id', $user->id)->exists()) {
+            abort(403);
+        }
+
+        $conversation->participants()
+            ->where('user_id', $user->id)
+            ->update(['cleared_at' => now()]);
+
+        return back()->with('message', 'Percakapan berhasil dibersihkan.');
+    }
+}

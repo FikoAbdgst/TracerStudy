@@ -33,7 +33,7 @@ class MouController extends Controller
 
         // Proses Upload File
         if ($request->hasFile('file')) {
-            $path = $request->file('file')->store('mou_documents', 'local');
+            $path = $request->file('file')->storeAs('mou_documents', preg_replace('/[^a-zA-Z0-9._-]/', '_', $request->file('file')->getClientOriginalName()), 'local');
 
             MouDocument::create([
                 'company_id' => $validated['company_id'],

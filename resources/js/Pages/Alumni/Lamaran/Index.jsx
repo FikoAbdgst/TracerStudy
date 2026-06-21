@@ -1,5 +1,5 @@
 import React, { Suspense, useState } from 'react';
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Dialog, DialogContent } from '@/Components/ui/dialog';
 
@@ -150,6 +150,15 @@ export default function LamaranIndex({ applications }) {
                                                             onMouseLeave={e => { e.currentTarget.style.background = T.purpleLight; e.currentTarget.style.color = T.purple; }}
                                                         >
                                                             Detail
+                                                        </button>
+                                                    )}
+                                                    {app.job_posting?.company?.user_id && (
+                                                        <button onClick={() => router.post(route('messages.open-company-conversation'), { company_user_id: app.job_posting.company.user_id })}
+                                                            style={{ fontSize: 10, fontWeight: 700, padding: '4px 8px', borderRadius: 6, border: `1px solid ${T.orange}33`, background: T.orangeLight, color: T.orange, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', transition: 'all 0.15s' }}
+                                                            onMouseEnter={e => { e.currentTarget.style.background = T.orange; e.currentTarget.style.color = '#fff'; }}
+                                                            onMouseLeave={e => { e.currentTarget.style.background = T.orangeLight; e.currentTarget.style.color = T.orange; }}
+                                                        >
+                                                            💬 Chat
                                                         </button>
                                                     )}
                                                 </div>

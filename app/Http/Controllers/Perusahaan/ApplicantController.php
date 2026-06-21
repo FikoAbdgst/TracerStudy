@@ -146,6 +146,11 @@ class ApplicantController extends Controller
 
         $lamaran->update($validated);
 
+        // Tutup percakapan terkait jika lamaran ditolak
+        if ($validated['status'] === 'ditolak' && $lamaran->lamaranConversation) {
+            $lamaran->lamaranConversation->update(['status' => 'closed']);
+        }
+
         if ($lamaran->alumni && $lamaran->alumni->user) {
             $alumniUser = $lamaran->alumni->user;
 

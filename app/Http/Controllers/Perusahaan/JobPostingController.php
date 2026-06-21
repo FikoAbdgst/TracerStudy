@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Perusahaan;
 
 use App\Http\Controllers\Controller;
+use App\Models\Conversation;
 use App\Models\JobPosting;
 use App\Models\MasterCategory;
 use Illuminate\Http\Request;
@@ -125,9 +126,18 @@ class JobPostingController extends Controller
             return back()->with('error', 'Izin posting dicabut. Anda tidak dapat mengubah status lowongan saat ini.');
         }
 
+        $isCurrentlyActive = $job->is_active;
+
         $job->update([
-            'is_active' => ! $job->is_active,
+            'is_active' => ! $isCurrentlyActive,
         ]);
+
+        // Tutup semua percakapan terkait jika lowongan dinonaktifkan
+        if ($isCurrentlyActive) {
+            Conversation::where('job_posting_id', $job->id)
+                ->where('status', 'open')
+                ->update(['status' => 'closed']);
+        }
 
         $statusMsg = $job->is_active ? 'dibuka' : 'ditutup';
 

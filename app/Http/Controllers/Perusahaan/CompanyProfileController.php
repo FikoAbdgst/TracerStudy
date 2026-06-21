@@ -70,7 +70,7 @@ class CompanyProfileController extends Controller
             }
 
             // Simpan gambar baru ke folder storage/app/public/company_logos
-            $validated['logo_url'] = $request->file('logo_file')->store('company_logos', 'public');
+            $validated['logo_url'] = $request->file('logo_file')->storeAs('company_logos', preg_replace('/[^a-zA-Z0-9._-]/', '_', $request->file('logo_file')->getClientOriginalName()), 'public');
         }
 
         // Buang logo_file dari array divalidasi agar tidak error saat disimpan ke DB

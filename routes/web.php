@@ -11,6 +11,7 @@ use App\Http\Controllers\Alumni\DashboardController as AlumniDashboard;
 use App\Http\Controllers\Alumni\ForumController;
 use App\Http\Controllers\Alumni\JobPortalController;
 use App\Http\Controllers\Alumni\TracerStudyController as AlumniTracerController;
+use App\Http\Controllers\ChatController;
 use App\Http\Controllers\GuestController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\Perusahaan\ApplicantController;
@@ -138,6 +139,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::patch('/pelamar/{lamaran}/status', [ApplicantController::class, 'updateStatus'])->name('pelamar.status');
 
         Route::get('/talent-pool', [TalentPoolController::class, 'index'])->name('talent-pool');
+        Route::get('/talent-pool/saved', [TalentPoolController::class, 'savedCandidates'])->name('talent-pool.saved');
+        Route::post('/talent-pool/{alumni}/bookmark', [TalentPoolController::class, 'toggleBookmark'])->name('talent-pool.bookmark');
         Route::get('/talent-pool/{alumni}', [TalentPoolController::class, 'show'])->name('talent-pool.show');
     });
 
@@ -174,6 +177,25 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('/forum/{forum}/reply/{reply}', [ForumController::class, 'updateReply'])->name('forum.reply.update');
         Route::delete('/forum/{forum}/reply/{reply}', [ForumController::class, 'destroyReply'])->name('forum.reply.destroy');
     });
+});
+
+// --- MESSAGING (All roles except Super Admin) ---
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/messages', [ChatController::class, 'index'])->name('messages.index');
+    Route::post('/messages/{conversation}/send', [ChatController::class, 'send'])->name('messages.send');
+    Route::post('/messages/{conversation}/read', [ChatController::class, 'markRead'])->name('messages.read');
+    Route::get('/messages/{conversation}/poll', [ChatController::class, 'poll'])->name('messages.poll');
+    Route::get('/api/messages/search-alumni', [ChatController::class, 'searchAlumni'])->name('messages.search-alumni');
+    Route::post('/messages/start-alumni', [ChatController::class, 'startAlumni'])->name('messages.start-alumni');
+    Route::post('/messages/start-admin', [ChatController::class, 'startAdmin'])->name('messages.start-admin');
+    Route::post('/messages/start-from-forum', [ChatController::class, 'startFromForum'])->name('messages.start-from-forum');
+    Route::post('/messages/start-company', [ChatController::class, 'startCompanyConversation'])->name('messages.start-company');
+    Route::post('/messages/invite-candidate', [ChatController::class, 'startCompanyConversation'])->name('messages.invite-candidate');
+    Route::post('/messages/open-company-conversation', [ChatController::class, 'openCompanyConversation'])->name('messages.open-company-conversation');
+    Route::post('/messages/block', [ChatController::class, 'blockUser'])->name('messages.block');
+    Route::post('/messages/unblock', [ChatController::class, 'unblockUser'])->name('messages.unblock');
+    Route::delete('/messages/{message}', [ChatController::class, 'deleteMessage'])->name('messages.delete');
+    Route::delete('/conversations/{conversation}/clear', [ChatController::class, 'clearConversation'])->name('messages.clear');
 });
 
 require __DIR__.'/auth.php';

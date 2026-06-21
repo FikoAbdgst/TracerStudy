@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
+import axios from 'axios';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/Components/ui/select';
 
@@ -11,11 +12,21 @@ const T = {
     green: '#16a34a', greenLight: '#f0fdf4',
     red: '#dc2626', redLight: '#fff1f2',
     purple: '#7c3aed', purpleLight: '#f5f3ff',
+    yellow: '#eab308',
 };
 
 const AlumniCard = ({ alumni }) => {
     const p = alumni;
     const totalSkills = p.skills?.length ?? 0;
+    const [saved, setSaved] = useState(p.is_saved ?? false);
+
+    const toggleBookmark = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const next = !saved;
+        setSaved(next);
+        axios.post(route('perusahaan.talent-pool.bookmark', p.id)).catch(() => setSaved(!next));
+    };
 
     return (
         <Link href={route('perusahaan.talent-pool.show', p.id)} style={{ textDecoration: 'none', color: 'inherit' }}>
@@ -23,7 +34,7 @@ const AlumniCard = ({ alumni }) => {
                 background: '#fff', borderRadius: 14, border: `1px solid ${T.borderSoft}`,
                 padding: '20px', transition: 'all 0.2s', cursor: 'pointer', height: '100%',
                 boxShadow: '0 1px 4px rgba(26,53,96,0.05)',
-                display: 'flex', flexDirection: 'column', gap: 12,
+                display: 'flex', flexDirection: 'column', gap: 12, position: 'relative',
             }}
                 onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 16px rgba(26,53,96,0.12)'; e.currentTarget.style.borderColor = T.orange; e.currentTarget.style.transform = 'translateY(-2px)'; }}
                 onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 1px 4px rgba(26,53,96,0.05)'; e.currentTarget.style.borderColor = T.borderSoft; e.currentTarget.style.transform = 'none'; }}
@@ -45,6 +56,16 @@ const AlumniCard = ({ alumni }) => {
                             {p.major || '—'}{p.jenjang_pendidikan ? ` (${p.jenjang_pendidikan})` : ''}
                         </div>
                     </div>
+                    <button onClick={toggleBookmark} title={saved ? 'Hapus dari Tersimpan' : 'Simpan Kandidat'} style={{
+                        width: 32, height: 32, borderRadius: 8, border: 'none',
+                        background: saved ? '#fef9c3' : T.bg,
+                        cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        flexShrink: 0, transition: 'all 0.15s',
+                    }}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill={saved ? T.yellow : 'none'} stroke={saved ? T.yellow : T.muted} strokeWidth="2">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.385a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
+                        </svg>
+                    </button>
                 </div>
 
                 <div style={{ fontSize: 11.5, color: T.muted, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
@@ -123,12 +144,26 @@ export default function TalentPoolIndex({ alumni, filters, skills, majors, compa
                 @media (max-width: 640px) {
                     .tp-grid { grid-template-columns: 1fr; }
                 }
-
-                .salary-thumb::-webkit-slider-thumb { appearance: none; width: 20px; height: 20px; border-radius: 50%; background: #f97316; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.2); cursor: pointer; }
-                .salary-thumb::-moz-range-thumb { width: 20px; height: 20px; border-radius: 50%; background: #f97316; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.2); cursor: pointer; }
             `}</style>
 
             <div className="tp-root" style={{ maxWidth: 1100, margin: '0 auto', padding: '0 2px' }}>
+
+                {/* ── Tab Navigasi ── */}
+                <div style={{ display: 'flex', gap: 0, marginBottom: 18, background: '#fff', borderRadius: 12, border: `1px solid ${T.borderSoft}`, overflow: 'hidden' }}>
+                    <Link href={route('perusahaan.talent-pool')} style={{
+                        flex: 1, padding: '10px 16px', textAlign: 'center', fontSize: 13, fontWeight: 700,
+                        textDecoration: 'none', borderBottom: `2.5px solid ${T.orange}`, color: T.orange,
+                        background: T.orangeLight,
+                    }}>
+                        🔍 Semua Kandidat
+                    </Link>
+                    <Link href={route('perusahaan.talent-pool.saved')} style={{
+                        flex: 1, padding: '10px 16px', textAlign: 'center', fontSize: 13, fontWeight: 600,
+                        textDecoration: 'none', borderBottom: `2.5px solid transparent`, color: T.mutedDark,
+                    }}>
+                        ⭐ Tersimpan
+                    </Link>
+                </div>
 
                 {/* ── Filter Bar ── */}
                 <div style={{

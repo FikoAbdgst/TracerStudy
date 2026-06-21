@@ -30,7 +30,7 @@ class RegisteredUserController extends Controller
             'company_name' => 'nullable|string|max:255',
         ]);
 
-        $user = new User();
+        $user = new User;
         $user->name = $request->name;
         $user->email = $request->email;
         $user->password = Hash::make($request->password);

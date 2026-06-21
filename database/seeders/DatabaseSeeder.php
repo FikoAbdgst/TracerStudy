@@ -31,7 +31,7 @@ class DatabaseSeeder extends Seeder
         Role::firstOrCreate(['name' => 'Alumni']);
 
         // 2. Buat Akun Super Admin & Admin Kampus
-        $superAdmin = new User();
+        $superAdmin = new User;
         $superAdmin->name = 'Super Administrator';
         $superAdmin->email = 'superadmin@sitami.ac.id';
         $superAdmin->password = Hash::make('password123');
@@ -39,7 +39,7 @@ class DatabaseSeeder extends Seeder
         $superAdmin->save();
         $superAdmin->assignRole('Super Admin');
 
-        $adminKampus = new User();
+        $adminKampus = new User;
         $adminKampus->name = 'Biro Kemahasiswaan (Admin)';
         $adminKampus->email = 'adminkampus@sitami.ac.id';
         $adminKampus->password = Hash::make('password123');
@@ -130,7 +130,7 @@ class DatabaseSeeder extends Seeder
         // 4. Buat Akun Perusahaan (Admin PT) & Lowongan Pekerjaan Bervariasi
 
         // --- PERUSAHAAN 1: Sektor IT ---
-        $hrdUser1 = new User();
+        $hrdUser1 = new User;
         $hrdUser1->name = 'HRD PT Inovasi Dinamika Solusi';
         $hrdUser1->email = 'hrd@inovasidinamika.com';
         $hrdUser1->password = Hash::make('password123');
@@ -159,7 +159,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         // --- PERUSAHAAN 2: Sektor Perbankan & Keuangan (Non-IT) ---
-        $hrdUser2 = new User();
+        $hrdUser2 = new User;
         $hrdUser2->name = 'HRD Bank Mandiri Sejahtera';
         $hrdUser2->email = 'recruitment@mandirisejahtera.co.id';
         $hrdUser2->password = Hash::make('password123');
@@ -188,7 +188,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         // --- PERUSAHAAN 3: Sektor Manufaktur / FMCG (Non-IT) ---
-        $hrdUser3 = new User();
+        $hrdUser3 = new User;
         $hrdUser3->name = 'HRD PT Nusantara Food Industri';
         $hrdUser3->email = 'career@nusantarafood.com';
         $hrdUser3->password = Hash::make('password123');
@@ -217,7 +217,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         // --- PERUSAHAAN 4: Sektor Media & Kreatif (Non-IT) ---
-        $hrdUser4 = new User();
+        $hrdUser4 = new User;
         $hrdUser4->name = 'HRD Circle Media Group';
         $hrdUser4->email = 'hr@circlemedia.id';
         $hrdUser4->password = Hash::make('password123');
@@ -279,7 +279,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         // 5. Buat Akun & Profil Alumni
-        $alumni1 = new User();
+        $alumni1 = new User;
         $alumni1->name = 'Fiko Abdigusti';
         $alumni1->email = 'fiko@alumni.sitami.ac.id';
         $alumni1->password = Hash::make('password123');
@@ -298,9 +298,10 @@ class DatabaseSeeder extends Seeder
             'skills' => ['Laravel', 'React.js', 'Inertia.js', 'Tailwind CSS'],
             'phone_number' => '081234567890',
             'address' => 'Bandung, Jawa Barat',
+            'privacy_allow_search' => true,
         ]);
 
-        $alumni2 = new User();
+        $alumni2 = new User;
         $alumni2->name = 'Zaky Hanif Testandy';
         $alumni2->email = 'zaky@alumni.sitami.ac.id';
         $alumni2->password = Hash::make('password123');
@@ -319,10 +320,11 @@ class DatabaseSeeder extends Seeder
             'skills' => ['System Analysis', 'ERP Development', 'PHP'],
             'phone_number' => '089876543210',
             'address' => 'Jakarta Selatan',
+            'privacy_allow_search' => true,
         ]);
 
         // --- ALUMNI TAMBAHAN AGAR DATA LEBIH BERVARIASI ---
-        $alumni3 = new User();
+        $alumni3 = new User;
         $alumni3->name = 'Rina Amalia';
         $alumni3->email = 'rina@alumni.sitami.ac.id';
         $alumni3->password = Hash::make('password123');
@@ -341,9 +343,10 @@ class DatabaseSeeder extends Seeder
             'skills' => ['Microsoft Excel Advanced', 'Data Entry', 'Administrative Skills', 'MYOB'],
             'phone_number' => '082145678901',
             'address' => 'Bandung, Jawa Barat',
+            'privacy_allow_search' => true,
         ]);
 
-        $alumni4 = new User();
+        $alumni4 = new User;
         $alumni4->name = 'Dimas Pratama';
         $alumni4->email = 'dimas@alumni.sitami.ac.id';
         $alumni4->password = Hash::make('password123');
@@ -362,9 +365,10 @@ class DatabaseSeeder extends Seeder
             'skills' => ['PHP', 'Laravel', 'System Analysis', 'ERP Development', 'React.js'],
             'phone_number' => '085678901234',
             'address' => 'Jakarta Selatan',
+            'privacy_allow_search' => true,
         ]);
 
-        $alumni5 = new User();
+        $alumni5 = new User;
         $alumni5->name = 'Siti Nurhaliza';
         $alumni5->email = 'siti@alumni.sitami.ac.id';
         $alumni5->password = Hash::make('password123');
@@ -383,6 +387,7 @@ class DatabaseSeeder extends Seeder
             'skills' => ['UI/UX Design', 'Digital Marketing', 'Content Creation', 'Tailwind CSS'],
             'phone_number' => '081398765432',
             'address' => 'Bandung, Jawa Barat',
+            'privacy_allow_search' => true,
         ]);
 
         // ==========================================

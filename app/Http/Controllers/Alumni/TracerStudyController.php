@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Alumni;
 
 use App\Http\Controllers\Controller;
-use App\Models\AlumniProfile;
 use App\Models\MasterCategory;
 use App\Models\TracerStudyForm;
 use App\Models\TracerStudyResponse;

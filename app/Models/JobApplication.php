@@ -24,4 +24,9 @@ class JobApplication extends Model
     {
         return $this->belongsTo(AlumniProfile::class, 'alumni_id');
     }
+
+    public function lamaranConversation()
+    {
+        return $this->hasOne(Conversation::class, 'job_posting_id', 'job_posting_id');
+    }
 }

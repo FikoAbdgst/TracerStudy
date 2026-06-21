@@ -1,5 +1,6 @@
-import React from 'react';
-import { Head, Link } from '@inertiajs/react';
+import React, { useState } from 'react';
+import { Head, Link, router } from '@inertiajs/react';
+import axios from 'axios';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 
 const T = {
@@ -9,14 +10,25 @@ const T = {
     muted: '#94a3b8', mutedDark: '#64748b',
     green: '#16a34a', greenLight: '#f0fdf4',
     red: '#dc2626', redLight: '#fff1f2',
+    yellow: '#eab308', yellowLight: '#fef9c3',
 };
 
-const Field = ({ label, value }) => (
+const MaskedText = ({ hidden, children }) => {
+    if (hidden) {
+        return (
+            <span style={{ fontSize: 13, color: T.muted, fontStyle: 'italic', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={T.muted} strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" /></svg>
+                Disembunyikan oleh pengguna
+            </span>
+        );
+    }
+    return <span style={{ fontSize: 13.5, color: children ? T.navy : T.muted, fontWeight: children ? 500 : 400, fontStyle: children ? 'normal' : 'italic' }}>{children || 'Tidak diisi'}</span>;
+};
+
+const Field = ({ label, value, hidden = false }) => (
     <div style={{ padding: '12px 0', borderBottom: `1px solid ${T.borderSoft}` }}>
         <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: T.muted, marginBottom: 4 }}>{label}</div>
-        <div style={{ fontSize: 13.5, color: value ? T.navy : T.muted, fontStyle: value ? 'normal' : 'italic', fontWeight: value ? 500 : 400 }}>
-            {value || 'Tidak diisi'}
-        </div>
+        <MaskedText hidden={hidden}>{value}</MaskedText>
     </div>
 );
 
@@ -33,8 +45,18 @@ const SectionCard = ({ title, icon, children }) => (
     </div>
 );
 
-export default function TalentPoolShow({ alumni, company }) {
+export default function TalentPoolShow({ alumni, company, jobList }) {
     const p = alumni;
+    const [saved, setSaved] = useState(p.is_saved ?? false);
+    const [inviteOpen, setInviteOpen] = useState(false);
+    const [selectedJobId, setSelectedJobId] = useState('');
+
+    const toggleBookmark = () => {
+        const next = !saved;
+        setSaved(next);
+        axios.post(route('perusahaan.talent-pool.bookmark', p.id)).catch(() => setSaved(!next));
+    };
+
     const formatDate = (dateStr) => {
         if (!dateStr) return null;
         return new Date(dateStr).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -50,7 +72,10 @@ export default function TalentPoolShow({ alumni, company }) {
         return age;
     };
 
-    const waNumber = p.phone_number?.replace(/\D/g, '');
+    const phoneHidden = p.phone_hidden ?? false;
+    const addressHidden = p.address_hidden ?? false;
+
+    const waNumber = !phoneHidden ? p.phone_number?.replace(/\D/g, '') : null;
     const waLink = waNumber ? `https://wa.me/62${waNumber.startsWith('0') ? waNumber.slice(1) : waNumber}` : null;
 
     return (
@@ -121,7 +146,22 @@ export default function TalentPoolShow({ alumni, company }) {
                         </div>
                     </div>
 
-                    {waLink && (
+                    {/* ── Bookmark Button ── */}
+                    <button onClick={toggleBookmark} title={saved ? 'Hapus dari Tersimpan' : 'Simpan Kandidat'} style={{
+                        height: 38, padding: '0 16px', borderRadius: 9, border: '1.5px solid rgba(255,255,255,0.3)',
+                        background: saved ? 'rgba(234,179,8,0.2)' : 'rgba(255,255,255,0.1)',
+                        color: saved ? T.yellow : '#fff', fontSize: 12.5, fontWeight: 700,
+                        cursor: 'pointer', fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', gap: 7,
+                        flexShrink: 0, transition: 'all 0.15s', position: 'relative',
+                    }}>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill={saved ? T.yellow : 'none'} stroke="currentColor" strokeWidth="2">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.385a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
+                        </svg>
+                        {saved ? 'Tersimpan' : 'Simpan'}
+                    </button>
+
+                    {/* ── WhatsApp Button ── */}
+                    {waLink ? (
                         <a href={waLink} target="_blank" rel="noopener noreferrer" style={{
                             height: 38, padding: '0 18px', borderRadius: 9, border: 'none',
                             background: '#25D366', color: '#fff', fontSize: 12.5, fontWeight: 700,
@@ -132,6 +172,31 @@ export default function TalentPoolShow({ alumni, company }) {
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
                             Hubungi via WhatsApp
                         </a>
+                    ) : (
+                        <div style={{
+                            height: 38, padding: '0 18px', borderRadius: 9, border: '1.5px solid rgba(255,255,255,0.2)',
+                            background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.4)', fontSize: 12.5, fontWeight: 600,
+                            display: 'inline-flex', alignItems: 'center', gap: 7, flexShrink: 0,
+                            fontFamily: 'inherit', cursor: 'not-allowed',
+                        }}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                            {phoneHidden ? 'Kontak Disembunyikan' : 'WhatsApp Tidak Tersedia'}
+                        </div>
+                    )}
+
+                    {/* ── Undang Melamar ── */}
+                    {p.user?.id && (
+                        <button onClick={() => setInviteOpen(true)} style={{
+                            height: 38, padding: '0 16px', borderRadius: 9, border: '1.5px solid rgba(255,255,255,0.3)',
+                            background: 'rgba(249,115,22,0.2)', color: '#fff', fontSize: 12.5, fontWeight: 700,
+                            cursor: 'pointer', fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', gap: 7,
+                            flexShrink: 0, transition: 'all 0.15s', position: 'relative',
+                        }}>
+                            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 9v.906a2.25 2.25 0 01-1.183 1.981l-6.478 3.488M2.25 9v.906a2.25 2.25 0 001.183 1.981l6.478 3.488m8.839 2.51l-4.66-2.51m0 0l-1.023-.55a2.25 2.25 0 00-2.134 0l-1.022.55m0 0l-4.661 2.51m16.5 1.615a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V8.844a2.25 2.25 0 011.183-1.981l7.5-4.039a2.25 2.25 0 012.134 0l7.5 4.039a2.25 2.25 0 011.183 1.98V19.5z" />
+                            </svg>
+                            Undang Melamar
+                        </button>
                     )}
                 </div>
 
@@ -144,7 +209,7 @@ export default function TalentPoolShow({ alumni, company }) {
                         <Field label="Jenis Kelamin" value={p.jenis_kelamin} />
                         <Field label="Tanggal Lahir" value={formatDate(p.tanggal_lahir)} />
                         {p.tanggal_lahir && <Field label="Usia" value={`${getAge(p.tanggal_lahir)} tahun`} />}
-                        <Field label="No. WhatsApp" value={p.phone_number} />
+                        <Field label="No. WhatsApp" value={p.phone_number} hidden={phoneHidden} />
                     </SectionCard>
 
                     {/* Pendidikan */}
@@ -156,8 +221,8 @@ export default function TalentPoolShow({ alumni, company }) {
 
                     {/* Lokasi & Pengalaman */}
                     <SectionCard title="Lokasi & Pengalaman" icon="📍">
-                        <Field label="Domisili" value={p.address} />
-                        {p.detail_address && <Field label="Detail Alamat" value={p.detail_address} />}
+                        <Field label="Domisili" value={p.address} hidden={addressHidden} />
+                        {!addressHidden && p.detail_address && <Field label="Detail Alamat" value={p.detail_address} />}
                         <Field label="Pengalaman Kerja" value={p.experience !== null ? `${p.experience} tahun` : null} />
                     </SectionCard>
 
@@ -199,19 +264,63 @@ export default function TalentPoolShow({ alumni, company }) {
                         </SectionCard>
                     </div>
                 )}
+            </div>
 
-                {/* ── WhatsApp (bottom CTA) ── */}
-                {!waLink && (
-                    <div style={{ marginTop: 16, textAlign: 'center', padding: '20px', background: '#fff', borderRadius: 14, border: `1px solid ${T.borderSoft}` }}>
-                        <div style={{ fontSize: 12.5, color: T.mutedDark, fontWeight: 600 }}>
-                            Nomor WhatsApp alumni tidak tersedia.
+            {/* ── Undang Melamar Modal ── */}
+            {inviteOpen && (
+                <div style={{
+                    position: 'fixed', inset: 0, zIndex: 9000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
+                    background: 'rgba(10,20,40,0.45)', backdropFilter: 'blur(3px)',
+                }} onClick={() => { setInviteOpen(false); setSelectedJobId(''); }}>
+                    <div style={{
+                        background: '#fff', borderRadius: 16, width: '100%', maxWidth: 420, overflow: 'hidden',
+                        boxShadow: '0 24px 60px rgba(10,20,40,0.2)',
+                    }} onClick={e => e.stopPropagation()}>
+                        <div style={{ padding: '20px 22px 14px', borderBottom: `1px solid ${T.borderSoft}` }}>
+                            <div style={{ fontSize: 15, fontWeight: 800, color: T.navy }}>Undang Melamar</div>
+                            <div style={{ fontSize: 12.5, color: T.muted, marginTop: 2 }}>Pilih lowongan untuk dikirimkan ke {p.user?.name}</div>
                         </div>
-                        <div style={{ fontSize: 11.5, color: T.muted, marginTop: 4 }}>
-                            Alumni ini belum melengkapi nomor kontak di profilnya.
+                        <div style={{ padding: '18px 22px' }}>
+                            <select value={selectedJobId} onChange={e => setSelectedJobId(e.target.value)} style={{
+                                width: '100%', height: 42, padding: '0 13px', border: `1.5px solid ${T.border}`,
+                                borderRadius: 9, background: T.bg, color: T.navy, fontSize: 13.5, outline: 'none',
+                                fontFamily: 'inherit', transition: 'all 0.18s', marginBottom: 4,
+                            }}>
+                                <option value="">Pilih lowongan aktif...</option>
+                                {jobList?.map(j => (
+                                    <option key={j.id} value={j.id}>{j.title}</option>
+                                ))}
+                            </select>
+                            {(!jobList || jobList.length === 0) && (
+                                <p style={{ fontSize: 12, color: T.red, marginTop: 6 }}>Tidak ada lowongan aktif. Buat lowongan terlebih dahulu.</p>
+                            )}
+                        </div>
+                        <div style={{ padding: '14px 22px', borderTop: `1px solid ${T.borderSoft}`, display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                            <button onClick={() => { setInviteOpen(false); setSelectedJobId(''); }}
+                                style={{ height: 36, padding: '0 14px', borderRadius: 8, border: `1.5px solid ${T.border}`, background: 'transparent', color: T.mutedDark, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                                Batal
+                            </button>
+                            <button onClick={() => {
+                                if (!selectedJobId) return;
+                                router.post(route('messages.invite-candidate'), {
+                                    alumni_id: p.user.id,
+                                    job_id: selectedJobId,
+                                });
+                                setInviteOpen(false);
+                            }} disabled={!selectedJobId}
+                                style={{
+                                    height: 36, padding: '0 18px', borderRadius: 8, border: 'none',
+                                    background: selectedJobId ? T.orange : T.muted,
+                                    color: '#fff', fontSize: 13, fontWeight: 700,
+                                    cursor: selectedJobId ? 'pointer' : 'not-allowed',
+                                    fontFamily: 'inherit', boxShadow: selectedJobId ? '0 2px 8px rgba(249,115,22,0.3)' : 'none',
+                                }}>
+                                Kirim Undangan
+                            </button>
                         </div>
                     </div>
-                )}
-            </div>
+                </div>
+            )}
         </AuthenticatedLayout>
     );
 }

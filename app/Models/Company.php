@@ -40,4 +40,10 @@ class Company extends Model
     {
         return $this->hasMany(MouDocument::class);
     }
+
+    public function savedCandidates()
+    {
+        return $this->belongsToMany(AlumniProfile::class, 'company_saved_candidates', 'company_id', 'alumni_profile_id')
+            ->withTimestamps();
+    }
 }

@@ -45,6 +45,9 @@ class HandleInertiaRequests extends Middleware
                 'message' => fn () => $request->session()->get('message'),
                 'error' => fn () => $request->session()->get('error'),
                 'duplicates' => fn () => $request->session()->get('duplicates'),
+                'draft_body' => fn () => $request->session()->get('draft_body'),
+                'draft_cv_path' => fn () => $request->session()->get('draft_cv_path'),
+                'draft_cv_name' => fn () => $request->session()->get('draft_cv_name'),
             ],
         ];
     }

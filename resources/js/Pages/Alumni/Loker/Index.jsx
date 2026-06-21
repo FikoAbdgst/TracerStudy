@@ -1,5 +1,5 @@
 import React, { Suspense, useState } from 'react';
-import { Head, useForm, usePage } from '@inertiajs/react';
+import { Head, useForm, usePage, router } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import InputError from '@/Components/InputError';
 import { Badge } from '@/Components/ui/badge';
@@ -45,15 +45,18 @@ function Modal({ open, onClose, title, subtitle, children, footer }) {
     }, [open]);
     if (!render) return null;
     return (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 9000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, opacity: visible ? 1 : 0, transition: 'opacity 0.25s ease' }}>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', opacity: visible ? 1 : 0, transition: 'opacity 0.25s ease' }}>
             <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(10,20,40,0.45)', backdropFilter: 'blur(3px)', cursor: 'default' }} />
             <div style={{
-                background: '#fff', borderRadius: 16, position: 'relative', width: '100%', maxWidth: 520,
+                background: '#fff', borderRadius: 16, position: 'relative', width: '100%',
+                maxWidth: 520, maxHeight: '90vh', overflowY: 'auto',
                 boxShadow: '0 24px 60px rgba(10,20,40,0.2)',
                 opacity: visible ? 1 : 0,
                 transform: visible ? 'translateY(0) scale(1)' : 'translateY(10px) scale(0.97)',
                 transition: 'opacity 0.25s ease, transform 0.25s cubic-bezier(0.22,1,0.36,1)',
-            }}>
+            }}
+            className="modal-scrollable"
+            >
                 <div style={{ padding: '20px 22px 14px', borderBottom: `1px solid ${T.borderSoft}` }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: subtitle ? 4 : 0 }}>
                         <span style={{ fontSize: 15, fontWeight: 800, color: T.navy }}>{title}</span>
@@ -86,7 +89,7 @@ const fieldBase = { height: 42, padding: '0 13px', border: `1.5px solid ${T.bord
 const onFocus = e => { e.target.style.borderColor = T.navyMid; e.target.style.background = '#fff'; e.target.style.boxShadow = '0 0 0 3px rgba(26,53,96,0.09)'; };
 const onBlur = e => { e.target.style.borderColor = T.border; e.target.style.background = T.bg; e.target.style.boxShadow = 'none'; };
 
-export default function LokerIndex({ jobs, appliedJobIds, alumniProfile }) {
+export default function LokerIndex({ jobs, appliedJobIds, appliedConversationIds, alumniProfile }) {
     const { flash, auth } = usePage().props;
     const [searchQuery, setSearchQuery] = useState('');
     const [modalOpen, setModalOpen] = useState(false);
@@ -142,6 +145,17 @@ export default function LokerIndex({ jobs, appliedJobIds, alumniProfile }) {
                 @keyframes slideDown { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:translateY(0)} }
                 .job-card { transition: all 0.2s ease; }
                 .job-card:hover { transform: translateY(-3px); box-shadow: 0 12px 32px rgba(15,31,61,0.1); }
+                @media (max-width: 540px) {
+                    .modal-scrollable { border-radius: 12px !important; max-width: 100% !important; margin: 0 8px; }
+                    .modal-scrollable > div:first-child { padding: 16px 18px 10px !important; }
+                    .modal-scrollable > div:nth-child(2) { padding: 14px 18px !important; }
+                    .modal-scrollable > div:last-child { padding: 12px 18px !important; }
+                    .map-company-wrapper .leaflet-container { height: 120px !important; }
+                }
+                @media (max-width: 400px) {
+                    .modal-scrollable > div:nth-child(2) { padding: 12px 14px !important; }
+                    .map-company-wrapper .leaflet-container { height: 100px !important; }
+                }
             `}</style>
 
             <div className="ak-root">
@@ -238,27 +252,48 @@ export default function LokerIndex({ jobs, appliedJobIds, alumniProfile }) {
                                     )}
                                 </div>
 
-                                {/* Footer Button */}
-                                <button
-                                    onClick={() => openApply(job, isApplied)}
-                                    style={{
-                                        height: 38, borderRadius: 9, border: 'none', width: '100%',
-                                        fontSize: 13, fontWeight: 700, cursor: 'pointer',
-                                        fontFamily: 'inherit', transition: 'all 0.15s',
-                                        background: isApplied ? T.greenLight : T.orange,
-                                        color: isApplied ? T.green : '#fff',
-                                        boxShadow: isApplied ? 'none' : '0 2px 8px rgba(249,115,22,0.25)',
-                                    }}
-                                    onMouseEnter={e => {
-                                        if (!isApplied) { e.currentTarget.style.background = '#ea6c0a'; e.currentTarget.style.transform = 'translateY(-1px)'; }
-                                        else { e.currentTarget.style.background = '#dcfce7'; e.currentTarget.style.transform = 'translateY(-1px)'; }
-                                    }}
-                                    onMouseLeave={e => {
-                                        e.currentTarget.style.background = isApplied ? T.greenLight : T.orange; e.currentTarget.style.transform = 'none';
-                                    }}
-                                >
-                                    {isApplied ? '✓ Terkirim (Ubah CV)' : 'Lamar Pekerjaan'}
-                                </button>
+                                {/* Footer Buttons */}
+                                {isApplied && appliedConversationIds?.[job.id] ? (
+                                    <button
+                                        onClick={() => router.get(route('messages.index', { conversation: appliedConversationIds[job.id] }))}
+                                        style={{
+                                            height: 38, borderRadius: 9, border: 'none', width: '100%',
+                                            fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                                            fontFamily: 'inherit', transition: 'all 0.15s',
+                                            background: T.orange, color: '#fff',
+                                            boxShadow: '0 2px 8px rgba(249,115,22,0.25)',
+                                        }}
+                                        onMouseEnter={e => { e.currentTarget.style.background = '#ea6c0a'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                                        onMouseLeave={e => { e.currentTarget.style.background = T.orange; e.currentTarget.style.transform = 'none'; }}
+                                    >
+                                        Lanjutkan Obrolan
+                                    </button>
+                                ) : isApplied ? (
+                                    <div style={{
+                                        height: 38, borderRadius: 9, width: '100%',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        fontSize: 13, fontWeight: 700,
+                                        background: T.greenLight, color: T.green, cursor: 'default',
+                                    }}>
+                                        ✓ Lamaran Terkirim
+                                    </div>
+                                ) : (
+                                    <button
+                                        onClick={() => openApply(job, false)}
+                                        style={{
+                                            height: 38, borderRadius: 9, border: 'none', width: '100%',
+                                            fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                                            fontFamily: 'inherit', transition: 'all 0.15s',
+                                            background: T.orange,
+                                            color: '#fff',
+                                            boxShadow: '0 2px 8px rgba(249,115,22,0.25)',
+                                        }}
+                                        onMouseEnter={e => { e.currentTarget.style.background = '#ea6c0a'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                                        onMouseLeave={e => { e.currentTarget.style.background = T.orange; e.currentTarget.style.transform = 'none'; }}
+                                    >
+                                        Lamar Pekerjaan
+                                    </button>
+                                )}
                             </div>
                         );
                     })}
@@ -304,6 +339,29 @@ export default function LokerIndex({ jobs, appliedJobIds, alumniProfile }) {
                             <div style={{ fontSize: 11.5, color: T.muted }}>{selectedJob?.company?.name}</div>
                         </div>
                     </div>
+
+                    {/* Company Location Map */}
+                    {selectedJob?.company?.latitude && selectedJob?.company?.longitude && (
+                        <div style={{ marginBottom: 16 }}>
+                            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#374151', marginBottom: 6 }}>
+                                Lokasi Perusahaan
+                            </label>
+                            <div className="map-company-wrapper" style={{ borderRadius: 9, overflow: 'hidden', border: `1px solid ${T.borderSoft}` }}>
+                                <Suspense fallback={<div style={{ height: 150, borderRadius: 9, background: '#f0f4f9' }} />}>
+                                    <MapWidget
+                                        latitude={parseFloat(selectedJob.company.latitude)}
+                                        longitude={parseFloat(selectedJob.company.longitude)}
+                                        height={150}
+                                    />
+                                </Suspense>
+                            </div>
+                            {selectedJob.company.address && (
+                                <div style={{ fontSize: 11.5, color: T.muted, marginTop: 4, paddingLeft: 2 }}>
+                                    📍 {selectedJob.company.address}
+                                </div>
+                            )}
+                        </div>
+                    )}
 
                     {/* Disclaimer */}
                     <div style={{ marginBottom: 16, padding: '12px 14px', borderRadius: 10, background: T.navyLight, border: `1px solid ${T.navyMid}22`, display: 'flex', gap: 10, alignItems: 'flex-start' }}>

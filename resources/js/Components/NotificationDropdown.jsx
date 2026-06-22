@@ -11,6 +11,8 @@ const typeConfig = {
     company_verification: { dot: '#b45309', bg: '#fffbeb', icon: '🏢' },
     mou_approved: { dot: '#15803d', bg: '#f0fdf4', icon: '📄' },
     forum_reply: { dot: '#0369a1', bg: '#f0f9ff', icon: '💬' },
+    chat: { dot: '#0891b2', bg: '#ecfeff', icon: '💬' },
+    warning: { dot: '#dc2626', bg: '#fef2f2', icon: '⚠️' },
     system: { dot: '#64748b', bg: '#f8fafc', icon: '🔔' },
 };
 

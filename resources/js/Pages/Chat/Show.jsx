@@ -34,7 +34,7 @@ export default function Show({ conversation, messages: initialMessages, otherUse
         if (polling && conversation.id) {
             intervalRef.current = setInterval(() => {
                 const since = messages.length > 0 ? messages[messages.length - 1].created_at : null;
-                axios.get(route('chat.poll', conversation.id), {
+                axios.get(route('messages.poll', conversation.id), {
                     params: { since }
                 }).then((res) => {
                     if (res.data.messages && res.data.messages.length > 0) {
@@ -56,7 +56,7 @@ export default function Show({ conversation, messages: initialMessages, otherUse
 
     useEffect(() => {
         if (conversation.id) {
-            axios.post(route('chat.read', conversation.id)).catch(() => {});
+            axios.post(route('messages.read', conversation.id)).catch(() => {});
         }
     }, [conversation.id]);
 
@@ -71,7 +71,7 @@ export default function Show({ conversation, messages: initialMessages, otherUse
             formData.append('attachment', attachment);
         }
 
-        axios.post(route('chat.send', conversation.id), formData, {
+        axios.post(route('messages.send', conversation.id), formData, {
             headers: { 'Content-Type': 'multipart/form-data' },
         }).then(() => {
             reset();
@@ -107,7 +107,7 @@ export default function Show({ conversation, messages: initialMessages, otherUse
                         {/* Header */}
                         <div className="px-6 py-4 border-b bg-gray-50 flex items-center justify-between">
                             <div className="flex items-center gap-3">
-                                <Link href={route('chat.index')} className="text-gray-400 hover:text-gray-600 transition-colors">
+                                <Link href={route('messages.index')} className="text-gray-400 hover:text-gray-600 transition-colors">
                                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                                     </svg>

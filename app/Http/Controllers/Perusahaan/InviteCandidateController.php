@@ -63,14 +63,14 @@ class InviteCandidateController extends Controller
         $alumniUser->notify(new SystemNotification(
             'Undangan Melamar dari '.$company->name,
             "Anda diundang untuk melamar posisi {$job->title}",
-            route('chat.show', $conversation->id),
+            route('messages.index', ['conversation' => $conversation->id]),
             'chat'
         ));
 
         return response()->json([
             'success' => true,
             'conversation_id' => $conversation->id,
-            'redirect' => route('chat.show', $conversation->id),
+            'redirect' => route('messages.index', ['conversation' => $conversation->id]),
         ]);
     }
 }

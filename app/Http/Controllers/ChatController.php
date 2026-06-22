@@ -414,6 +414,13 @@ class ChatController extends Controller
         $conversation = Conversation::create(['type' => 'company']);
         $conversation->users()->attach([$companyUser->id, $alumniUser->id]);
 
+        $alumniUser->notify(new SystemNotification(
+            'Pesan Baru dari ' . ($company->name ?? 'Perusahaan'),
+            'Anda memiliki percakapan baru.',
+            route('messages.index', ['conversation' => $conversation->id]),
+            'chat'
+        ));
+
         if ($validated['job_id']) {
             $job = JobPosting::find($validated['job_id']);
             $companyName = $company->name;

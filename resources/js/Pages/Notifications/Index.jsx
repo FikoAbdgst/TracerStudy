@@ -9,6 +9,7 @@ const typeConfig = {
     mou_approved:          { dot: '#15803d', bg: '#f0fdf4', icon: '📄', label: 'Dokumen MoU' },
     forum_reply:           { dot: '#0369a1', bg: '#f0f9ff', icon: '💬', label: 'Forum Diskusi' },
     warning:               { dot: '#dc2626', bg: '#fef2f2', icon: '⚠️', label: 'Peringatan' },
+    chat:                  { dot: '#0891b2', bg: '#ecfeff', icon: '💬', label: 'Pesan' },
     system:                { dot: '#64748b', bg: '#f8fafc', icon: '🔔', label: 'Sistem' },
 };
 

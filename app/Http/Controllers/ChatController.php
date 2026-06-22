@@ -33,6 +33,13 @@ class ChatController extends Controller
         $user = $this->user();
         $otherUser = $conv->otherUser($user->id);
 
+        // Cek apakah alumni masih boleh reply (one-last-reply untuk ditolak)
+        $can_reply = true;
+        $jobApp = $conv->jobApplication;
+        if ($jobApp && $jobApp->status === 'ditolak' && $conv->rejected_reply_count >= 1) {
+            $can_reply = false;
+        }
+
         return [
             'id' => $conv->id,
             'type' => $conv->type,
@@ -50,6 +57,8 @@ class ChatController extends Controller
             'is_blocked_by' => $otherUser ? $user->isBlockedBy($otherUser->id) : false,
             'alumni_msg_count' => $conv->alumni_msg_count,
             'hr_replied' => $conv->hr_replied,
+            'rejected_reply_count' => $conv->rejected_reply_count,
+            'can_reply' => $can_reply,
             'last_message' => $conv->lastMessage ? [
                 'body' => $conv->lastMessage->body,
                 'sender_id' => $conv->lastMessage->sender_id,
@@ -183,6 +192,14 @@ class ChatController extends Controller
             }
         }
 
+        // One-last-reply: alumni hanya boleh 1x balas setelah ditolak
+        $jobApp = $conversation->jobApplication;
+        if ($jobApp && $jobApp->status === 'ditolak') {
+            if ($user->hasRole('Alumni') && $conversation->rejected_reply_count >= 1) {
+                return back()->with('error', 'Percakapan telah ditutup. Tidak dapat mengirim pesan lagi.');
+            }
+        }
+
         $validated = $request->validate([
             'body' => 'nullable|string|max:10000',
             'attachment' => 'nullable|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:10240',
@@ -215,6 +232,11 @@ class ChatController extends Controller
         ]);
 
         $conversation->touch();
+
+        // Increment rejected_reply_count jika alumni membalas setelah ditolak
+        if ($jobApp && $jobApp->status === 'ditolak' && $user->hasRole('Alumni')) {
+            $conversation->increment('rejected_reply_count');
+        }
 
         $otherUser = $conversation->otherUser($user->id);
         if ($otherUser && ! $otherUser->isBlockedBy($user->id)) {

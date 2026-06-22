@@ -27,6 +27,11 @@ class JobApplication extends Model
 
     public function lamaranConversation()
     {
-        return $this->hasOne(Conversation::class, 'job_posting_id', 'job_posting_id');
+        return $this->hasOne(Conversation::class, 'job_application_id');
+    }
+
+    public function scopeMenunggu($query)
+    {
+        return $query->where('status', 'menunggu');
     }
 }

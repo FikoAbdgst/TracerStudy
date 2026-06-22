@@ -16,10 +16,9 @@ const T = {
 };
 
 const statusMap = {
-    pending: { bg: T.borderSoft, color: T.mutedDark, label: 'Terkirim', icon: '📤', step: 1 },
-    direview: { bg: T.navyLight, color: T.navyMid, label: 'Sedang Direview', icon: '🔍', step: 2 },
-    wawancara: { bg: T.purpleLight, color: T.purple, label: 'Panggil Wawancara', icon: '🎙️', step: 3 },
-    diterima: { bg: T.greenLight, color: T.green, label: 'Diterima 🎉', icon: '✅', step: 4 },
+    menunggu: { bg: T.borderSoft, color: T.mutedDark, label: 'Menunggu', icon: '⏳', step: 1 },
+    wawancara: { bg: T.purpleLight, color: T.purple, label: 'Panggil Wawancara', icon: '🎙️', step: 2 },
+    diterima: { bg: T.greenLight, color: T.green, label: 'Diterima 🎉', icon: '✅', step: 3 },
     ditolak: { bg: T.redLight, color: T.red, label: 'Tidak Lolos', icon: '❌', step: 0 },
 };
 
@@ -123,7 +122,7 @@ export default function LamaranIndex({ applications }) {
                             </thead>
                             <tbody>
                                 {filtered.map((app, i) => {
-                                    const st = statusMap[app.status] ?? statusMap.pending;
+                                    const st = statusMap[app.status] ?? statusMap.menunggu;
                                     return (
                                         <tr key={app.id} className="tbl-row" style={{ borderBottom: `1px solid ${T.borderSoft}`, animation: `rowIn 0.26s ${i * 0.04}s both` }}>
                                             <td style={{ padding: '13px 14px', fontSize: 12.5, color: T.muted, whiteSpace: 'nowrap' }}>{formatDate(app.created_at)}</td>
@@ -152,15 +151,21 @@ export default function LamaranIndex({ applications }) {
                                                             Detail
                                                         </button>
                                                     )}
-                                                    {app.job_posting?.company?.user_id && (
-                                                        <button onClick={() => router.post(route('messages.open-company-conversation'), { company_user_id: app.job_posting.company.user_id })}
+                                                    {app.job_posting?.company?.user_id && app.can_chat ? (
+                                                        <button onClick={() => router.get(route('messages.index', { conversation: app.conversation_id }))}
                                                             style={{ fontSize: 10, fontWeight: 700, padding: '4px 8px', borderRadius: 6, border: `1px solid ${T.orange}33`, background: T.orangeLight, color: T.orange, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', transition: 'all 0.15s' }}
                                                             onMouseEnter={e => { e.currentTarget.style.background = T.orange; e.currentTarget.style.color = '#fff'; }}
                                                             onMouseLeave={e => { e.currentTarget.style.background = T.orangeLight; e.currentTarget.style.color = T.orange; }}
                                                         >
                                                             💬 Chat
                                                         </button>
-                                                    )}
+                                                    ) : app.job_posting?.company?.user_id ? (
+                                                        <span title="Menunggu respon HRD"
+                                                            style={{ fontSize: 10, fontWeight: 700, padding: '4px 8px', borderRadius: 6, border: `1px solid ${T.border}`, background: T.bg, color: T.muted, cursor: 'not-allowed', fontFamily: 'inherit', whiteSpace: 'nowrap', opacity: 0.6 }}
+                                                        >
+                                                            💬 Chat
+                                                        </span>
+                                                    ) : null}
                                                 </div>
                                             </td>
                                         </tr>

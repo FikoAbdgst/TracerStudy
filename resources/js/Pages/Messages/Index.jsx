@@ -562,7 +562,7 @@ export default function MessagesIndex({ conversations: initialConvs, selectedCon
                                         <div ref={messagesEndRef} />
                                     </div>
 
-                                    {/* Send Form (disabled when closed or blocked) */}
+                                    {/* Send Form (disabled when closed, blocked, or one-reply quota exhausted) */}
                                     {(selectedConv.status === 'closed' || selectedConv.is_blocked_by) ? (
                                         <div className="px-5 py-4 border-t border-gray-200 bg-gray-50 text-center">
                                             <p className="text-sm text-gray-500">
@@ -585,6 +585,12 @@ export default function MessagesIndex({ conversations: initialConvs, selectedCon
                                                         })
                                                         .catch(() => {});
                                                 }} className="text-orange-500 font-semibold hover:underline">Buka blokir</button> untuk melanjutkan percakapan.
+                                            </p>
+                                        </div>
+                                    ) : selectedConv.can_reply === false ? (
+                                        <div className="px-5 py-4 border-t border-gray-200 bg-gray-50 text-center">
+                                            <p className="text-sm text-gray-500">
+                                                Percakapan telah ditutup. Alumni telah menggunakan batas balasan.
                                             </p>
                                         </div>
                                     ) : (

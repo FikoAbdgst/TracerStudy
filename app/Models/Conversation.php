@@ -20,14 +20,17 @@ class Conversation extends Model
         'type',
         'status',
         'job_posting_id',
+        'job_application_id',
         'alumni_msg_count',
         'hr_replied',
+        'rejected_reply_count',
     ];
 
     protected $casts = [
         'status' => 'string',
         'hr_replied' => 'boolean',
         'alumni_msg_count' => 'integer',
+        'rejected_reply_count' => 'integer',
     ];
 
     public function participants()
@@ -59,6 +62,11 @@ class Conversation extends Model
     public function jobPosting()
     {
         return $this->belongsTo(JobPosting::class);
+    }
+
+    public function jobApplication()
+    {
+        return $this->belongsTo(JobApplication::class);
     }
 
     public function scopeStatus($query, $status)

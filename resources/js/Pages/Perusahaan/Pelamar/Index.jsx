@@ -20,15 +20,14 @@ const T = {
 
 /* ─── Status config ───────────────────────────────────────────────────────── */
 const STATUS = {
-    pending: { bg: T.borderSoft, color: T.mutedDark, border: T.border, label: 'Menunggu', dot: '#94a3b8', desc: 'Belum ditindaklanjuti' },
-    direview: { bg: T.navyLight, color: T.navyMid, border: '#bfdbfe', label: 'Direview', dot: '#3b82f6', desc: 'Sedang diperiksa tim' },
+    menunggu: { bg: T.borderSoft, color: T.mutedDark, border: T.border, label: 'Menunggu', dot: '#94a3b8', desc: 'Belum ditindaklanjuti' },
     wawancara: { bg: T.purpleLight, color: T.purple, border: T.purpleBorder, label: 'Wawancara', dot: T.purple, desc: 'Panggil kandidat' },
     diterima: { bg: T.greenLight, color: T.green, border: T.greenBorder, label: 'Diterima ✓', dot: T.green, desc: 'Kandidat terpilih' },
     ditolak: { bg: T.redLight, color: T.red, border: T.redBorder, label: 'Ditolak', dot: T.red, desc: 'Tidak lolos seleksi' },
 };
 
 const StatusBadge = ({ status, size = 'sm', onClick }) => {
-    const s = STATUS[status] ?? STATUS.pending;
+    const s = STATUS[status] ?? STATUS.menunggu;
     const pad = size === 'lg' ? '5px 14px' : '3px 10px';
     const fs = size === 'lg' ? 12 : 11;
     return (
@@ -118,21 +117,19 @@ const onBlur = e => { e.target.style.borderColor = T.border; e.target.style.boxS
 /* ════════════════════════════════════════════════════════════════════════════
    STATUS OPTION CARD (modal)
 ════════════════════════════════════════════════════════════════════════════ */
-const StatusOptionCard = ({ value, current, onClick }) => {
+const StatusOptionCard = ({ value, current, onClick, locked }) => {
     const s = STATUS[value];
     const isActive = current === value;
 
     const activeBorderColor = {
-        pending: '#94a3b8',
-        direview: '#3b82f6',
+        menunggu: '#94a3b8',
         wawancara: T.purple,
         diterima: T.green,
         ditolak: T.red,
     }[value];
 
     const activeBg = {
-        pending: T.borderSoft,
-        direview: T.navyLight,
+        menunggu: T.borderSoft,
         wawancara: T.purpleLight,
         diterima: T.greenLight,
         ditolak: T.redLight,
@@ -140,33 +137,133 @@ const StatusOptionCard = ({ value, current, onClick }) => {
 
     return (
         <div
-            onClick={() => onClick(value)}
+            onClick={() => { if (!locked) onClick(value); }}
             style={{
-                border: `${isActive ? '1.5px' : '1px'} solid ${isActive ? activeBorderColor : T.border}`,
+                border: `${isActive ? '1.5px' : '1px'} solid ${locked ? T.border : isActive ? activeBorderColor : T.border}`,
                 borderRadius: 10,
                 padding: '10px 13px',
-                cursor: 'pointer',
+                cursor: locked ? 'not-allowed' : 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 gap: 10,
                 transition: 'all 0.15s',
-                background: isActive ? activeBg : '#fff',
+                background: locked ? T.borderSoft : isActive ? activeBg : '#fff',
+                opacity: locked ? 0.5 : 1,
             }}
-            onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = T.bg; }}
-            onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = '#fff'; }}
+            onMouseEnter={e => { if (!isActive && !locked) e.currentTarget.style.background = T.bg; }}
+            onMouseLeave={e => { if (!isActive && !locked) e.currentTarget.style.background = '#fff'; }}
         >
             <span style={{
                 width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
-                background: s.dot,
+                background: locked ? T.muted : s.dot,
                 boxShadow: isActive ? `0 0 0 3px ${activeBg}, 0 0 0 4px ${s.dot}` : 'none',
                 transition: 'box-shadow 0.15s',
             }} />
             <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: isActive ? s.color : T.navy, lineHeight: 1.2 }}>{s.label}</div>
-                <div style={{ fontSize: 11, color: T.muted, marginTop: 1 }}>{s.desc}</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: locked ? T.muted : isActive ? s.color : T.navy, lineHeight: 1.2 }}>
+                    {s.label}
+                    {locked && <span style={{ fontSize: 10, color: T.muted, marginLeft: 6 }}>🔒</span>}
+                </div>
+                <div style={{ fontSize: 11, color: T.muted, marginTop: 1 }}>{locked ? 'Sudah ditetapkan' : s.desc}</div>
             </div>
         </div>
     );
+};
+
+/* ─── Template chat per status ────────────────────────────────────────────── */
+const formatDt = (d) => {
+    if (!d) return '';
+    return new Intl.DateTimeFormat('id-ID', {
+        weekday: 'long', day: '2-digit', month: 'long', year: 'numeric',
+        hour: '2-digit', minute: '2-digit',
+    }).format(new Date(d));
+};
+
+const TEMPLATES = {
+    wawancara: [
+        {
+            id: 'w1', label: 'Formal & Lengkap',
+            desc: 'Undangan wawancara formal dengan detail jadwal dan lokasi',
+            body: (jobTitle, companyName, iv) => {
+                let t = `Dengan hormat,\n\nKami mengundang Saudara/i untuk mengikuti sesi wawancara sebagai bagian dari seleksi posisi *${jobTitle}* di *${companyName}*.`;
+                if (iv?.scheduled_at) t += `\n\n📅 Jadwal: ${formatDt(iv.scheduled_at)}`;
+                if (iv?.location) t += `\n📍 Lokasi: ${iv.location}`;
+                if (iv?.duration) t += `\n⏱ Durasi: ${iv.duration} menit`;
+                if (iv?.notes) t += `\n📝 Catatan: ${iv.notes}`;
+                t += `\n\nHadirlah tepat waktu dan bawakan dokumen pendukung yang diperlukan. Konfirmasi kehadiran Anda dengan membalas pesan ini.\n\nTerima kasih.\n\nSalam hormat,\nTim Rekrutmen ${companyName}`;
+                return t;
+            },
+        },
+        {
+            id: 'w2', label: 'Singkat & Padat',
+            desc: 'Pemberitahuan wawancara singkat dan langsung ke inti',
+            body: (jobTitle, companyName, iv) => {
+                let t = `Halo,\n\nSelamat! Anda lolos ke tahap wawancara untuk posisi ${jobTitle}.\n\nBerikut detailnya:`;
+                if (iv?.scheduled_at) t += `\n• Waktu: ${formatDt(iv.scheduled_at)}`;
+                if (iv?.location) t += `\n• Tempat: ${iv.location}`;
+                if (iv?.notes) t += `\n• Catatan: ${iv.notes}`;
+                t += `\n\nSilakan persiapkan diri Anda. Kami tunggu konfirmasinya.\n\nTim Rekrutmen ${companyName}`;
+                return t;
+            },
+        },
+        {
+            id: 'w3', label: 'Teknis & Persiapan',
+            desc: 'Fokus pada persiapan teknis dan dokumen yang dibawa',
+            body: (jobTitle, companyName, iv) => {
+                let t = `Yth. Kandidat,\n\nAnda diundang untuk mengikuti wawancara teknis posisi *${jobTitle}* di *${companyName}*.`;
+                if (iv?.scheduled_at) t += `\n\n🗓 Waktu: ${formatDt(iv.scheduled_at)}`;
+                if (iv?.location) t += `\n🔗 ${iv.interview_mode === 'online' ? 'Link' : 'Lokasi'}: ${iv.location}`;
+                t += `\n\nPersiapkan hal-hal berikut:\n1. Dokumen pendukung (CV, portofolio, ijazah)\n2. Koneksi internet stabil ${iv.interview_mode === 'online' ? 'dan perangkat yang memadai' : ''}\n3. Catatan pengalaman kerja relevan\n\nSemoga sukses!\n\nTim Rekrutmen ${companyName}`;
+                return t;
+            },
+        },
+    ],
+    diterima: [
+        {
+            id: 'a1', label: 'Resmi & Profesional',
+            desc: 'Surat penerimaan formal dengan langkah selanjutnya',
+            body: (jobTitle, companyName) => {
+                return `Dengan hormat,\n\nMelalui surat ini, dengan gembira kami mengumumkan bahwa Anda telah **DITERIMA** untuk bergabung sebagai ${jobTitle} di ${companyName}.\n\nKami akan menghubungi Anda dalam waktu dekat untuk memberikan informasi lebih lanjut mengenai:\n- Jadwal onboarding\n- Dokumen kelengkapan administrasi\n- Hari pertama masuk kerja\n\nSelamat bergabung dengan keluarga besar ${companyName}!\n\nSalam hangat,\nTim Rekrutmen ${companyName}`;
+            },
+        },
+        {
+            id: 'a2', label: 'Ramah & Hangat',
+            desc: 'Pemberitahuan diterima dengan nuansa personal',
+            body: (jobTitle, companyName) => {
+                return `Halo,\n\nSelamattt! 🎉 Kami dengan senang hati menginformasikan bahwa Anda telah **DITERIMA** untuk posisi ${jobTitle} di ${companyName}.\n\nKami sangat antusias menyambut Anda sebagai bagian dari tim kami. Langkah selanjutnya akan kami informasikan melalui pesan terpisah.\n\nJika ada pertanyaan, jangan ragu untuk menghubungi kami.\n\nSampai jumpa!\n\nTim Rekrutmen ${companyName}`;
+            },
+        },
+        {
+            id: 'a3', label: 'Singkat & Jelas',
+            desc: 'Pemberitahuan singkat dan langsung',
+            body: (jobTitle, companyName) => {
+                return `Halo,\n\nSelamat! Anda dinyatakan **DITERIMA** sebagai ${jobTitle} di ${companyName}.\n\nKami akan segera menghubungi Anda untuk informasi proses selanjutnya.\n\nTerima kasih telah melamar di perusahaan kami.\n\nTim Rekrutmen ${companyName}`;
+            },
+        },
+    ],
+    ditolak: [
+        {
+            id: 'r1', label: 'Santun & Profesional',
+            desc: 'Penolakan formal yang sopan dan profesional',
+            body: (jobTitle, companyName) => {
+                return `Dengan hormat,\n\nTerima kasih telah meluangkan waktu untuk melamar posisi ${jobTitle} di ${companyName}.\n\nSetelah melalui proses seleksi yang ketat, dengan berat hati kami informasikan bahwa Anda belum memenuhi kualifikasi yang kami butuhkan pada tahap ini.\n\nKami menghargai ketertarikan Anda untuk bergabung dengan kami dan berharap dapat berkesempatan bekerja sama di lain waktu.\n\nTetap semangat dan jangan menyerah!\n\nSalam hormat,\nTim Rekrutmen ${companyName}`;
+            },
+        },
+        {
+            id: 'r2', label: 'Memotivasi',
+            desc: 'Penolakan dengan semangat dan dorongan positif',
+            body: (jobTitle, companyName) => {
+                return `Halo,\n\nTerima kasih sudah berpartisipasi dalam seleksi posisi ${jobTitle} di ${companyName}.\n\nKeputusan yang kami ambil bukanlah refleksi dari kemampuan Anda. Kami yakin ada kesempatan lain yang lebih cocok menanti.\n\nTeruslah belajar dan berkembang. Suatu saat nanti, kami akan senang melihat lamaran Anda kembali.\n\nJangan menyerah! 💪\n\nTim Rekrutmen ${companyName}`;
+            },
+        },
+        {
+            id: 'r3', label: 'Singkat & Jelas',
+            desc: 'Pemberitahuan penolakan singkat tanpa bertele-tele',
+            body: (jobTitle, companyName) => {
+                return `Halo,\n\nTerima kasih telah melamar untuk posisi ${jobTitle} di ${companyName}.\n\nSetelah proses seleksi, kami informasikan bahwa Anda belum lolos pada tahap ini.\n\nKami berharap Anda dapat mencoba kembali di kesempatan lain.\n\nSalam,\nTim Rekrutmen ${companyName}`;
+            },
+        },
+    ],
 };
 
 /* ════════════════════════════════════════════════════════════════════════════
@@ -186,6 +283,7 @@ export default function PelamarIndex({ applications, company }) {
     const [alumniNoteLen, setAlumniNoteLen] = useState(0);
     const [sameAsCompany, setSameAsCompany] = useState(false);
     const [freshCompany, setFreshCompany] = useState(null);
+    const [selectedTemplate, setSelectedTemplate] = useState('custom');
 
     const statusForm = useForm({
         status: '',
@@ -198,11 +296,12 @@ export default function PelamarIndex({ applications, company }) {
         setModalTarget(app);
         setActiveNoteTab('alumni');
         setAlumniNoteLen((app.notes || '').length);
+        setSelectedTemplate('custom');
         setSameAsCompany(false);
         setFreshCompany(null);
         const prev = app.interview_details || {};
         statusForm.setData({
-            status: app.status || 'pending',
+            status: app.status || 'menunggu',
             notes: app.notes || '',
             hr_notes: app.hr_notes || '',
             interview_details: {
@@ -294,19 +393,54 @@ export default function PelamarIndex({ applications, company }) {
     const jobStats = job => {
         const total = job.applications.length;
         const diterima = job.applications.filter(a => a.status === 'diterima').length;
-        const proses = job.applications.filter(a => ['direview', 'wawancara'].includes(a.status)).length;
+        const proses = job.applications.filter(a => a.status === 'wawancara').length;
         const avgScore = total ? Math.round(job.applications.reduce((s, a) => s + (a.match_score || 0), 0) / total) : 0;
         return { total, diterima, proses, avgScore };
     };
 
-    /* placeholder pesan alumni berdasarkan status */
-    const alumniPlaceholder = {
-        pending: 'Pesan tambahan untuk alumni...',
-        direview: 'Pesan tambahan untuk alumni...',
-        wawancara: 'Informasi jadwal wawancara dan hal yang perlu disiapkan...',
-        diterima: 'Ucapkan selamat dan informasi langkah selanjutnya...',
-        ditolak: 'Sampaikan alasan penolakan yang konstruktif kepada alumni...',
-    }[statusForm.data.status] ?? 'Pesan tambahan untuk alumni...';
+    /* auto-draft berdasarkan status */
+    const getAutoDraft = (status) => {
+        const jobTitle = modalTarget?.job_posting?.title || 'Posisi';
+        const companyName = modalTarget?.job_posting?.company?.name || 'Perusahaan';
+        const iv = statusForm.data.interview_details || {};
+
+        switch (status) {
+            case 'wawancara': {
+                let draft = `Selamat! Anda lolos ke tahap wawancara untuk posisi ${jobTitle}.`;
+                if (iv.scheduled_at) draft += `\n\nJadwal: ${formatDt(iv.scheduled_at)}`;
+                if (iv.location) draft += `\nLokasi/Link: ${iv.location}`;
+                if (iv.notes) draft += `\nCatatan: ${iv.notes}`;
+                draft += `\n\nSilakan persiapkan diri Anda dengan baik.\n\nSalam hangat,\nTim Rekrutmen ${companyName}`;
+                return draft;
+            }
+            case 'diterima':
+                return `Selamat! Anda telah diterima untuk posisi ${jobTitle}.\n\nKami akan menghubungi Anda untuk informasi lebih lanjut mengenai proses onboarding.\n\nTerima kasih telah melamar di perusahaan kami.\n\nSalam hangat,\nTim Rekrutmen ${companyName}`;
+            case 'ditolak':
+                return `Terima kasih telah melamar untuk posisi ${jobTitle}.\n\nSetelah melalui proses seleksi, dengan berat hati kami informasikan bahwa Anda belum lolos kualifikasi pada tahap ini.\n\nKami berharap Anda dapat mencoba kembali di kesempatan lain.\n\nSalam hangat,\nTim Rekrutmen ${companyName}`;
+            default:
+                return modalTarget?.notes || '';
+        }
+    };
+
+    const applyTemplate = (tpl) => {
+        setSelectedTemplate(tpl.id);
+        const jobTitle = modalTarget?.job_posting?.title || 'Posisi';
+        const companyName = modalTarget?.job_posting?.company?.name || 'Perusahaan';
+        const iv = statusForm.data.interview_details;
+        const body = tpl.body(jobTitle, companyName, iv);
+        statusForm.setData('notes', body);
+        setAlumniNoteLen(body.length);
+    };
+
+    const handleStatusChange = (newStatus) => {
+        statusForm.setData('status', newStatus);
+        setSelectedTemplate('custom');
+        const draft = getAutoDraft(newStatus);
+        if (draft) {
+            statusForm.setData('notes', draft);
+            setAlumniNoteLen(draft.length);
+        }
+    };
 
     /* ════ RENDER ════ */
     return (
@@ -622,7 +756,7 @@ export default function PelamarIndex({ applications, company }) {
                                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
                                                 <StatusBadge status={activeApp.status} size="lg" onClick={() => openStatusModal(activeApp)} />
                                                 {activeApp.cv_path ? (
-                                                    <a href={`/storage/${activeApp.cv_path}`} target="_blank" rel="noreferrer"
+                                                    <a href={route('private-file', activeApp.cv_path)} target="_blank" rel="noreferrer"
                                                         style={{ fontSize: 12, fontWeight: 700, color: T.orange, textDecoration: 'none', background: T.orangeLight, padding: '6px 12px', borderRadius: 8, display: 'inline-flex', alignItems: 'center', gap: 5, border: `1px solid ${T.orangeBorder}` }}>
                                                         <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>
                                                         Lihat CV
@@ -769,11 +903,62 @@ export default function PelamarIndex({ applications, company }) {
                                             key={val}
                                             value={val}
                                             current={statusForm.data.status}
-                                            onClick={v => statusForm.setData('status', v)}
+                                            onClick={handleStatusChange}
+                                            locked={modalTarget?.status === 'diterima' || modalTarget?.status === 'ditolak' || (val !== 'menunggu' && val === modalTarget?.status)}
                                         />
                                     ))}
                                 </div>
                             </div>
+
+                            {/* Template picker — hanya untuk status non-menunggu */}
+                            {statusForm.data.status !== 'menunggu' && TEMPLATES[statusForm.data.status] && (
+                                <div>
+                                    <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: T.mutedDark, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>
+                                        Template Pesan ke Alumni
+                                    </label>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
+                                        {TEMPLATES[statusForm.data.status].map(tpl => (
+                                            <div
+                                                key={tpl.id}
+                                                onClick={() => applyTemplate(tpl)}
+                                                style={{
+                                                    border: `${selectedTemplate === tpl.id ? '2px' : '1px'} solid ${selectedTemplate === tpl.id ? T.orange : T.border}`,
+                                                    borderRadius: 10, padding: '10px 12px', cursor: 'pointer',
+                                                    background: selectedTemplate === tpl.id ? T.orangeLight : '#fff',
+                                                    transition: 'all 0.15s',
+                                                }}
+                                                onMouseEnter={e => { if (selectedTemplate !== tpl.id) e.currentTarget.style.borderColor = T.muted; }}
+                                                onMouseLeave={e => { if (selectedTemplate !== tpl.id) e.currentTarget.style.borderColor = T.border; }}
+                                            >
+                                                <div style={{ fontSize: 12, fontWeight: 700, color: selectedTemplate === tpl.id ? T.orange : T.navy }}>{tpl.label}</div>
+                                                <div style={{ fontSize: 10, color: T.muted, marginTop: 2, lineHeight: 1.3 }}>{tpl.desc}</div>
+                                            </div>
+                                        ))}
+                                        <div
+                                            onClick={() => {
+                                                setSelectedTemplate('custom');
+                                                statusForm.setData('notes', '');
+                                                setAlumniNoteLen(0);
+                                            }}
+                                            style={{
+                                                border: `${selectedTemplate === 'custom' ? '2px' : '1px'} solid ${selectedTemplate === 'custom' ? T.orange : T.border}`,
+                                                borderRadius: 10, padding: '10px 12px', cursor: 'pointer',
+                                                background: selectedTemplate === 'custom' ? T.orangeLight : '#fff',
+                                                transition: 'all 0.15s',
+                                                display: 'flex', alignItems: 'center', gap: 8,
+                                            }}
+                                            onMouseEnter={e => { if (selectedTemplate !== 'custom') e.currentTarget.style.borderColor = T.muted; }}
+                                            onMouseLeave={e => { if (selectedTemplate !== 'custom') e.currentTarget.style.borderColor = T.border; }}
+                                        >
+                                            <span style={{ fontSize: 16 }}>✏️</span>
+                                            <div>
+                                                <div style={{ fontSize: 12, fontWeight: 700, color: selectedTemplate === 'custom' ? T.orange : T.navy }}>Custom</div>
+                                                <div style={{ fontSize: 10, color: T.muted, marginTop: 2 }}>Tulis pesan sendiri</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Interview panel — hanya muncul saat wawancara */}
                             {statusForm.data.status === 'wawancara' && (() => {
@@ -961,7 +1146,7 @@ export default function PelamarIndex({ applications, company }) {
                                         <textarea
                                             style={{ ...fieldBase, height: 'auto', padding: '10px 13px', resize: 'vertical', fontSize: 13, lineHeight: 1.5 }}
                                             rows={3}
-                                            placeholder={alumniPlaceholder}
+                                            placeholder="Pesan untuk alumni (akan dikirim ke ruang chat)..."
                                             value={statusForm.data.notes}
                                             onChange={e => {
                                                 statusForm.setData('notes', e.target.value);

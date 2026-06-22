@@ -30,13 +30,23 @@ class JobPortalController extends Controller
             ? JobApplication::where('alumni_id', $alumniProfile->id)->pluck('job_posting_id')->toArray()
             : [];
 
-        // Ambil conversation IDs untuk lowongan yang sudah dilamar (untuk tombol "Lanjutkan Obrolan")
-        $appliedConversationIds = $alumniProfile
-            ? Conversation::whereIn('job_posting_id', $appliedJobIds)
+        // Ambil conversation IDs via job_application_id (dibuat oleh HR saat ubah status)
+        $appliedConversationIds = [];
+        if ($alumniProfile) {
+            $applications = JobApplication::where('alumni_id', $alumniProfile->id)
+                ->whereIn('job_posting_id', $appliedJobIds)
+                ->get();
+
+            $convIds = Conversation::whereIn('job_application_id', $applications->pluck('id'))
                 ->whereHas('participants', fn ($q) => $q->where('user_id', $user->id))
-                ->pluck('id', 'job_posting_id')
-                ->toArray()
-            : [];
+                ->pluck('id', 'job_application_id');
+
+            foreach ($applications as $app) {
+                if (isset($convIds[$app->id])) {
+                    $appliedConversationIds[$app->job_posting_id] = $convIds[$app->id];
+                }
+            }
+        }
 
         return Inertia::render('Alumni/Loker/Index', [
             'jobs' => $jobs,
@@ -87,55 +97,23 @@ class JobPortalController extends Controller
             $cvPath = $alumniProfile->cv_path;
         }
 
-        // Cari percakapan yang sudah ada untuk lowongan ini (anti double-apply)
-        $conversation = Conversation::where('job_posting_id', $job->id)
-            ->whereHas('participants', fn ($q) => $q->where('user_id', $user->id))
-            ->first();
-
-        if (! $conversation) {
-            // Cari percakapan company yang sudah ada dengan perusahaan ini
-            $conversation = $user->conversations()
-                ->where('type', 'company')
-                ->whereHas('participants', fn ($q) => $q->where('user_id', $companyUser->id))
-                ->first();
-        }
-
-        if (! $conversation) {
-            $conversation = Conversation::create([
-                'type' => 'company',
-                'job_posting_id' => $job->id,
-            ]);
-            $conversation->users()->attach([$user->id, $companyUser->id]);
-        } elseif (! $conversation->job_posting_id) {
-            $conversation->update(['job_posting_id' => $job->id]);
-        }
-
-        // Buat record lamaran
+        // Buat record lamaran — JANGAN buat conversation, jangan redirect ke chat
         JobApplication::create([
             'job_posting_id' => $job->id,
             'alumni_id' => $alumniProfile->id,
             'cv_path' => $cvPath,
-            'status' => 'pending',
+            'status' => 'menunggu',
         ]);
 
         // Notifikasi perusahaan (tanpa auto-kirim pesan)
         $companyUser->notify(new SystemNotification(
             'Lamaran Baru Masuk!',
-            "{$user->name} melamar untuk posisi {$job->title} — buka chat untuk mengirim pesan lamaran.",
-            route('messages.index', ['conversation' => $conversation->id]),
+            "{$user->name} melamar untuk posisi {$job->title}. Buka panel pelamar untuk mengubah status.",
+            route('perusahaan.pelamar'),
             'job_application'
         ));
 
-        // Siapkan draf teks lamaran
-        $draftBody = "Halo, saya {$user->name}".($alumniProfile->major ? " dari program studi {$alumniProfile->major}" : '')
-            .".\n\nSaya ingin melamar untuk posisi *{$job->title}* di {$company->name}.\n\n"
-            ."CV saya terlampir pada pesan ini.\n\n"
-            ."Mohon dapat dipertimbangkan.\n\nTerima kasih.";
-
-        return redirect()->route('messages.index', ['conversation' => $conversation->id])
-            ->with('draft_body', $draftBody)
-            ->with('draft_cv_path', $cvPath)
-            ->with('draft_cv_name', 'CV Lamaran - '.$job->title.'.pdf');
+        return back()->with('message', 'Lamaran berhasil dikirim! Silakan pantau status di halaman Status Lamaran.');
     }
 
     public function updateCv(Request $request, JobPosting $job)
@@ -175,13 +153,12 @@ class JobPortalController extends Controller
 
         $application->update([
             'cv_path' => $path,
-            'status' => 'pending',
+            'status' => 'menunggu',
         ]);
 
         return back()->with('message', 'Lamaran berhasil diperbarui!');
     }
 
-    // Fitur 5: Melihat Status Lamaran
     public function applications()
     {
         $alumniProfile = Auth::user()->alumniProfile;
@@ -191,10 +168,16 @@ class JobPortalController extends Controller
                 ->with('message', 'Silakan lengkapi profil terlebih dahulu.');
         }
 
-        $applications = JobApplication::with(['jobPosting.company'])
+        $applications = JobApplication::with(['jobPosting.company', 'lamaranConversation'])
             ->where('alumni_id', $alumniProfile->id)
             ->latest()
-            ->get();
+            ->get()
+            ->map(function ($app) {
+                $app->conversation_id = $app->lamaranConversation?->id;
+                $app->can_chat = $app->status !== 'menunggu';
+
+                return $app;
+            });
 
         return Inertia::render('Alumni/Lamaran/Index', [
             'applications' => $applications,

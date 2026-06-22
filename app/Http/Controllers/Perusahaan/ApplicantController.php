@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Perusahaan;
 
 use App\Http\Controllers\Controller;
+use App\Models\Conversation;
 use App\Models\JobApplication;
+use App\Models\Message;
 use App\Notifications\SystemNotification;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -20,72 +22,47 @@ class ApplicantController extends Controller
             return redirect()->route('perusahaan.profile.edit')->with('error', 'Silakan lengkapi profil terlebih dahulu.');
         }
 
-        // 1. Tarik semua data pelamar untuk perusahaan ini
         $applications = JobApplication::with(['jobPosting', 'alumni.user'])
             ->whereHas('jobPosting', function ($query) use ($company) {
                 $query->where('company_id', $company->id);
             })
             ->get();
 
-        // 2. Kalkulasi Skor Kecocokan (Weighted ATS Scoring)
         $applicationsWithScore = $applications->map(function ($app) {
             $job = $app->jobPosting;
             $alumni = $app->alumni;
 
-            // --- A. SKOR KEAHLIAN (PURE SKILL MATCH) : BOBOT 40% ---
             $jobSkills = is_array($job->requirements) ? $job->requirements : [];
             $alumniSkills = is_array($alumni->skills) ? $alumni->skills : [];
 
-            $skillScore = 1.0; // Beri poin penuh jika perusahaan tidak menetapkan syarat skill
-
+            $skillScore = 1.0;
             if (count($jobSkills) > 0) {
-                // Ubah semua skill ke huruf kecil agar pencocokan tidak sensitif (huruf besar/kecil)
                 $lowerJobSkills = array_map('strtolower', $jobSkills);
                 $lowerAlumniSkills = array_map('strtolower', $alumniSkills);
-
-                // Cari irisan array (Skill pelamar yang sama persis dengan syarat lowongan)
                 $matchedSkills = array_intersect($lowerJobSkills, $lowerAlumniSkills);
-
-                // Rumus: (Jumlah Skill Pelamar yang Cocok) dibagi (Jumlah Skill yang Diminta HRD)
                 $skillScore = count($matchedSkills) / count($jobSkills);
             }
 
-            // --- B. SKOR PENDIDIKAN : BOBOT 25% ---
-            $eduScore = 1.0; // Default 100% jika perusahaan tidak mensyaratkan
+            $eduScore = 1.0;
             if ($job->min_education) {
-                // Mapping hierarki pendidikan menjadi angka
                 $eduMap = ['SMA/SMK' => 1, 'D3' => 2, 'D4/S1' => 3, 'S1' => 3, 'S2' => 4, 'S3' => 5];
                 $jobEdu = $eduMap[$job->min_education] ?? 0;
                 $alumniEdu = $eduMap[$alumni->jenjang_pendidikan] ?? 0;
-
-                if ($alumniEdu >= $jobEdu) {
-                    $eduScore = 1.0; // Memenuhi atau melebihi standar
-                } else {
-                    $eduScore = 0.3; // Penalti berat jika di bawah standar pendidikan
-                }
+                $eduScore = $alumniEdu >= $jobEdu ? 1.0 : 0.3;
             }
 
-            // --- C. SKOR PENGALAMAN : BOBOT 20% ---
             $expScore = 1.0;
             if ($job->min_experience !== null) {
                 $alumniExp = (int) $alumni->experience;
-                if ($alumniExp >= $job->min_experience) {
-                    $expScore = 1.0;
-                } else {
-                    // Proporsional (Contoh: Butuh 2 thn, pelamar 1 thn = Skor 0.5)
-                    $expScore = $job->min_experience > 0 ? ($alumniExp / $job->min_experience) : 1.0;
-                }
+                $expScore = $alumniExp >= $job->min_experience ? 1.0 : ($job->min_experience > 0 ? ($alumniExp / $job->min_experience) : 1.0);
             }
 
-            // --- D. SKOR USIA : BOBOT 15% ---
             $ageScore = 1.0;
             if ($job->max_age !== null && $alumni->tanggal_lahir) {
                 $alumniAge = Carbon::parse($alumni->tanggal_lahir)->age;
-
                 if ($alumniAge <= $job->max_age) {
                     $ageScore = 1.0;
                 } else {
-                    // Penalti bertahap: Kurangi skor 20% untuk setiap 1 tahun kelebihan usia
                     $ageDiff = $alumniAge - $job->max_age;
                     $ageScore = max(0, 1.0 - ($ageDiff * 0.2));
                 }
@@ -98,10 +75,7 @@ class ApplicantController extends Controller
 
             $finalScore = ($skillScore * $wSkill) + ($eduScore * $wEdu) + ($expScore * $wExp) + ($ageScore * $wAge);
 
-            // Ubah menjadi persentase bulat
             $app->match_score = round($finalScore * 100);
-
-            // Simpan rincian skor TANPA label tulisan persen (agar UI React yang urus)
             $app->score_details = [
                 'skill_match' => round($skillScore * 100),
                 'education' => round($eduScore * 100),
@@ -112,7 +86,6 @@ class ApplicantController extends Controller
             return $app;
         });
 
-        // 3. Urutkan dari skor tertinggi sebagai default
         $sortedApps = $applicationsWithScore->sortByDesc('match_score')->values();
 
         return Inertia::render('Perusahaan/Pelamar/Index', [
@@ -124,14 +97,14 @@ class ApplicantController extends Controller
     public function updateStatus(Request $request, JobApplication $lamaran)
     {
         $lamaran->load(['jobPosting', 'alumni.user']);
-
         $company = Auth::user()->company;
+
         if ($lamaran->jobPosting->company_id !== $company->id) {
             abort(403, 'Unauthorized action.');
         }
 
         $validated = $request->validate([
-            'status' => 'required|in:pending,direview,wawancara,diterima,ditolak',
+            'status' => 'required|in:menunggu,wawancara,diterima,ditolak',
             'notes' => 'nullable|string',
             'hr_notes' => 'nullable|string',
             'interview_details' => 'nullable|array',
@@ -144,35 +117,101 @@ class ApplicantController extends Controller
             'interview_details.interview_mode' => 'nullable|in:online,offline',
         ]);
 
-        $lamaran->update($validated);
-
-        // Tutup percakapan terkait jika lamaran ditolak
-        if ($validated['status'] === 'ditolak' && $lamaran->lamaranConversation) {
-            $lamaran->lamaranConversation->update(['status' => 'closed']);
+        // Prevent changing status if already diterima or ditolak (final)
+        if (in_array($lamaran->status, ['diterima', 'ditolak'])) {
+            return back()->with('error', 'Status lamaran sudah final ("' . $lamaran->status . '"). Tidak dapat diubah lagi.');
         }
 
+        // Prevent re-setting the same non-menunggu status
+        if (in_array($validated['status'], ['wawancara', 'diterima', 'ditolak'])
+            && $lamaran->status === $validated['status']) {
+            return back()->with('error', 'Status lamaran ini sudah ditetapkan sebagai "' . $validated['status'] . '". Tidak dapat memperbarui ke status yang sama.');
+        }
+
+        $lamaran->update($validated);
+
+        // Jika status bukan 'menunggu', buat percakapan dan kirim pesan otomatis
+        if (in_array($validated['status'], ['wawancara', 'diterima', 'ditolak'])) {
+            $hrUser = Auth::user();
+            $alumniUser = $lamaran->alumni?->user;
+
+            if ($alumniUser) {
+                // Cari atau buat conversation terikat job_application_id
+                $conversation = Conversation::where('job_application_id', $lamaran->id)->first();
+
+                if (! $conversation) {
+                    $conversation = Conversation::create([
+                        'type' => 'company',
+                        'job_application_id' => $lamaran->id,
+                        'job_posting_id' => $lamaran->job_posting_id,
+                        'hr_replied' => true,
+                        'rejected_reply_count' => 0,
+                    ]);
+                    $conversation->users()->attach([$hrUser->id, $alumniUser->id]);
+                }
+
+                // Siapkan body pesan dari notes
+                $messageBody = $validated['notes'] ?? '';
+
+                if ($validated['status'] === 'ditolak' && empty($messageBody)) {
+                    $messageBody = "Terima kasih telah melamar untuk posisi {$lamaran->jobPosting->title}.\n\n"
+                        ."Setelah melalui proses seleksi, dengan berat hati kami informasikan bahwa Anda belum lolos kualifikasi pada tahap ini.\n\n"
+                        ."Kami berharap Anda dapat mencoba kembali di kesempatan lain.\n\n"
+                        ."Salam hangat,\nTim Rekrutmen {$company->name}";
+                    $lamaran->update(['notes' => $messageBody]);
+                } elseif ($validated['status'] === 'diterima' && empty($messageBody)) {
+                    $messageBody = "Selamat! Anda telah diterima untuk posisi {$lamaran->jobPosting->title}.\n\n"
+                        ."Kami akan menghubungi Anda untuk informasi lebih lanjut mengenai proses onboarding.\n\n"
+                        ."Terima kasih telah melamar di perusahaan kami.\n\n"
+                        ."Salam hangat,\nTim Rekrutmen {$company->name}";
+                    $lamaran->update(['notes' => $messageBody]);
+                } elseif ($validated['status'] === 'wawancara' && empty($messageBody)) {
+                    $details = $validated['interview_details'] ?? [];
+                    $messageBody = "Selamat! Anda lolos ke tahap wawancara untuk posisi {$lamaran->jobPosting->title}.";
+                    if (! empty($details['scheduled_at'])) {
+                        $messageBody .= "\n\nJadwal: ".Carbon::parse($details['scheduled_at'])->translatedFormat('l, d F Y H:i');
+                    }
+                    if (! empty($details['location'])) {
+                        $messageBody .= "\nLokasi/Link: ".$details['location'];
+                    }
+                    if (! empty($details['notes'])) {
+                        $messageBody .= "\nCatatan: ".$details['notes'];
+                    }
+                    $messageBody .= "\n\nSilakan persiapkan diri Anda dengan baik.\n\nSalam hangat,\nTim Rekrutmen {$company->name}";
+                    $lamaran->update(['notes' => $messageBody]);
+                }
+
+                // Kirim pesan sebagai HR
+                Message::create([
+                    'conversation_id' => $conversation->id,
+                    'sender_id' => $hrUser->id,
+                    'body' => $messageBody,
+                ]);
+
+                $conversation->touch();
+
+                // Jika ditolak, reset reply counter
+                if ($validated['status'] === 'ditolak') {
+                    $conversation->update(['rejected_reply_count' => 0]);
+                }
+            }
+        }
+
+        // Kirim notifikasi ke alumni
         if ($lamaran->alumni && $lamaran->alumni->user) {
             $alumniUser = $lamaran->alumni->user;
 
-            $message = 'Status lamaran Anda untuk posisi '.$lamaran->jobPosting->title.' berubah menjadi: '.strtoupper($validated['status']);
+            $statusLabel = [
+                'menunggu' => 'MENUNGGU',
+                'wawancara' => 'WAWANCARA',
+                'diterima' => 'DITERIMA',
+                'ditolak' => 'DITOLAK',
+            ][$validated['status']] ?? strtoupper($validated['status']);
+
+            $message = 'Status lamaran Anda untuk posisi '.$lamaran->jobPosting->title.' berubah menjadi: '.$statusLabel;
 
             if (! empty($validated['notes'])) {
                 $message .= "\n\nPesan dari HRD:\n".$validated['notes'];
-            }
-
-            if ($validated['status'] === 'wawancara' && ! empty($validated['interview_details'])) {
-                $details = $validated['interview_details'];
-                $interviewMsg = "\n\n📅 Detail Panggilan Wawancara:";
-                if (! empty($details['scheduled_at'])) {
-                    $interviewMsg .= "\nJadwal: ".Carbon::parse($details['scheduled_at'])->translatedFormat('l, d F Y H:i');
-                }
-                if (! empty($details['location'])) {
-                    $interviewMsg .= "\nLokasi/Link: ".$details['location'];
-                }
-                if (! empty($details['notes'])) {
-                    $interviewMsg .= "\nCatatan: ".$details['notes'];
-                }
-                $message .= $interviewMsg;
             }
 
             $alumniUser->notify(new SystemNotification(
@@ -183,10 +222,10 @@ class ApplicantController extends Controller
             ));
         }
 
-        $flashMessage = $validated['status'] === 'wawancara'
-            ? 'Status berhasil diperbarui dan panggilan wawancara telah dikirim ke alumni.'
-            : 'Status pelamar berhasil diperbarui.';
+        if (in_array($validated['status'], ['wawancara', 'diterima', 'ditolak']) && isset($conversation)) {
+            return redirect()->route('messages.index', ['conversation' => $conversation->id]);
+        }
 
-        return back()->with('message', $flashMessage);
+        return back()->with('message', 'Status pelamar berhasil diperbarui.');
     }
 }

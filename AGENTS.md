@@ -8,7 +8,7 @@
 |-------|------|------------|
 | Backend | Laravel 13, PHP 8.3+ | Monolithic — all app routes in `routes/web.php` (no `api.php`) |
 | Frontend | React 18, Inertia.js 2, Tailwind 3, PostCSS | `.jsx` only, no TS; entrypoint `resources/js/app.jsx` |
-| UI | shadcn/ui `radix-nova` | Components config in `components.json`; CSS vars: HSL + oklch in `app.css`; `@tailwindcss/forms` in devDeps but **not** in plugins; `resources/js/components/` directory absent — no components generated yet |
+| UI | shadcn/ui `radix-nova` | 9 components in `resources/js/Components/ui/` (badge, button, card, dialog, dropdown-menu, input, label, select, table); `@radix-ui/react-slot` in deps; CSS vars: HSL + oklch in `app.css`; `@tailwindcss/forms` in devDeps but **not** in plugins; icon library: `lucide-react` |
 | DB | PostgreSQL (dev), SQLite `:memory:` (test) | phpunit.xml overrides env; `.env.example` defaults to SQLite |
 | Auth | Breeze + Sanctum | Email verification on; session/cache/queue all default to `database` driver |
 | Roles | Spatie Permission v7 | `Super Admin`, `Admin Kampus`, `Admin PT`, `Alumni` |
@@ -62,7 +62,6 @@ Flash keys — `message`, `error`, `duplicates`, `draft_body`, `draft_cv_path`, 
 - **Private file serving** — `GET /storage/private/{path}` via `PrivateFileController` (behind `auth`, glob `where('path', '.*')`); role-based ACL in controller
 - **Forum policies** — `ForumTopicPolicy` + `ForumReplyPolicy` bound via `Gate::policy()` in `AppServiceProvider` (not route middleware)
 - **Dev guard** — `Model::preventLazyLoading(!$app->isProduction())` in `AppServiceProvider`
-- **Login rejection** — `Admin PT` users whose company `verification_status === 'rejected'` are locked out on login
 - **Seeder** — uses explicit `new User()` records via `DatabaseSeeder` (not factories; `UserFactory` exists for tests only); clears Spatie cache at start
 - **Vite** — manual chunking for react, inertia, radix-ui, headlessui, leaflet, lucide
 - **Guest landing** — `/` → `GuestController@index` renders `Welcome` page with latest jobs, top skills, partner companies
@@ -73,9 +72,10 @@ Flash keys — `message`, `error`, `duplicates`, `draft_body`, `draft_cv_path`, 
 - `ForumTopic.slug` not-null — `booted()` auto-fills from title via `Str::slug`; `attachment` JSON yields computed `attachment_urls` accessor (`Storage::url`)
 - Forum topic/reply create routes throttled: `throttle:3,10` and `throttle:5,10`
 - Test logins (all `password123`): `superadmin@sitami.ac.id`, `adminkampus@sitami.ac.id`, `fiko@alumni.sitami.ac.id`, `hrd@inovasidinamika.com`; more in `database/seeders/DatabaseSeeder.php`
-- Timezone: UTC; no CI workflows (`.github` directory absent)
+- Timezone: UTC
 - Role-based login redirect in `AuthenticatedSessionController` — not in middleware
 - `AlumniProfile` ↔ `Company` many-to-many via `company_saved_candidates` pivot table (talent pool bookmarking)
-- `resources/js/components/` does not exist — shadcn/ui components have not been generated yet
+- shadcn config aliases (`components.json`) point to `@/components/ui` (lowercase `components/`), but actual files live at `resources/js/Components/ui/` (capital `C`) — imports use `@/Components/ui/...`
 - Tests only include Breeze auth tests — no custom feature tests exist yet
-- `CurriculumVitae` model/flash keys (`draft_cv_path`, `draft_cv_name`) suggest an in-progress CV feature not fully wired
+- CV feature flash keys (`draft_cv_path`, `draft_cv_name`) exist in session middleware but `CurriculumVitae` model not yet created
+- Admin PT users whose company `verification_status === 'rejected'` are locked out on login

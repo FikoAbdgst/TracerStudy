@@ -47,7 +47,7 @@ class AlumniProfileController extends Controller
             'cv_file' => 'nullable|file|mimes:pdf|max:5120',
             'photo_file' => 'nullable|file|mimes:png,jpg,jpeg|max:2048',
             'is_open_to_work' => 'boolean',
-            'employment_status' => 'nullable|string|in:Bekerja,Mencari Kerja,Wiraswasta',
+            'employment_status' => 'required|string|in:Bekerja,Mencari Kerja,Wiraswasta',
             'privacy_hide_phone' => 'boolean',
             'privacy_hide_address' => 'boolean',
             'privacy_allow_search' => 'boolean',

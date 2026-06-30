@@ -51,9 +51,6 @@ export default function MessagesIndex({ conversations: initialConvs, selectedCon
     const [selectedConv, setSelectedConv] = useState(initSelected);
     const [messages, setMessages] = useState(initMessages);
     const [showNewChatModal, setShowNewChatModal] = useState(false);
-    const [alumniSearchQ, setAlumniSearchQ] = useState('');
-    const [alumniResults, setAlumniResults] = useState([]);
-    const [searching, setSearching] = useState(false);
     const [sending, setSending] = useState(false);
     const [body, setBody] = useState('');
     const [attachment, setAttachment] = useState(null);
@@ -69,7 +66,6 @@ export default function MessagesIndex({ conversations: initialConvs, selectedCon
     const messagesEndRef = useRef(null);
     const fileInputRef = useRef(null);
     const chatContainerRef = useRef(null);
-    const searchTimeoutRef = useRef(null);
     const pollIntervalRef = useRef(null);
     const textareaRef = useRef(null);
 
@@ -166,30 +162,6 @@ export default function MessagesIndex({ conversations: initialConvs, selectedCon
         }).catch(() => setSending(false));
     };
 
-    const searchAlumni = useCallback((q) => {
-        setAlumniSearchQ(q);
-        if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
-        if (!q || q.length < 2) { setAlumniResults([]); return; }
-        searchTimeoutRef.current = setTimeout(() => {
-            setSearching(true);
-            axios.get(route('messages.search-alumni'), { params: { q } })
-                .then(res => { setAlumniResults(res.data.alumni); })
-                .catch(() => { })
-                .finally(() => setSearching(false));
-        }, 300);
-    }, []);
-
-    const handleStartAlumni = (targetUserId) => {
-        axios.post(route('messages.start-alumni'), { user_id: targetUserId })
-            .then(res => {
-                setShowNewChatModal(false);
-                setAlumniSearchQ('');
-                setAlumniResults([]);
-                window.location.href = res.request?.responseURL || route('messages.index');
-            })
-            .catch(err => { alert('Gagal memulai percakapan.'); });
-    };
-
     const handleStartAdmin = () => {
         axios.post(route('messages.start-admin'))
             .then(res => {
@@ -207,7 +179,7 @@ export default function MessagesIndex({ conversations: initialConvs, selectedCon
         }).then(res => {
             setShowJobPicker(false);
             setInviteAlumniId(null);
-            window.location.href = res.data?.redirect || route('messages.index');
+            window.location.href = res.request.responseURL;
         }).catch(err => alert(err.response?.data?.error || 'Gagal mengundang.'));
     };
 
@@ -678,14 +650,14 @@ export default function MessagesIndex({ conversations: initialConvs, selectedCon
             {showNewChatModal && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4"
                     style={{ background: 'rgba(10,20,40,0.45)', backdropFilter: 'blur(3px)' }}
-                    onClick={() => { setShowNewChatModal(false); setAlumniSearchQ(''); setAlumniResults([]); }}>
+                    onClick={() => { setShowNewChatModal(false); }}>
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
                         onClick={e => e.stopPropagation()}
                         style={{ animation: 'modalIn 0.2s cubic-bezier(0.22,1,0.36,1) both' }}>
                         <div className="px-5 py-4 border-b border-gray-100">
                             <div className="flex items-center justify-between">
                                 <h3 className="text-base font-bold text-gray-900">Mulai Percakapan Baru</h3>
-                                <button onClick={() => { setShowNewChatModal(false); setAlumniSearchQ(''); setAlumniResults([]); }}
+                                <button onClick={() => { setShowNewChatModal(false); }}
                                     className="w-7 h-7 rounded-lg bg-gray-100 text-gray-400 hover:bg-gray-200 flex items-center justify-center transition-colors">
                                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -708,57 +680,6 @@ export default function MessagesIndex({ conversations: initialConvs, selectedCon
                                     <p className="text-xs text-gray-500">Konsultasi atau tanyakan informasi ke kampus</p>
                                 </div>
                             </button>
-
-                            {/* Divider */}
-                            <div className="flex items-center gap-3">
-                                <div className="flex-1 h-px bg-gray-200" />
-                                <span className="text-xs font-medium text-gray-400">ATAU</span>
-                                <div className="flex-1 h-px bg-gray-200" />
-                            </div>
-
-                            {/* Cari Alumni */}
-                            <div>
-                                <label className="block text-xs font-semibold text-gray-500 mb-1.5">Cari Alumni</label>
-                                <input type="text" value={alumniSearchQ}
-                                    onChange={e => searchAlumni(e.target.value)}
-                                    placeholder="Cari berdasarkan nama atau program studi..."
-                                    className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 bg-gray-50 text-sm focus:border-orange-400 focus:ring-orange-400 transition-colors"
-                                />
-                            </div>
-
-                            {/* Results */}
-                            <div className="max-h-52 overflow-y-auto space-y-1">
-                                {searching && (
-                                    <div className="text-center py-3">
-                                        <svg className="w-5 h-5 animate-spin mx-auto text-gray-400" fill="none" viewBox="0 0 24 24">
-                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                                        </svg>
-                                    </div>
-                                )}
-                                {!searching && alumniSearchQ.length >= 2 && alumniResults.length === 0 && (
-                                    <p className="text-xs text-gray-400 text-center py-3">Tidak ada alumni ditemukan.</p>
-                                )}
-                                {alumniResults.map(a => {
-                                    const isSelf = a.id === auth.user.id;
-                                    return (
-                                        <button key={a.id} onClick={() => !isSelf && handleStartAlumni(a.id)}
-                                            disabled={isSelf}
-                                            className={`w-full flex items-center gap-3 p-2.5 rounded-lg transition-colors ${isSelf ? 'opacity-60 cursor-default' : 'hover:bg-gray-50'}`}>
-                                            <div className="w-9 h-9 rounded-full bg-green-600 flex items-center justify-center text-white font-semibold text-sm">
-                                                {a.name.charAt(0).toUpperCase()}
-                                            </div>
-                                            <div className="text-left">
-                                                <p className="text-sm font-medium text-gray-900">
-                                                    {a.name}
-                                                    {isSelf && <span className="text-orange-500 font-semibold ml-1.5">(Anda)</span>}
-                                                </p>
-                                                <p className="text-xs text-gray-500">{a.major || '—'} {a.nim ? `• ${a.nim}` : ''}</p>
-                                            </div>
-                                        </button>
-                                    );
-                                })}
-                            </div>
                         </div>
                     </div>
                 </div>

@@ -44,7 +44,8 @@ class TalentPoolController extends Controller
         }
 
         $query = AlumniProfile::with('user')
-            ->where('is_open_to_work', true);
+            ->where('is_open_to_work', true)
+            ->whereNotNull('employment_status');
 
         if ($search = $request->input('search')) {
             $query->whereHas('user', function ($q) use ($search) {
@@ -70,6 +71,7 @@ class TalentPoolController extends Controller
         $keahlianMaster = $keahlianCat ? $keahlianCat->items : [];
 
         $majors = AlumniProfile::where('is_open_to_work', true)
+            ->whereNotNull('employment_status')
             ->whereNotNull('major')
             ->distinct()
             ->pluck('major')

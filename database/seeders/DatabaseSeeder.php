@@ -299,6 +299,8 @@ class DatabaseSeeder extends Seeder
             'phone_number' => '081234567890',
             'address' => 'Bandung, Jawa Barat',
             'privacy_allow_search' => true,
+            'employment_status' => 'Bekerja',
+            'is_open_to_work' => true,
         ]);
 
         $alumni2 = new User;
@@ -321,6 +323,8 @@ class DatabaseSeeder extends Seeder
             'phone_number' => '089876543210',
             'address' => 'Jakarta Selatan',
             'privacy_allow_search' => true,
+            'employment_status' => 'Bekerja',
+            'is_open_to_work' => true,
         ]);
 
         // --- ALUMNI TAMBAHAN AGAR DATA LEBIH BERVARIASI ---
@@ -344,6 +348,8 @@ class DatabaseSeeder extends Seeder
             'phone_number' => '082145678901',
             'address' => 'Bandung, Jawa Barat',
             'privacy_allow_search' => true,
+            'employment_status' => 'Bekerja',
+            'is_open_to_work' => false,
         ]);
 
         $alumni4 = new User;
@@ -366,6 +372,8 @@ class DatabaseSeeder extends Seeder
             'phone_number' => '085678901234',
             'address' => 'Jakarta Selatan',
             'privacy_allow_search' => true,
+            'employment_status' => 'Bekerja',
+            'is_open_to_work' => false,
         ]);
 
         $alumni5 = new User;
@@ -388,6 +396,8 @@ class DatabaseSeeder extends Seeder
             'phone_number' => '081398765432',
             'address' => 'Bandung, Jawa Barat',
             'privacy_allow_search' => true,
+            'employment_status' => 'Mencari Kerja',
+            'is_open_to_work' => true,
         ]);
 
         // ==========================================

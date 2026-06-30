@@ -90,6 +90,7 @@ class AlumniController extends Controller
                     'major' => $major,
                     'tanggal_lahir' => $tgl_lahir,
                     'graduation_year' => $graduation_year,
+                    'employment_status' => 'Mencari Kerja',
                 ]);
 
                 $count++;

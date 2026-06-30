@@ -31,7 +31,11 @@ class ChatController extends Controller
     protected function conversationData(Conversation $conv)
     {
         $user = $this->user();
-        $otherUser = $conv->otherUser($user->id);
+
+        // Ambil otherUser dari participants yg sudah di-eager-load
+        // (sehingga alumniProfile & company tersedia tanpa lazy load)
+        $otherParticipant = $conv->participants->where('user_id', '!=', $user->id)->first();
+        $otherUser = $otherParticipant?->user;
 
         // Cek apakah alumni masih boleh reply (one-last-reply untuk ditolak)
         $can_reply = true;
@@ -111,7 +115,7 @@ class ChatController extends Controller
         $user = $this->user();
 
         $conversations = $user->conversations()
-            ->with(['lastMessage.sender', 'participants.user.alumniProfile', 'participants.user.company'])
+            ->with(['lastMessage.sender', 'participants.user.alumniProfile', 'participants.user.company', 'jobApplication'])
             ->latest('updated_at')
             ->get()
             ->map(fn ($c) => $this->conversationData($c))
@@ -125,6 +129,8 @@ class ChatController extends Controller
             $conv = Conversation::with([
                 'participants.user.alumniProfile',
                 'participants.user.company',
+                'jobApplication',
+                'lastMessage.sender',
             ])->findOrFail($request->conversation);
 
             if (! $conv->users()->where('user_id', $user->id)->exists()) {
@@ -193,6 +199,7 @@ class ChatController extends Controller
         }
 
         // One-last-reply: alumni hanya boleh 1x balas setelah ditolak
+        $conversation->load('jobApplication');
         $jobApp = $conversation->jobApplication;
         if ($jobApp && $jobApp->status === 'ditolak') {
             if ($user->hasRole('Alumni') && $conversation->rejected_reply_count >= 1) {
@@ -281,7 +288,7 @@ class ChatController extends Controller
             ->values()
             ->map(fn ($m) => $this->messageData($m));
 
-        $updatedConv = $this->conversationData($conversation->fresh(['lastMessage.sender', 'participants.user.alumniProfile', 'participants.user.company']));
+        $updatedConv = $this->conversationData($conversation->fresh(['lastMessage.sender', 'participants.user.alumniProfile', 'participants.user.company', 'jobApplication']));
 
         return response()->json([
             'messages' => $messages,

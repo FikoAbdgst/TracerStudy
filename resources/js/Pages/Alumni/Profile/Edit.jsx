@@ -493,7 +493,7 @@ const EditMode = ({ data, setData, errors, processing, submit, programStudis, ma
             {/* ── Status Pekerjaan ── */}
             <Section title="Status Pekerjaan" icon="💼" delay={0.115}>
                 <div style={{ padding: '12px 0 4px' }}>
-                    <FieldLabel>Apa status Anda saat ini?</FieldLabel>
+                    <FieldLabel>Apa status Anda saat ini? <span style={{color: 'red'}}>*</span></FieldLabel>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                         {[
                             { value: 'Bekerja', label: 'Bekerja', icon: '💼' },
@@ -527,17 +527,22 @@ const EditMode = ({ data, setData, errors, processing, submit, programStudis, ma
             <Section title="Ketersediaan" icon="🔍" delay={0.12}>
                 <div style={{ padding: '12px 0 4px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
                     <div>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: T.navy }}>Saya terbuka untuk tawaran pekerjaan</div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: !data.employment_status ? T.muted : T.navy }}>
+                            Saya terbuka untuk tawaran pekerjaan
+                        </div>
                         <div style={{ fontSize: 11.5, color: T.muted, marginTop: 3, lineHeight: 1.5 }}>
                             Alumni yang mengaktifkan ini akan muncul di pencarian <strong>Bakat Potensial</strong> perusahaan mitra.
                         </div>
                     </div>
                     <button type="button" onClick={() => setData('is_open_to_work', !data.is_open_to_work)}
+                        disabled={!data.employment_status}
                         style={{
                             position: 'relative', flexShrink: 0, width: 48, height: 26, borderRadius: 13, border: 'none',
-                            cursor: 'pointer', transition: 'all 0.25s',
+                            cursor: !data.employment_status ? 'not-allowed' : 'pointer',
+                            transition: 'all 0.25s',
                             background: data.is_open_to_work ? T.green : T.border,
                             padding: 0, fontFamily: 'inherit', outline: 'none',
+                            opacity: !data.employment_status ? 0.4 : 1,
                         }}>
                         <div style={{
                             position: 'absolute', top: 3, left: data.is_open_to_work ? 24 : 3,
@@ -547,9 +552,15 @@ const EditMode = ({ data, setData, errors, processing, submit, programStudis, ma
                         }} />
                     </button>
                 </div>
-                <div style={{ fontSize: 11, color: data.is_open_to_work ? T.green : T.muted, fontWeight: 600, marginTop: 2 }}>
-                    {data.is_open_to_work ? '✓ Aktif — profil Anda akan muncul di hasil pencarian perusahaan' : '— Tidak ditampilkan di pencarian perusahaan'}
-                </div>
+                {!data.employment_status ? (
+                    <div style={{ fontSize: 11, color: T.orange, fontWeight: 600, marginTop: 2, fontStyle: 'italic' }}>
+                        Isi Status Pekerjaan terlebih dahulu untuk mengaktifkan fitur ini
+                    </div>
+                ) : (
+                    <div style={{ fontSize: 11, color: data.is_open_to_work ? T.green : T.muted, fontWeight: 600, marginTop: 2 }}>
+                        {data.is_open_to_work ? '✓ Aktif — profil Anda akan muncul di hasil pencarian perusahaan' : '— Tidak ditampilkan di pencarian perusahaan'}
+                    </div>
+                )}
             </Section>
 
             {/* ── Pengaturan Privasi ── */}
@@ -603,7 +614,7 @@ const EditMode = ({ data, setData, errors, processing, submit, programStudis, ma
                         <div>
                             <div style={{ fontSize: 13, fontWeight: 700, color: T.navy }}>Izinkan Dicari di Chat Percakapan Baru</div>
                             <div style={{ fontSize: 11.5, color: T.muted, marginTop: 3, lineHeight: 1.5 }}>
-                                Alumni lain, Admin Kampus, dan HRD dapat menemukan dan memulai chat dengan Anda.
+                                Alumni lain dapat menemukan dan memulai chat dengan Anda.
                             </div>
                         </div>
                         <button type="button" onClick={() => setData('privacy_allow_search', !data.privacy_allow_search)}
@@ -665,17 +676,17 @@ const EditMode = ({ data, setData, errors, processing, submit, programStudis, ma
                     >
                         ✕ Batal
                     </button>
-                    <button type="submit" disabled={processing}
+                    <button type="submit" disabled={processing || !data.employment_status}
                         style={{
                             height: 42, padding: '0 22px', borderRadius: 9, border: 'none',
-                            background: processing ? T.muted : T.orange, color: '#fff',
-                            fontSize: 13, fontWeight: 700, cursor: processing ? 'not-allowed' : 'pointer',
+                            background: processing || !data.employment_status ? T.muted : T.orange, color: '#fff',
+                            fontSize: 13, fontWeight: 700, cursor: processing || !data.employment_status ? 'not-allowed' : 'pointer',
                             fontFamily: 'inherit', transition: 'all 0.15s',
                             display: 'flex', alignItems: 'center', gap: 7,
-                            boxShadow: processing ? 'none' : '0 2px 8px rgba(249,115,22,0.25)',
+                            boxShadow: processing || !data.employment_status ? 'none' : '0 2px 8px rgba(249,115,22,0.25)',
                         }}
-                        onMouseEnter={e => { if (!processing) { e.currentTarget.style.background = '#ea6c0a'; e.currentTarget.style.transform = 'translateY(-1px)'; } }}
-                        onMouseLeave={e => { e.currentTarget.style.background = processing ? T.muted : T.orange; e.currentTarget.style.transform = 'none'; }}
+                        onMouseEnter={e => { if (!processing && data.employment_status) { e.currentTarget.style.background = '#ea6c0a'; e.currentTarget.style.transform = 'translateY(-1px)'; } }}
+                        onMouseLeave={e => { e.currentTarget.style.background = processing || !data.employment_status ? T.muted : T.orange; e.currentTarget.style.transform = 'none'; }}
                     >
                         {processing
                             ? <><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ animation: 'spin 0.8s linear infinite' }}><path strokeLinecap="round" d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83" /></svg>Menyimpan...</>
@@ -721,7 +732,8 @@ export default function EditProfile({ profile, programStudis = [], keahlianMaste
         profile?.tanggal_lahir &&
         profile?.experience !== null &&
         profile?.experience !== '' &&
-        profile?.skills?.length > 0
+        profile?.skills?.length > 0 &&
+        profile?.employment_status
     );
 
     const submit = e => {

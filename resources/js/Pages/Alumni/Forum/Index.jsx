@@ -366,7 +366,7 @@ export default function ForumIndex({ topics, filters }) {
                                     </div>
                                 </Link>
                                 <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-                                    {topic.user?.id && (
+                                    {topic.user?.id && topic.user.id !== userId && (
                                         <button onClick={e => {
                                             e.preventDefault();
                                             e.stopPropagation();

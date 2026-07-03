@@ -2,6 +2,7 @@ import { Head, router, usePage } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import axios from 'axios';
+import DeleteConfirmationModal from '@/Components/DeleteConfirmationModal';
 
 const T = {
     navy: '#0f1f3d', navyMid: '#1a3560', navyLight: '#e8f0fb',
@@ -63,6 +64,8 @@ export default function MessagesIndex({ conversations: initialConvs, selectedCon
     const [showMsgMenu, setShowMsgMenu] = useState(null);
     const [showClearConfirm, setShowClearConfirm] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [deleteConfirmTarget, setDeleteConfirmTarget] = useState(null);
+    const [deleteLoading, setDeleteLoading] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState([]);
     const [searching, setSearching] = useState(false);
@@ -134,8 +137,9 @@ export default function MessagesIndex({ conversations: initialConvs, selectedCon
                 }).then((res) => {
                     if (res.data.messages?.length > 0) {
                         setMessages(prev => {
-                            const ids = new Set(prev.map(m => m.id));
-                            return [...prev, ...res.data.messages.filter(m => !ids.has(m.id))];
+                            const incomingIds = new Set(res.data.messages.map(m => m.id));
+                            const kept = prev.filter(m => !incomingIds.has(m.id));
+                            return [...kept, ...res.data.messages];
                         });
                     }
                     if (res.data.conversation) {
@@ -191,8 +195,9 @@ export default function MessagesIndex({ conversations: initialConvs, selectedCon
                 .then(res => {
                     if (res.data.messages?.length > 0) {
                         setMessages(prev => {
-                            const ids = new Set(prev.map(m => m.id));
-                            return [...prev, ...res.data.messages.filter(m => !ids.has(m.id))];
+                            const incomingIds = new Set(res.data.messages.map(m => m.id));
+                            const kept = prev.filter(m => !incomingIds.has(m.id));
+                            return [...kept, ...res.data.messages];
                         });
                     }
                     if (res.data.conversation) {
@@ -240,19 +245,37 @@ export default function MessagesIndex({ conversations: initialConvs, selectedCon
         }).catch(err => alert(err.response?.data?.error || 'Gagal mengundang.'));
     };
 
-    const handleDeleteMessage = (msgId, type) => {
-        axios.delete(route('messages.delete', msgId), { data: { type } })
-            .then(() => {
-                if (type === 'for_everyone') {
-                    setMessages(prev => prev.map(m =>
-                        m.id === msgId ? { ...m, body: 'Pesan ini telah dihapus.', is_deleted_for_everyone: true, attachment_url: null } : m
-                    ));
-                } else {
-                    setMessages(prev => prev.filter(m => m.id !== msgId));
-                }
+    const handleDeleteConfirm = () => {
+        if (!deleteConfirmTarget) return;
+        const { msgId, type } = deleteConfirmTarget;
+        const prevMessages = messages;
+        setDeleteLoading(true);
+
+        if (type === 'for_everyone') {
+            setMessages(prev => prev.map(m =>
+                m.id === msgId ? { ...m, is_deleted_for_everyone: true, attachment_url: null } : m
+            ));
+        } else {
+            setMessages(prev => prev.filter(m => m.id !== msgId));
+        }
+
+        router.delete(route('messages.delete', msgId), {
+            data: { type },
+            preserveScroll: true,
+            onSuccess: () => {
+                setDeleteConfirmTarget(null);
+                setDeleteLoading(false);
                 setShowMsgMenu(null);
-            })
-            .catch(() => {});
+            },
+            onError: (errors) => {
+                setMessages(prevMessages);
+                setDeleteLoading(false);
+                const msg = errors?.error || 'Gagal menghapus pesan.';
+                alert(msg);
+                setDeleteConfirmTarget(null);
+                setShowMsgMenu(null);
+            },
+        });
     };
 
     const handleClearChat = () => {
@@ -494,6 +517,8 @@ export default function MessagesIndex({ conversations: initialConvs, selectedCon
                                         {messages.map((msg, idx) => {
                                             const isOwn = msg.sender_id === auth.user.id;
                                             const isDeleted = msg.is_deleted_for_everyone;
+                                            const msgAgeHours = (Date.now() - new Date(msg.created_at).getTime()) / (1000 * 60 * 60);
+                                            const canDeleteEveryone = isOwn && msgAgeHours <= 48;
                                             const showDate = idx === 0 || new Date(msg.created_at).toDateString() !== new Date(messages[idx - 1]?.created_at).toDateString();
                                             return (
                                                 <div key={msg.id}>
@@ -521,9 +546,9 @@ export default function MessagesIndex({ conversations: initialConvs, selectedCon
                                                                             <>
                                                                                 <div className="fixed inset-0 z-10" onClick={() => setShowMsgMenu(null)} />
                                                                                 <div className={`absolute bottom-full mb-1 bg-white rounded-xl shadow-lg border border-gray-200 py-1 z-20 min-w-[150px] ${isOwn ? 'right-0' : 'left-0'}`}>
-                                                                                    {isOwn && (
+                                                                                    {canDeleteEveryone && (
                                                                                         <button
-                                                                                            onClick={() => handleDeleteMessage(msg.id, 'for_everyone')}
+                                                                                            onClick={() => { setDeleteConfirmTarget({ msgId: msg.id, type: 'for_everyone' }); setShowMsgMenu(null); }}
                                                                                             className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-gray-50 flex items-center gap-2"
                                                                                         >
                                                                                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -533,7 +558,7 @@ export default function MessagesIndex({ conversations: initialConvs, selectedCon
                                                                                         </button>
                                                                                     )}
                                                                                     <button
-                                                                                        onClick={() => handleDeleteMessage(msg.id, 'for_me')}
+                                                                                        onClick={() => { setDeleteConfirmTarget({ msgId: msg.id, type: 'for_me' }); setShowMsgMenu(null); }}
                                                                                         className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
                                                                                     >
                                                                                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -553,7 +578,7 @@ export default function MessagesIndex({ conversations: initialConvs, selectedCon
                                                                         : 'bg-white border border-gray-200 text-gray-900 rounded-bl-md'
                                                                     }`}>
                                                                     {isDeleted ? (
-                                                                        <p className="text-xs italic">Pesan ini telah dihapus.</p>
+                                                                        <p className="text-xs italic">🚫 {isOwn ? 'Anda telah menghapus pesan ini' : 'Pesan ini telah dihapus'}</p>
                                                                     ) : (
                                                                         <>
                                                                             {msg.body && <p className="text-sm whitespace-pre-wrap leading-relaxed">{msg.body}</p>}
@@ -868,7 +893,7 @@ export default function MessagesIndex({ conversations: initialConvs, selectedCon
                         </div>
                         <div className="p-5">
                             <p className="text-sm text-gray-600">
-                                Apakah Anda yakin ingin membersihkan seluruh pesan dalam percakapan ini? Tindakan ini hanya berlaku untuk Anda.
+                                Apakah Anda yakin ingin membersihkan seluruh riwayat chat ini? Pesan hanya akan terhapus dari perangkat Anda.
                             </p>
                         </div>
                         <div className="px-5 py-4 border-t border-gray-100 flex justify-end gap-2">
@@ -913,6 +938,19 @@ export default function MessagesIndex({ conversations: initialConvs, selectedCon
                     </div>
                 </div>
             )}
+
+            <DeleteConfirmationModal
+                isOpen={deleteConfirmTarget !== null}
+                onClose={() => { setDeleteConfirmTarget(null); }}
+                onConfirm={handleDeleteConfirm}
+                loading={deleteLoading}
+                title={deleteConfirmTarget?.type === 'for_everyone' ? 'Hapus untuk Semua Orang' : 'Hapus untuk Saya'}
+                message={deleteConfirmTarget?.type === 'for_everyone'
+                    ? 'Apakah Anda yakin ingin menghapus pesan ini untuk semua orang di obrolan ini?'
+                    : 'Hapus pesan ini? Pesan hanya akan dihapus untuk Anda.'}
+                confirmText={deleteConfirmTarget?.type === 'for_everyone' ? 'Hapus untuk Semua' : 'Hapus untuk Saya'}
+                confirmVariant={deleteConfirmTarget?.type === 'for_everyone' ? 'danger' : 'default'}
+            />
 
             <style>{`
                 @keyframes modalIn { from{opacity:0;transform:translateY(10px) scale(0.97)} to{opacity:1;transform:translateY(0) scale(1)} }

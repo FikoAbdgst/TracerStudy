@@ -28,6 +28,7 @@ class AlumniProfile extends Model
         'company_name',
         'privacy_hide_phone',
         'privacy_hide_address',
+        'privacy_allow_search',
     ];
 
     protected $casts = [
@@ -37,6 +38,7 @@ class AlumniProfile extends Model
         'is_open_to_work' => 'boolean',
         'privacy_hide_phone' => 'boolean',
         'privacy_hide_address' => 'boolean',
+        'privacy_allow_search' => 'boolean',
     ];
 
     public function user()

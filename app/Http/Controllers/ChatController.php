@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Notifications\SystemNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
@@ -283,7 +284,10 @@ class ChatController extends Controller
         $messages = $conversation->messages()
             ->with('sender')
             ->afterCleared($clearedAt)
-            ->when($since, fn ($q) => $q->where('created_at', '>', $since))
+            ->when($since, fn ($q) => $q->where(function ($sub) use ($since) {
+                $sub->where('created_at', '>', $since)
+                     ->orWhere('updated_at', '>', $since);
+            }))
             ->orderBy('created_at')
             ->get()
             ->filter(fn ($m) => ! $m->isDeletedForUser($user->id))
@@ -569,9 +573,7 @@ class ChatController extends Controller
         ]);
 
         if ($validated['type'] === 'for_everyone') {
-            if ((int) $message->sender_id !== $user->id) {
-                return back()->with('error', 'Hanya pengirim yang dapat menghapus pesan untuk semua orang.');
-            }
+            Gate::authorize('deleteForEveryone', $message);
 
             $message->update([
                 'is_deleted_for_everyone' => true,

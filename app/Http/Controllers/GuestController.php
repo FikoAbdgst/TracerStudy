@@ -6,6 +6,7 @@ use App\Models\AlumniProfile;
 use App\Models\Company;
 use App\Models\JobPosting;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 class GuestController extends Controller
@@ -32,25 +33,6 @@ class GuestController extends Controller
             }
         }
 
-        if (Schema::hasTable('alumni_profiles')) {
-            try {
-                $allSkills = AlumniProfile::whereNotNull('skills')
-                    ->pluck('skills')
-                    ->flatten()
-                    ->filter()
-                    ->countBy()
-                    ->sortDesc()
-                    ->take(10);
-
-                $topSkills = $allSkills->map(fn ($count, $skill) => [
-                    'skill' => $skill,
-                    'count' => $count,
-                ])->values();
-            } catch (\Exception) {
-                $topSkills = collect();
-            }
-        }
-
         $totalAlumni = 0;
         if (Schema::hasTable('alumni_profiles')) {
             try {
@@ -72,11 +54,31 @@ class GuestController extends Controller
             }
         }
 
+        $featuredAlumni = collect();
+        if (Schema::hasTable('alumni_profiles')) {
+            try {
+                $featuredAlumni = AlumniProfile::where('is_open_to_work', true)
+                    ->whereHas('user')
+                    ->with('user')
+                    ->inRandomOrder()
+                    ->take(6)
+                    ->get()
+                    ->map(fn ($alumni) => [
+                        'name' => $alumni->user->name,
+                        'major' => $alumni->major,
+                        'skills' => collect($alumni->skills ?? [])->take(4)->values(),
+                        'photo' => $alumni->photo_path ? Storage::url($alumni->photo_path) : null,
+                    ]);
+            } catch (\Exception) {
+                $featuredAlumni = collect();
+            }
+        }
+
         return Inertia::render('Welcome', [
             'latestJobs' => $latestJobs,
-            'topSkills' => $topSkills,
             'totalAlumni' => $totalAlumni,
             'partnerCompanies' => $partnerCompanies,
+            'featuredAlumni' => $featuredAlumni,
         ]);
     }
 }

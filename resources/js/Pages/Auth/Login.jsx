@@ -316,8 +316,14 @@ export default function Login({ status, canResetPassword }) {
                     </form>
 
                     <div className="login-footer">
-                        Butuh bantuan?{' '}
-                        <a href="mailto:admin@mardira.ac.id">Hubungi administrator kampus</a>
+                        Ingin berkolaborasi dengan kampus?{' '}
+                        <a
+                            href="https://wa.me/62882001330851?text=Halo,%20saya%20ingin%20mendaftar%20sebagai%20perusahaan%20mitra.%20Mohon%20informasinya%20lebih%20lanjut."
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            Hubungi Kami
+                        </a>
                     </div>
                 </div>
             </div>

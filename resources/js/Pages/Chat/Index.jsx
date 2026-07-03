@@ -46,7 +46,7 @@ export default function Index({ conversations }) {
                                 {conversations.map((conv) => (
                                     <li key={conv.id}>
                                         <Link
-                                            href={route('messages.index', ['conversation' => conv.id])}
+                                            href={route('messages.index', { conversation: conv.id })}
                                             className="block px-6 py-4 hover:bg-gray-50 transition-colors"
                                         >
                                             <div className="flex items-center justify-between">

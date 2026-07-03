@@ -39,10 +39,6 @@ class Message extends Model
 
     public function isDeletedForUser($userId): bool
     {
-        if ($this->is_deleted_for_everyone) {
-            return true;
-        }
-
         if ($this->deleted_by && in_array((int) $userId, $this->deleted_by)) {
             return true;
         }

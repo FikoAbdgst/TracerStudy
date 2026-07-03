@@ -289,7 +289,7 @@ export default function ForumShow({ topic }) {
 
     const getInitials = name => name ? name.charAt(0).toUpperCase() : '?';
 
-function UserPopover({ user, onClose }) {
+function UserPopover({ user, onClose, userId }) {
     const popoverRef = useRef(null);
     useEffect(() => {
         const handler = e => { if (popoverRef.current && !popoverRef.current.contains(e.target)) onClose(); };
@@ -313,24 +313,37 @@ function UserPopover({ user, onClose }) {
                     <BadgeModerator user={user} />
                 </div>
             </div>
-            <button onClick={() => {
-                axios.post(route('messages.start-from-forum'), { user_id: user.id })
-                    .then(res => { window.location.href = res.request?.responseURL || route('messages.index'); })
-                    .catch(err => alert(err.response?.data?.error || 'Gagal memulai percakapan.'));
-            }} style={{
-                width: '100%', height: 34, borderRadius: 8, border: 'none',
-                background: T.orange, color: '#fff', fontSize: 12, fontWeight: 700,
-                cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                transition: 'all 0.15s',
-            }}
-                onMouseEnter={e => e.currentTarget.style.background = '#ea6c0a'}
-                onMouseLeave={e => e.currentTarget.style.background = T.orange}
-            >
-                <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
-                </svg>
-                Kirim Pesan
-            </button>
+            {user.id === userId ? (
+                <div style={{
+                    width: '100%', height: 34, borderRadius: 8, border: `1px solid ${T.border}`,
+                    background: T.bg, color: T.muted, fontSize: 12, fontWeight: 700,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'not-allowed',
+                }}>
+                    <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
+                    </svg>
+                    Akun Anda
+                </div>
+            ) : (
+                <button onClick={() => {
+                    axios.post(route('messages.start-from-forum'), { user_id: user.id })
+                        .then(res => { window.location.href = res.request?.responseURL || route('messages.index'); })
+                        .catch(err => alert(err.response?.data?.error || 'Gagal memulai percakapan.'));
+                }} style={{
+                    width: '100%', height: 34, borderRadius: 8, border: 'none',
+                    background: T.orange, color: '#fff', fontSize: 12, fontWeight: 700,
+                    cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                    transition: 'all 0.15s',
+                }}
+                    onMouseEnter={e => e.currentTarget.style.background = '#ea6c0a'}
+                    onMouseLeave={e => e.currentTarget.style.background = T.orange}
+                >
+                    <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
+                    </svg>
+                    Kirim Pesan
+                </button>
+            )}
         </div>
     );
 }
@@ -351,7 +364,7 @@ function UserPopover({ user, onClose }) {
                             style={{ width: 32, height: 32, borderRadius: 8, background: T.orangeLight, color: T.orange, fontSize: 13, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, cursor: 'pointer' }}>
                             {getInitials(reply.user?.name)}
                         </div>
-                        {popoverUser?.id === reply.user?.id && <UserPopover user={reply.user} onClose={() => setPopoverUser(null)} />}
+                        {popoverUser?.id === reply.user?.id && <UserPopover user={reply.user} userId={userId} onClose={() => setPopoverUser(null)} />}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
@@ -556,7 +569,7 @@ function UserPopover({ user, onClose }) {
                                     style={{ width: 36, height: 36, borderRadius: 10, background: T.navyMid, color: '#fff', fontSize: 14, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, cursor: 'pointer' }}>
                                     {getInitials(topic.user?.name)}
                                 </div>
-                                {popoverUser?.id === topic.user?.id && <UserPopover user={topic.user} onClose={() => setPopoverUser(null)} />}
+                                {popoverUser?.id === topic.user?.id && <UserPopover user={topic.user} userId={userId} onClose={() => setPopoverUser(null)} />}
                             </div>
                             <div>
                                 <div style={{ fontSize: 13.5, fontWeight: 700, color: T.navy, display: 'flex', alignItems: 'center' }}>

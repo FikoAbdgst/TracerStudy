@@ -4,8 +4,10 @@ namespace App\Providers;
 
 use App\Models\ForumReply;
 use App\Models\ForumTopic;
+use App\Models\Message;
 use App\Policies\ForumReplyPolicy;
 use App\Policies\ForumTopicPolicy;
+use App\Policies\MessagePolicy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Vite;
@@ -28,6 +30,7 @@ class AppServiceProvider extends ServiceProvider
     {
         Gate::policy(ForumTopic::class, ForumTopicPolicy::class);
         Gate::policy(ForumReply::class, ForumReplyPolicy::class);
+        Gate::policy(Message::class, MessagePolicy::class);
 
         Model::preventLazyLoading(! $this->app->isProduction());
 

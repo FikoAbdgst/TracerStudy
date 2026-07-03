@@ -6,16 +6,25 @@ import {
     ArrowRight,
     Briefcase,
     Sparkles,
-    Users,
     MessageCircle,
 } from 'lucide-react';
 import GuestLayout from '@/Layouts/GuestLayout';
+import { Card, CardContent } from '@/Components/ui/card';
+import { Badge } from '@/Components/ui/badge';
+import { Button } from '@/Components/ui/button';
 
 const WA_NUMBER = '62882001330851';
 const waLink = (msg) =>
     `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`;
 
-export default function Welcome({ latestJobs, topSkills, totalAlumni, partnerCompanies }) {
+const abbreviateName = (name) => {
+    if (!name) return '';
+    const parts = name.trim().split(/\s+/);
+    if (parts.length === 1) return parts[0];
+    return parts[0] + ' ' + parts[1].charAt(0) + '.';
+};
+
+export default function Welcome({ latestJobs, totalAlumni, partnerCompanies, featuredAlumni }) {
     return (
         <GuestLayout variant="landing">
             <Head title="STMIK Mardira Indonesia — Tracer Study & Alumni" />
@@ -155,7 +164,7 @@ export default function Welcome({ latestJobs, topSkills, totalAlumni, partnerCom
             {/* Stats Bar */}
             <section className="border-b border-[#e8edf5] bg-white">
                 <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-                    <div className="grid grid-cols-2 gap-8 md:grid-cols-3">
+                    <div className="grid grid-cols-2 gap-8">
                         <div className="text-center">
                             <div
                                 className="text-3xl font-bold"
@@ -168,17 +177,6 @@ export default function Welcome({ latestJobs, topSkills, totalAlumni, partnerCom
                             </div>
                         </div>
                         <div className="text-center">
-                            <div
-                                className="text-3xl font-bold"
-                                style={{ color: '#1a3560' }}
-                            >
-                                {topSkills.length}
-                            </div>
-                            <div className="mt-1 text-sm" style={{ color: '#64748b' }}>
-                                Keahlian Unggulan
-                            </div>
-                        </div>
-                        <div className="col-span-2 text-center md:col-span-1">
                             <div
                                 className="text-3xl font-bold"
                                 style={{ color: '#1a3560' }}
@@ -249,78 +247,79 @@ export default function Welcome({ latestJobs, topSkills, totalAlumni, partnerCom
                 </section>
             )}
 
-            {/* Top Skills Section */}
-            <section className="py-16 sm:py-20" style={{ backgroundColor: '#f0f4f9' }}>
-                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                    <div className="mx-auto max-w-2xl text-center">
-                        <h2
-                            className="text-3xl font-bold tracking-tight sm:text-4xl"
-                            style={{ color: '#0f1f3d' }}
-                        >
-                            Keahlian Unggulan Alumni
-                        </h2>
-                        <p className="mt-4 text-lg" style={{ color: '#64748b' }}>
-                            Portofolio kompetensi yang dimiliki oleh lulusan
-                            STMIK Mardira Indonesia
-                        </p>
-                    </div>
-
-                    {topSkills.length > 0 ? (
-                        <div className="mt-12">
-                            <div className="mx-auto max-w-3xl space-y-4">
-                                {topSkills.map((item) => {
-                                    const maxCount = topSkills[0]?.count || 1;
-                                    const pct = item.count / maxCount;
-                                    return (
-                                        <div key={item.skill}>
-                                            <div className="mb-1.5 flex items-center justify-between">
-                                                <span
-                                                    className="text-sm font-medium"
-                                                    style={{ color: '#374151' }}
-                                                >
-                                                    {item.skill}
-                                                </span>
-                                                <span
-                                                    className="text-sm font-semibold"
-                                                    style={{ color: '#f97316' }}
-                                                >
-                                                    {item.count} Alumni
-                                                </span>
-                                            </div>
-                                            <div className="h-2.5 overflow-hidden rounded-full bg-gray-100">
-                                                <div
-                                                    className="h-full rounded-full transition-all duration-700"
-                                                    style={{
-                                                        width: `${pct * 100}%`,
-                                                        background:
-                                                            'linear-gradient(90deg, #f97316, #fb923c)',
-                                                    }}
-                                                />
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    ) : (
-                        <div
-                            className="mt-12 rounded-xl border border-dashed px-6 py-12 text-center"
-                            style={{
-                                borderColor: '#e2e8f0',
-                                backgroundColor: '#f8fafc',
-                            }}
-                        >
-                            <Users
-                                className="mx-auto h-10 w-10"
-                                style={{ color: '#94a3b8' }}
-                            />
-                            <p className="mt-3 text-sm" style={{ color: '#94a3b8' }}>
-                                Belum ada data keahlian alumni
+            {/* Talenta Unggulan Section */}
+            {featuredAlumni.length > 0 && (
+                <section className="py-16 sm:py-20" style={{ backgroundColor: '#f0f4f9' }}>
+                    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                        <div className="mx-auto max-w-2xl text-center mb-12">
+                            <h2
+                                className="text-3xl font-bold tracking-tight sm:text-4xl"
+                                style={{ color: '#0f1f3d' }}
+                            >
+                                Talenta Unggulan STMIK
+                            </h2>
+                            <p className="mt-4 text-base sm:text-lg" style={{ color: '#64748b' }}>
+                                Temukan talenta terbaik kami yang siap berkontribusi untuk perusahaan Anda
                             </p>
                         </div>
-                    )}
-                </div>
-            </section>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {featuredAlumni.map((alumni, idx) => (
+                                <Card key={idx} size="sm" className="overflow-hidden">
+                                    <CardContent className="pt-4 pb-3">
+                                        <div className="flex items-center gap-3 mb-3">
+                                            <div className="w-11 h-11 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-white font-semibold text-sm shrink-0">
+                                                {alumni.photo ? (
+                                                    <img src={alumni.photo} alt="" className="w-full h-full rounded-full object-cover" />
+                                                ) : (
+                                                    abbreviateName(alumni.name).charAt(0)
+                                                )}
+                                            </div>
+                                            <div className="min-w-0">
+                                                <p className="text-sm font-semibold truncate" style={{ color: '#0f1f3d' }}>
+                                                    {abbreviateName(alumni.name)}
+                                                </p>
+                                                <p className="text-xs truncate" style={{ color: '#64748b' }}>
+                                                    {alumni.major || '-'}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {alumni.skills.length > 0 && (
+                                            <div className="flex flex-wrap gap-1.5 mb-2">
+                                                {alumni.skills.map((skill, i) => (
+                                                    <Badge key={i} variant="secondary" className="text-[11px]">
+                                                        {skill}
+                                                    </Badge>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        <div className="flex items-center gap-1.5 mt-3 pt-3 border-t border-gray-100">
+                                            <span className="w-2 h-2 rounded-full bg-green-500 inline-block" />
+                                            <span className="text-xs font-medium text-green-600">Open to Work</span>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            ))}
+                        </div>
+
+                        <div className="text-center mt-10">
+                            <Button
+                                variant="default"
+                                size="lg"
+                                className="rounded-full px-8"
+                                asChild
+                            >
+                                <a href={route('login')}>
+                                    Eksplorasi Ratusan Talenta Lainnya
+                                    <ArrowRight className="w-4 h-4 ml-1" />
+                                </a>
+                            </Button>
+                        </div>
+                    </div>
+                </section>
+            )}
 
             {/* Recent Jobs Section */}
             <section className="py-16 sm:py-20 bg-white">

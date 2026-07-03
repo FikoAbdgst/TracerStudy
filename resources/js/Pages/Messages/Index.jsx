@@ -62,6 +62,10 @@ export default function MessagesIndex({ conversations: initialConvs, selectedCon
     const [showBlockConfirm, setShowBlockConfirm] = useState(null);
     const [showMsgMenu, setShowMsgMenu] = useState(null);
     const [showClearConfirm, setShowClearConfirm] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchResults, setSearchResults] = useState([]);
+    const [searching, setSearching] = useState(false);
 
     const messagesEndRef = useRef(null);
     const fileInputRef = useRef(null);
@@ -88,6 +92,29 @@ export default function MessagesIndex({ conversations: initialConvs, selectedCon
             if (flash.draft_cv_path) setDraftCvPath(flash.draft_cv_path);
         }
     }, []);
+
+    useEffect(() => {
+        if (!showNewChatModal || userRole === 'Admin PT') {
+            setSearchQuery('');
+            setSearchResults([]);
+            return;
+        }
+        const timer = setTimeout(() => {
+            if (searchQuery.trim().length < 2) {
+                setSearchResults([]);
+                setSearching(false);
+                return;
+            }
+            setSearching(true);
+            axios.get(route('messages.search-alumni'), { params: { q: searchQuery } })
+                .then(res => {
+                    setSearchResults(res.data.alumni);
+                    setSearching(false);
+                })
+                .catch(() => setSearching(false));
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [searchQuery, showNewChatModal]);
 
     useEffect(() => {
         if (selectedConv?.id) {
@@ -159,7 +186,26 @@ export default function MessagesIndex({ conversations: initialConvs, selectedCon
             setDraftCvName(null);
             setDraftCvPath(null);
             setSending(false);
-        }).catch(() => setSending(false));
+            const since = messages.length > 0 ? messages[messages.length - 1].created_at : null;
+            axios.get(route('messages.poll', selectedConv.id), { params: { since } })
+                .then(res => {
+                    if (res.data.messages?.length > 0) {
+                        setMessages(prev => {
+                            const ids = new Set(prev.map(m => m.id));
+                            return [...prev, ...res.data.messages.filter(m => !ids.has(m.id))];
+                        });
+                    }
+                    if (res.data.conversation) {
+                        setConversations(prev => prev.map(c =>
+                            c.id === res.data.conversation.id ? res.data.conversation : c
+                        ));
+                    }
+                }).catch(() => {});
+        }).catch((err) => {
+            setSending(false);
+            const msg = err.response?.data?.error || err.response?.data?.message || 'Gagal mengirim pesan.';
+            alert(msg);
+        });
     };
 
     const handleStartAdmin = () => {
@@ -169,6 +215,17 @@ export default function MessagesIndex({ conversations: initialConvs, selectedCon
                 window.location.href = res.request?.responseURL || route('messages.index');
             })
             .catch(() => alert('Gagal menghubungi admin.'));
+    };
+
+    const handleStartAlumniChat = (targetId) => {
+        axios.post(route('messages.start-alumni'), { user_id: targetId })
+            .then(res => {
+                setShowNewChatModal(false);
+                setSearchQuery('');
+                setSearchResults([]);
+                window.location.href = res.request?.responseURL || route('messages.index');
+            })
+            .catch(err => alert(err.response?.data?.error || err.response?.data?.message || 'Gagal memulai percakapan.'));
     };
 
     const handleInviteToApply = (alumniUserId) => {
@@ -199,12 +256,16 @@ export default function MessagesIndex({ conversations: initialConvs, selectedCon
     };
 
     const handleClearChat = () => {
-        axios.delete(route('messages.clear', selectedConv.id))
-            .then(() => {
-                setMessages([]);
-                setShowClearConfirm(false);
-            })
-            .catch(() => {});
+        router.delete(route('messages.clear', selectedConv.id), {
+            preserveScroll: true,
+            preserveState: true,
+        });
+    };
+
+    const handleDeleteConv = () => {
+        router.delete(route('messages.destroy', selectedConv.id), {
+            onSuccess: () => setShowDeleteConfirm(false),
+        });
     };
 
     const activeConvId = selectedConv?.id;
@@ -402,6 +463,15 @@ export default function MessagesIndex({ conversations: initialConvs, selectedCon
                                                                         <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                                                     </svg>
                                                                     Bersihkan Chat
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => { setShowBlockConfirm(null); setShowDeleteConfirm(true); }}
+                                                                    className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-gray-50 flex items-center gap-2"
+                                                                >
+                                                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                                    </svg>
+                                                                    Hapus Chat
                                                                 </button>
                                                             </div>
                                                         </>
@@ -666,7 +736,8 @@ export default function MessagesIndex({ conversations: initialConvs, selectedCon
                             </div>
                         </div>
                         <div className="p-5 space-y-4">
-                            {/* Hubungi Admin Kampus */}
+                            {/* Hubungi Admin Kampus (hidden for Admin Kampus themselves) */}
+                            {userRole !== 'Admin Kampus' && (
                             <button onClick={handleStartAdmin}
                                 className="w-full flex items-center gap-3 p-3.5 rounded-xl bg-purple-50 border border-purple-200 hover:bg-purple-100 transition-colors">
                                 <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold">
@@ -680,6 +751,72 @@ export default function MessagesIndex({ conversations: initialConvs, selectedCon
                                     <p className="text-xs text-gray-500">Konsultasi atau tanyakan informasi ke kampus</p>
                                 </div>
                             </button>
+                            )}
+
+                            {/* Cari Alumni (hidden for Admin PT) */}
+                            {userRole !== 'Admin PT' && (
+                                <div>
+                                    <div className="relative">
+                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                            <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                            </svg>
+                                        </div>
+                                        <input
+                                            type="text"
+                                            value={searchQuery}
+                                            onChange={e => setSearchQuery(e.target.value)}
+                                            placeholder="Cari alumni berdasarkan nama atau jurusan..."
+                                            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm focus:border-orange-400 focus:ring-orange-400 transition-colors"
+                                        />
+                                        {searching && (
+                                            <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                                                <svg className="w-4 h-4 text-gray-400 animate-spin" fill="none" viewBox="0 0 24 24">
+                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                                                </svg>
+                                            </div>
+                                        )}
+                                    </div>
+                                    {searchResults.length > 0 && (
+                                        <div className="mt-2 max-h-48 overflow-y-auto space-y-1">
+                                            {searchResults.map(alumni => {
+                                                const isSelf = alumni.id === auth.user.id;
+                                                return (
+                                                <button
+                                                    key={alumni.id}
+                                                    disabled={isSelf}
+                                                    onClick={() => !isSelf && handleStartAlumniChat(alumni.id)}
+                                                    className={`w-full flex items-center gap-3 p-2.5 rounded-xl border border-transparent transition-colors ${isSelf ? 'opacity-50 cursor-not-allowed bg-gray-50' : 'hover:bg-gray-50 hover:border-gray-200 cursor-pointer'}`}
+                                                >
+                                                    <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0 ${isSelf ? 'bg-gray-400' : 'bg-green-600'}`}>
+                                                        {alumni.name.charAt(0)?.toUpperCase() || 'A'}
+                                                    </div>
+                                                    <div className="text-left min-w-0 flex-1">
+                                                        <p className="text-sm font-semibold text-gray-900 truncate">
+                                                            {alumni.name}
+                                                            {isSelf && <span className="text-gray-400 font-normal"> (Anda)</span>}
+                                                        </p>
+                                                        <p className="text-xs text-gray-500 truncate">
+                                                            {alumni.nim && <span>{alumni.nim} · </span>}
+                                                            {alumni.major || 'Alumni'}
+                                                        </p>
+                                                    </div>
+                                                    {!isSelf && (
+                                                    <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                                                    </svg>
+                                                    )}
+                                                </button>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                    {searchQuery.trim().length >= 2 && !searching && searchResults.length === 0 && (
+                                        <p className="mt-2 text-xs text-gray-400 text-center">Tidak ada alumni ditemukan</p>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -742,6 +879,35 @@ export default function MessagesIndex({ conversations: initialConvs, selectedCon
                             <button onClick={handleClearChat}
                                 className="px-4 py-2 text-sm font-semibold text-white bg-red-500 rounded-lg hover:bg-red-600 transition-colors">
                                 Bersihkan
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal: Konfirmasi Hapus Chat */}
+            {showDeleteConfirm && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+                    style={{ background: 'rgba(10,20,40,0.45)', backdropFilter: 'blur(3px)' }}
+                    onClick={() => setShowDeleteConfirm(false)}>
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden"
+                        onClick={e => e.stopPropagation()}>
+                        <div className="px-5 py-4 border-b border-gray-100">
+                            <h3 className="text-base font-bold text-gray-900">Hapus Chat</h3>
+                        </div>
+                        <div className="p-5">
+                            <p className="text-sm text-gray-600">
+                                Apakah Anda yakin ingin menghapus seluruh percakapan ini? Tindakan ini tidak dapat dibatalkan.
+                            </p>
+                        </div>
+                        <div className="px-5 py-4 border-t border-gray-100 flex justify-end gap-2">
+                            <button onClick={() => setShowDeleteConfirm(false)}
+                                className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
+                                Batal
+                            </button>
+                            <button onClick={handleDeleteConv}
+                                className="px-4 py-2 text-sm font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors">
+                                Hapus
                             </button>
                         </div>
                     </div>

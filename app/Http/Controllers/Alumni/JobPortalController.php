@@ -84,7 +84,7 @@ class JobPortalController extends Controller
         // Validasi opsi CV
         $validated = $request->validate([
             'cv_option' => 'required|in:profile,upload',
-            'cv_file' => 'required_if:cv_option,upload|file|mimes:pdf|max:5120',
+            'cv_file' => 'nullable|required_if:cv_option,upload|file|mimes:pdf|max:5120',
         ]);
 
         // Tentukan path CV
@@ -126,7 +126,7 @@ class JobPortalController extends Controller
 
         $request->validate([
             'cv_option' => 'required|in:profile,upload',
-            'cv_file' => 'required_if:cv_option,upload|file|mimes:pdf|max:5120',
+            'cv_file' => 'nullable|required_if:cv_option,upload|file|mimes:pdf|max:5120',
         ]);
 
         $application = JobApplication::where('job_posting_id', $job->id)

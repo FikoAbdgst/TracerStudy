@@ -196,6 +196,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/messages/unblock', [ChatController::class, 'unblockUser'])->name('messages.unblock');
     Route::delete('/messages/{message}', [ChatController::class, 'deleteMessage'])->name('messages.delete');
     Route::delete('/conversations/{conversation}/clear', [ChatController::class, 'clearConversation'])->name('messages.clear');
+    Route::delete('/conversations/{conversation}', [ChatController::class, 'destroy'])->name('messages.destroy');
 });
 
 require __DIR__.'/auth.php';

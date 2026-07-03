@@ -213,15 +213,17 @@ class ChatController extends Controller
             'draft_cv_path' => 'nullable|string',
         ]);
 
-        if (! $validated['body'] && ! $request->hasFile('attachment') && ! $validated['draft_cv_path']) {
+        $draftCvPath = $validated['draft_cv_path'] ?? null;
+
+        if (! $validated['body'] && ! $request->hasFile('attachment') && ! $draftCvPath) {
             return back()->withErrors(['body' => 'Pesan atau lampiran harus diisi.']);
         }
 
         $attachmentUrl = null;
         if ($request->hasFile('attachment')) {
             $attachmentUrl = $request->file('attachment')->storeAs('chat_attachments', preg_replace('/[^a-zA-Z0-9._-]/', '_', $request->file('attachment')->getClientOriginalName()), 'public');
-        } elseif ($validated['draft_cv_path']) {
-            $srcPath = $validated['draft_cv_path'];
+        } elseif ($draftCvPath) {
+            $srcPath = $draftCvPath;
             $local = Storage::disk('local');
             if ($local->exists($srcPath)) {
                 $destPath = 'chat_attachments/'.basename($srcPath);
@@ -300,10 +302,15 @@ class ChatController extends Controller
     {
         $this->authorizeAccess();
 
+        $user = $this->user();
+
+        if ($user->hasRole('Admin PT')) {
+            return response()->json(['alumni' => []]);
+        }
+
         $query = $request->input('q');
 
-        $alumni = AlumniProfile::where('privacy_allow_search', true)
-            ->when($query, function ($q) use ($query) {
+        $alumni = AlumniProfile::when($query, function ($q) use ($query) {
                 $lowered = mb_strtolower($query);
                 $q->where(function ($sub) use ($lowered) {
                     $sub->whereRaw('LOWER(major) LIKE ?', ["%{$lowered}%"])
@@ -335,17 +342,25 @@ class ChatController extends Controller
 
         $targetUser = User::findOrFail($targetId);
 
-        if (! $targetUser->hasRole('Alumni') || ! $user->hasRole('Alumni')) {
-            abort(403, 'Hanya sesama alumni yang dapat memulai percakapan tipe ini.');
+        if (! $targetUser->hasRole('Alumni')) {
+            abort(403, 'Hanya dapat memulai percakapan dengan alumni.');
         }
 
-        $profile = $targetUser->alumniProfile;
-        if (! $profile || ! $profile->privacy_allow_search) {
-            return back()->with('error', 'Alumni ini tidak mengizinkan ditemukan di pencarian.');
+        if ($user->hasRole('Admin PT')) {
+            abort(403, 'HRD tidak dapat memulai percakapan dengan alumni melalui fitur ini.');
+        }
+
+        if (! $user->hasRole('Alumni') && ! $user->hasRole('Admin Kampus') && ! $user->hasRole('Super Admin')) {
+            abort(403, 'Anda tidak diizinkan memulai percakapan dengan alumni.');
+        }
+
+        $existingTypes = ['alumni'];
+        if ($user->hasRole('Admin Kampus') || $user->hasRole('Super Admin')) {
+            $existingTypes[] = 'admin';
         }
 
         $existing = $user->conversations()
-            ->where('type', 'alumni')
+            ->whereIn('type', $existingTypes)
             ->whereHas('participants', fn ($q) => $q->where('user_id', $targetId))
             ->first();
 
@@ -452,10 +467,6 @@ class ChatController extends Controller
         $targetUser = User::with('alumniProfile')->findOrFail($targetId);
 
         if ($user->hasRole('Alumni') && $targetUser->hasRole('Alumni')) {
-            $profile = $targetUser->alumniProfile;
-            if (! $profile || ! $profile->privacy_allow_search) {
-                return back()->with('error', 'Alumni ini tidak mengizinkan ditemukan di chat.');
-            }
             $type = 'alumni';
         } elseif (($user->hasRole('Alumni') && $targetUser->hasRole('Admin Kampus')) ||
                   ($user->hasRole('Admin Kampus') && $targetUser->hasRole('Alumni'))) {
@@ -594,5 +605,26 @@ class ChatController extends Controller
             ->update(['cleared_at' => now()]);
 
         return back()->with('message', 'Percakapan berhasil dibersihkan.');
+    }
+
+    public function destroy(Conversation $conversation)
+    {
+        $this->authorizeAccess();
+        $user = $this->user();
+
+        if (! $conversation->users()->where('user_id', $user->id)->exists()) {
+            abort(403);
+        }
+
+        $conversation->participants()->where('user_id', $user->id)->delete();
+
+        $remainingParticipants = $conversation->participants()->count();
+
+        if ($remainingParticipants === 0) {
+            $conversation->messages()->delete();
+            $conversation->delete();
+        }
+
+        return redirect()->route('messages.index')->with('message', 'Percakapan berhasil dihapus.');
     }
 }

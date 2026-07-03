@@ -298,7 +298,6 @@ class DatabaseSeeder extends Seeder
             'skills' => ['Laravel', 'React.js', 'Inertia.js', 'Tailwind CSS'],
             'phone_number' => '081234567890',
             'address' => 'Bandung, Jawa Barat',
-            'privacy_allow_search' => true,
             'employment_status' => 'Bekerja',
             'is_open_to_work' => true,
         ]);
@@ -322,12 +321,10 @@ class DatabaseSeeder extends Seeder
             'skills' => ['System Analysis', 'ERP Development', 'PHP'],
             'phone_number' => '089876543210',
             'address' => 'Jakarta Selatan',
-            'privacy_allow_search' => true,
             'employment_status' => 'Bekerja',
             'is_open_to_work' => true,
         ]);
 
-        // --- ALUMNI TAMBAHAN AGAR DATA LEBIH BERVARIASI ---
         $alumni3 = new User;
         $alumni3->name = 'Rina Amalia';
         $alumni3->email = 'rina@alumni.sitami.ac.id';
@@ -347,7 +344,6 @@ class DatabaseSeeder extends Seeder
             'skills' => ['Microsoft Excel Advanced', 'Data Entry', 'Administrative Skills', 'MYOB'],
             'phone_number' => '082145678901',
             'address' => 'Bandung, Jawa Barat',
-            'privacy_allow_search' => true,
             'employment_status' => 'Bekerja',
             'is_open_to_work' => false,
         ]);
@@ -371,7 +367,6 @@ class DatabaseSeeder extends Seeder
             'skills' => ['PHP', 'Laravel', 'System Analysis', 'ERP Development', 'React.js'],
             'phone_number' => '085678901234',
             'address' => 'Jakarta Selatan',
-            'privacy_allow_search' => true,
             'employment_status' => 'Bekerja',
             'is_open_to_work' => false,
         ]);
@@ -395,7 +390,6 @@ class DatabaseSeeder extends Seeder
             'skills' => ['UI/UX Design', 'Digital Marketing', 'Content Creation', 'Tailwind CSS'],
             'phone_number' => '081398765432',
             'address' => 'Bandung, Jawa Barat',
-            'privacy_allow_search' => true,
             'employment_status' => 'Mencari Kerja',
             'is_open_to_work' => true,
         ]);

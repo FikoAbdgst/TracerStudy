@@ -50,7 +50,6 @@ class AlumniProfileController extends Controller
             'employment_status' => 'required|string|in:Bekerja,Mencari Kerja,Wiraswasta',
             'privacy_hide_phone' => 'boolean',
             'privacy_hide_address' => 'boolean',
-            'privacy_allow_search' => 'boolean',
         ], [
             'tanggal_lahir.before_or_equal' => 'Maaf, usia Anda harus minimal 18 tahun untuk menggunakan sistem ini.',
             'tanggal_lahir.required' => 'Tanggal lahir wajib diisi.',

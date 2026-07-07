@@ -125,6 +125,43 @@ const ViewMode = ({ profile, data }) => {
                     </div>
                 </ViewSection>
 
+                <ViewSection title="Skripsi / TA & Portofolio" icon="📘" delay={0.13}>
+                    {data.judul_skripsi && (
+                        <ProfileField label="Judul Skripsi / Tugas Akhir" value={data.judul_skripsi} full />
+                    )}
+                    {data.portofolio_proyek?.length > 0 ? (
+                        <div style={{ padding: '10px 0 6px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                            {data.portofolio_proyek.map((proyek, i) => (
+                                <div key={i} style={{
+                                    padding: '12px 14px', borderRadius: 10,
+                                    border: `1px solid ${T.borderSoft}`, background: T.bg,
+                                }}>
+                                    <div style={{ fontSize: 13, fontWeight: 700, color: T.navy }}>
+                                        📌 {proyek.nama_proyek}
+                                    </div>
+                                    {proyek.deskripsi_singkat && (
+                                        <p style={{ fontSize: 12, color: T.mutedDark, marginTop: 4, lineHeight: 1.5 }}>
+                                            {proyek.deskripsi_singkat}
+                                        </p>
+                                    )}
+                                    {proyek.tautan && (
+                                        <a href={proyek.tautan} target="_blank" rel="noopener noreferrer" style={{
+                                            display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 6,
+                                            fontSize: 11.5, color: '#2563eb', fontWeight: 600, textDecoration: 'none',
+                                        }}>
+                                            🔗 Lihat Proyek
+                                        </a>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div style={{ padding: '12px 0 6px', fontSize: 13, color: T.muted, fontStyle: 'italic' }}>
+                            Belum ada portofolio yang ditambahkan.
+                        </div>
+                    )}
+                </ViewSection>
+
             </div>
 
             <div className="al-sidebar">
@@ -500,6 +537,117 @@ const EditMode = ({ data, setData, errors, processing, submit, programStudis, ma
                         <InputError className="mt-2" message={errors.skills} />
                     </Section>
 
+                    {/* ── Skripsi / TA & Portofolio ── */}
+                    <Section title="Skripsi / TA & Portofolio" icon="📘" delay={0.13}>
+                        <div style={{ marginBottom: 16 }}>
+                            <FieldLabel>Judul Skripsi / Tugas Akhir</FieldLabel>
+                            <input style={fieldBase} placeholder="Contoh: Sistem Informasi Tracer Study Berbasis Web"
+                                value={data.judul_skripsi}
+                                onChange={e => setData('judul_skripsi', e.target.value)}
+                                onFocus={onFocus} onBlur={onBlur}
+                            />
+                            <InputError message={errors.judul_skripsi} className="mt-1.5" />
+                        </div>
+
+                        <div>
+                            <FieldLabel>Proyek Terbaik (Portofolio)</FieldLabel>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 8 }}>
+                                {(data.portofolio_proyek || []).map((proyek, idx) => (
+                                    <div key={idx} style={{
+                                        padding: 14, borderRadius: 10,
+                                        border: `1px solid ${T.borderSoft}`, background: T.bg,
+                                    }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                                            <span style={{ fontSize: 12, fontWeight: 700, color: T.navy }}>
+                                                Proyek #{idx + 1}
+                                            </span>
+                                            <button type="button" onClick={() => {
+                                                const updated = [...data.portofolio_proyek];
+                                                updated.splice(idx, 1);
+                                                setData('portofolio_proyek', updated);
+                                            }} style={{
+                                                border: 'none', background: '#fee2e2', color: '#dc2626',
+                                                padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700,
+                                                cursor: 'pointer', fontFamily: 'inherit',
+                                            }}>
+                                                ✕ Hapus
+                                            </button>
+                                        </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                            <div>
+                                                <FieldLabel>Nama Proyek</FieldLabel>
+                                                <input style={fieldBase} placeholder="Nama proyek..."
+                                                    value={proyek.nama_proyek || ''}
+                                                    onChange={e => {
+                                                        const updated = [...data.portofolio_proyek];
+                                                        updated[idx] = { ...updated[idx], nama_proyek: e.target.value };
+                                                        setData('portofolio_proyek', updated);
+                                                    }}
+                                                    onFocus={onFocus} onBlur={onBlur}
+                                                />
+                                                {errors[`portofolio_proyek.${idx}.nama_proyek`] && (
+                                                    <InputError message={errors[`portofolio_proyek.${idx}.nama_proyek`]} className="mt-1" />
+                                                )}
+                                            </div>
+                                            <div>
+                                                <FieldLabel>Deskripsi Singkat</FieldLabel>
+                                                <textarea style={{ ...fieldBase, minHeight: 56, paddingTop: 10, resize: 'vertical', fontFamily: 'inherit' }}
+                                                    placeholder="Deskripsikan proyek Anda secara singkat..."
+                                                    value={proyek.deskripsi_singkat || ''}
+                                                    onChange={e => {
+                                                        const updated = [...data.portofolio_proyek];
+                                                        updated[idx] = { ...updated[idx], deskripsi_singkat: e.target.value };
+                                                        setData('portofolio_proyek', updated);
+                                                    }}
+                                                    onFocus={onFocus} onBlur={onBlur}
+                                                />
+                                                <InputError message={errors[`portofolio_proyek.${idx}.deskripsi_singkat`]} className="mt-1" />
+                                            </div>
+                                            <div>
+                                                <FieldLabel>Tautan / Link <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: '#94a3b8' }}>(opsional — GitHub, Figma, Google Drive, Web, dll.)</span></FieldLabel>
+                                                <input style={fieldBase} placeholder="https://github.com/username/proyek-anda"
+                                                    value={proyek.tautan || ''}
+                                                    onChange={e => {
+                                                        const updated = [...data.portofolio_proyek];
+                                                        updated[idx] = { ...updated[idx], tautan: e.target.value };
+                                                        setData('portofolio_proyek', updated);
+                                                    }}
+                                                    onFocus={onFocus} onBlur={onBlur}
+                                                />
+                                                <InputError message={errors[`portofolio_proyek.${idx}.tautan`]} className="mt-1" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <button type="button" onClick={() => {
+                                setData('portofolio_proyek', [
+                                    ...(data.portofolio_proyek || []),
+                                    { nama_proyek: '', deskripsi_singkat: '', tautan: '' },
+                                ]);
+                            }} style={{
+                                marginTop: 12, width: '100%', padding: '10px 16px', borderRadius: 9,
+                                border: `2px dashed ${T.border}`, background: 'transparent',
+                                color: T.navyMid, fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                                fontFamily: 'inherit', transition: 'all 0.15s',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                            }}
+                                onMouseEnter={e => { e.currentTarget.style.borderColor = T.orange; e.currentTarget.style.color = T.orange; e.currentTarget.style.background = T.orangeLight; }}
+                                onMouseLeave={e => { e.currentTarget.style.borderColor = T.border; e.currentTarget.style.color = T.navyMid; e.currentTarget.style.background = 'transparent'; }}
+                            >
+                                + Tambah Proyek
+                            </button>
+                            <InputError message={errors.portofolio_proyek} className="mt-2" />
+
+                            {(data.portofolio_proyek || []).length > 0 && (
+                                <div style={{ fontSize: 11, color: T.muted, marginTop: 8, fontStyle: 'italic', lineHeight: 1.5 }}>
+                                    *Tautan bisa diisi dengan URL publik apapun (GitHub, Figma, Google Drive, website, dll.)
+                                </div>
+                            )}
+                        </div>
+                    </Section>
+
                 </div>
 
                 <div className="al-sidebar">
@@ -714,6 +862,8 @@ export default function EditProfile({ profile, programStudis = [], keahlianMaste
         employment_status: profile?.employment_status || '',
         privacy_hide_phone: profile?.privacy_hide_phone ?? false,
         privacy_hide_address: profile?.privacy_hide_address ?? false,
+        judul_skripsi: profile?.judul_skripsi || '',
+        portofolio_proyek: profile?.portofolio_proyek || [],
     });
 
     const isComplete = !!(

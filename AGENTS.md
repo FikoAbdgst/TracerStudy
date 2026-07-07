@@ -69,7 +69,7 @@ Flash keys — `message`, `error`, `duplicates`, `draft_body`, `draft_cv_path`, 
 - **`MouDocument`** — `status` (active/expired/terminated), `signed_at`, `expires_at`; Admin Kampus terminates via `mitra.terminate`
 - **npm scripts disabled** — `.npmrc` has `ignore-scripts=true`; use `npm install --ignore-scripts`
 - **Private file serving** — `GET /storage/private/{path}` via `PrivateFileController` (behind `auth`, glob `where('path', '.*')`); role-based ACL in controller
-- **Forum policies** — `ForumTopicPolicy` + `ForumReplyPolicy` bound via `Gate::policy()` in `AppServiceProvider` (not route middleware)
+- **Policies** — `ForumTopicPolicy`, `ForumReplyPolicy`, `MessagePolicy` bound via `Gate::policy()` in `AppServiceProvider` (not route middleware)
 - **Seeder** — uses explicit `new User()` via `DatabaseSeeder` (not factories; `UserFactory` exists for tests only); clears Spatie cache at start
 - **Guest landing** — `/` → `GuestController@index` renders `Welcome` page with latest jobs, top skills, partner companies
 
@@ -81,7 +81,7 @@ Flash keys — `message`, `error`, `duplicates`, `draft_body`, `draft_cv_path`, 
 - Test logins (all `password123`): `superadmin@sitami.ac.id`, `adminkampus@sitami.ac.id`, `fiko@alumni.sitami.ac.id`, `hrd@inovasidinamika.com`; more in `database/seeders/DatabaseSeeder.php`
 - Role-based login redirect in `AuthenticatedSessionController` — not in middleware
 - `AlumniProfile` ↔ `Company` many-to-many via `company_saved_candidates` pivot (talent pool bookmarking)
-- `MustVerifyEmail` is commented out in `User.php:5` — `verified` route middleware present but contract unimplemented, so email verification is **not enforced**
+- `MustVerifyEmail` is commented out in `User.php:5` — `verified` route middleware is used on forum (`/alumni/forum`) and messaging (`/messages`) routes, but the contract is unimplemented, so email verification is **not enforced**
 - `Model::preventLazyLoading()` enabled in `AppServiceProvider` for non-production — N+1 queries throw exceptions in dev
 - shadcn config aliases (`components.json`) point to `@/components/ui` (lowercase `components/`), but actual files live at `resources/js/Components/ui/` (capital C) — imports use `@/Components/ui/...`
 - Tests are Breeze-generated only (Auth + Profile) — no custom feature tests exist yet

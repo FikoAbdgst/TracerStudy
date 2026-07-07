@@ -29,6 +29,8 @@ class AlumniProfile extends Model
         'privacy_hide_phone',
         'privacy_hide_address',
         'privacy_allow_search',
+        'judul_skripsi',
+        'portofolio_proyek',
     ];
 
     protected $casts = [
@@ -39,6 +41,7 @@ class AlumniProfile extends Model
         'privacy_hide_phone' => 'boolean',
         'privacy_hide_address' => 'boolean',
         'privacy_allow_search' => 'boolean',
+        'portofolio_proyek' => 'array',
     ];
 
     public function user()

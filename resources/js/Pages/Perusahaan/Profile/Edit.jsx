@@ -51,7 +51,22 @@ const EditMode = ({ data, setData, errors, processing, submit, industries, compa
 
     const [selectedProvinsi, setSelectedProvinsi] = useState(data.province || '');
     const [selectedKota, setSelectedKota] = useState(data.city || '');
-    const [detailAlamat, setDetailAlamat] = useState('');
+
+    const extractDetailAlamat = (address, city, province) => {
+        if (!address) return '';
+        let detail = address;
+        if (city && province) {
+            const suffix = `, ${city}, ${province}`;
+            if (detail.endsWith(suffix)) return detail.slice(0, -suffix.length);
+        }
+        if (city) {
+            const suffix = `, ${city}`;
+            if (detail.endsWith(suffix)) return detail.slice(0, -suffix.length);
+        }
+        return detail;
+    };
+
+    const [detailAlamat, setDetailAlamat] = useState(extractDetailAlamat(data.address, data.city, data.province));
     const [isResolvingAddress, setIsResolvingAddress] = useState(false);
 
     const matchWilayah = (cityName, provinceName) => {
@@ -86,7 +101,9 @@ const EditMode = ({ data, setData, errors, processing, submit, industries, compa
 
     const handleAddressResolve = (lat, lng, address) => {
         setDetailAlamat(address);
-        setData({ address, latitude: lat, longitude: lng });
+        setData('address', address);
+        setData('latitude', lat);
+        setData('longitude', lng);
     };
 
     const handleAddressData = (addr) => {

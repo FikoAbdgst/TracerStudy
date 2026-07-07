@@ -300,6 +300,11 @@ class DatabaseSeeder extends Seeder
             'address' => 'Bandung, Jawa Barat',
             'employment_status' => 'Bekerja',
             'is_open_to_work' => true,
+            'judul_skripsi' => 'Sistem Informasi Tracer Study Berbasis Web Menggunakan Laravel dan Inertia.js',
+            'portofolio_proyek' => [
+                ['nama_proyek' => 'SITAMI - Tracer Study Alumni', 'deskripsi_singkat' => 'Platform tracer study dan bursa kerja untuk alumni STMIK Mardira Indonesia. Dibangun dengan Laravel, React, Inertia.js.', 'tautan' => 'https://github.com/fikoo5/sitami'],
+                ['nama_proyek' => 'E-Commerce UMKM', 'deskripsi_singkat' => 'Aplikasi e-commerce untuk produk UMKM lokal dengan fitur manajemen stok, keranjang, dan pembayaran.', 'tautan' => 'https://github.com/fikoo5/ecommerce-umkm'],
+            ],
         ]);
 
         $alumni2 = new User;
@@ -323,6 +328,12 @@ class DatabaseSeeder extends Seeder
             'address' => 'Jakarta Selatan',
             'employment_status' => 'Bekerja',
             'is_open_to_work' => true,
+            'judul_skripsi' => 'Pengembangan Sistem ERP Modul Inventory Pada Perusahaan Manufaktur Menggunakan Metode Waterfall',
+            'portofolio_proyek' => [
+                ['nama_proyek' => 'ERP Inventory System', 'deskripsi_singkat' => 'Sistem manajemen inventori untuk perusahaan manufaktur menengah. Meliputi barang masuk/keluar, stok opname, dan laporan.', 'tautan' => 'https://github.com/zakyhanif/erp-inventory'],
+                ['nama_proyek' => 'Aplikasi Penggajian Karyawan', 'deskripsi_singkat' => 'Sistem penggajian terintegrasi dengan absensi dan perhitungan PPh 21.', 'tautan' => 'https://github.com/zakyhanif/payroll-app'],
+                ['nama_proyek' => 'Company Profile Website', 'deskripsi_singkat' => 'Website company profile interaktif dengan animasi dan optimasi SEO.', 'tautan' => 'https://zakyhanif.my.id'],
+            ],
         ]);
 
         $alumni3 = new User;
@@ -346,6 +357,11 @@ class DatabaseSeeder extends Seeder
             'address' => 'Bandung, Jawa Barat',
             'employment_status' => 'Bekerja',
             'is_open_to_work' => false,
+            'judul_skripsi' => 'Perancangan Sistem Informasi Akuntansi Penerimaan dan Pengeluaran Kas Pada Koperasi Simpan Pinjam',
+            'portofolio_proyek' => [
+                ['nama_proyek' => 'Aplikasi Pembukuan Koperasi', 'deskripsi_singkat' => 'Aplikasi pembukuan untuk koperasi simpan pinjam dengan fitur jurnal, buku besar, dan laporan keuangan.', 'tautan' => 'https://docs.google.com/spreadsheets/d/example-koperasi'],
+                ['nama_proyek' => 'Dashboard Keuangan UMKM', 'deskripsi_singkat' => 'Dashboard interaktif untuk monitoring arus kas dan laba rugi UMKM menggunakan Excel VBA.', 'tautan' => 'https://drive.google.com/file/d/example-finance'],
+            ],
         ]);
 
         $alumni4 = new User;
@@ -369,6 +385,12 @@ class DatabaseSeeder extends Seeder
             'address' => 'Jakarta Selatan',
             'employment_status' => 'Bekerja',
             'is_open_to_work' => false,
+            'judul_skripsi' => 'Implementasi Algoritma AHP Untuk Sistem Pendukung Keputusan Seleksi Penerimaan Karyawan',
+            'portofolio_proyek' => [
+                ['nama_proyek' => 'SPK Penerimaan Karyawan', 'deskripsi_singkat' => 'Sistem pendukung keputusan berbasis web menggunakan metode AHP untuk membantu HRD melakukan seleksi kandidat.', 'tautan' => 'https://github.com/dimaspratama/spk-ahp'],
+                ['nama_proyek' => 'Aplikasi Pengelolaan Proyek', 'deskripsi_singkat' => 'Project management tool dengan fitur Gantt chart, task assignment, dan tracking progress.', 'tautan' => 'https://dimaspratama.dev/projects'],
+                ['nama_proyek' => 'Rest API Layanan Publik', 'deskripsi_singkat' => 'RESTful API untuk layanan publik dengan dokumentasi Swagger dan autentikasi JWT.', 'tautan' => 'https://github.com/dimaspratama/public-api'],
+            ],
         ]);
 
         $alumni5 = new User;
@@ -392,6 +414,11 @@ class DatabaseSeeder extends Seeder
             'address' => 'Bandung, Jawa Barat',
             'employment_status' => 'Mencari Kerja',
             'is_open_to_work' => true,
+            'judul_skripsi' => 'Perancangan UI/UX Aplikasi Mobile E-Learning Menggunakan Metode Design Thinking',
+            'portofolio_proyek' => [
+                ['nama_proyek' => 'Desain Aplikasi E-Learning', 'deskripsi_singkat' => 'Perancangan UI/UX aplikasi mobile pembelajaran interaktif menggunakan Figma, mencakup wireframe, prototype, dan user testing.', 'tautan' => 'https://figma.com/file/example-elearning'],
+                ['nama_proyek' => 'Brand Identity UMKM Makanan', 'deskripsi_singkat' => 'Perancangan brand identity lengkap untuk UMKM makanan ringan, termasuk logo, kemasan, dan media sosial.', 'tautan' => 'https://drive.google.com/drive/folders/example-branding'],
+            ],
         ]);
 
         // ==========================================

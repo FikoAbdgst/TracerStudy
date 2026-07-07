@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Head, Link } from '@inertiajs/react';
 import {
     Building2,
@@ -9,22 +10,19 @@ import {
     MessageCircle,
 } from 'lucide-react';
 import GuestLayout from '@/Layouts/GuestLayout';
-import { Card, CardContent } from '@/Components/ui/card';
-import { Badge } from '@/Components/ui/badge';
 import { Button } from '@/Components/ui/button';
+import JobDetailModal from '@/Components/JobDetailModal';
+import AlumniCard from '@/Components/AlumniCard';
+import AlumniDetailModal from '@/Components/AlumniDetailModal';
 
 const WA_NUMBER = '62882001330851';
 const waLink = (msg) =>
     `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`;
 
-const abbreviateName = (name) => {
-    if (!name) return '';
-    const parts = name.trim().split(/\s+/);
-    if (parts.length === 1) return parts[0];
-    return parts[0] + ' ' + parts[1].charAt(0) + '.';
-};
-
 export default function Welcome({ latestJobs, totalAlumni, partnerCompanies, featuredAlumni }) {
+    const [selectedJob, setSelectedJob] = useState(null);
+    const [selectedAlumni, setSelectedAlumni] = useState(null);
+
     return (
         <GuestLayout variant="landing">
             <Head title="STMIK Mardira Indonesia — Tracer Study & Alumni" />
@@ -49,10 +47,10 @@ export default function Welcome({ latestJobs, totalAlumni, partnerCompanies, fea
                             STMIK Mardira
                         </span>
                     </Link>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 sm:gap-3">
                         <Link
                             href={route('login')}
-                            className="rounded-lg px-4 py-2 text-sm font-medium transition hover:bg-gray-100"
+                            className="rounded-lg px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium transition hover:bg-gray-100"
                             style={{ color: '#64748b' }}
                         >
                             Masuk
@@ -63,14 +61,14 @@ export default function Welcome({ latestJobs, totalAlumni, partnerCompanies, fea
                             )}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 rounded-lg px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:shadow-md"
+                            className="inline-flex items-center gap-1.5 sm:gap-2 rounded-lg px-3 sm:px-5 py-2 text-xs sm:text-sm font-semibold text-white shadow-sm transition hover:shadow-md"
                             style={{
                                 background:
                                     'linear-gradient(135deg, #1a3560, #0f1f3d)',
                             }}
                         >
-                            <MessageCircle className="h-4 w-4" />
-                            Hubungi Kami
+                            <MessageCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                            <span className="hidden sm:inline">Hubungi Kami</span>
                         </a>
                     </div>
                 </div>
@@ -209,9 +207,10 @@ export default function Welcome({ latestJobs, totalAlumni, partnerCompanies, fea
                         </div>
                         <div className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
                             {partnerCompanies.map((company) => (
-                                <div
+                                <Link
                                     key={company.id}
-                                    className="flex flex-col items-center gap-2 rounded-xl border bg-white p-5 text-center shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                                    href={route('guest.company.show', company.id)}
+                                    className="flex flex-col items-center gap-2 rounded-xl border bg-white p-5 text-center shadow-sm transition hover:-translate-y-0.5 hover:shadow-md cursor-pointer"
                                     style={{ borderColor: '#e8edf5' }}
                                 >
                                     <div
@@ -227,7 +226,7 @@ export default function Welcome({ latestJobs, totalAlumni, partnerCompanies, fea
                                             .toUpperCase()}
                                     </div>
                                     <span
-                                        className="text-xs font-semibold leading-tight"
+                                        className="text-xs font-semibold leading-tight line-clamp-2"
                                         style={{ color: '#374151' }}
                                     >
                                         {company.name}
@@ -240,9 +239,10 @@ export default function Welcome({ latestJobs, totalAlumni, partnerCompanies, fea
                                             {company.industry}
                                         </span>
                                     )}
-                                </div>
+                                </Link>
                             ))}
                         </div>
+
                     </div>
                 </section>
             )}
@@ -265,42 +265,11 @@ export default function Welcome({ latestJobs, totalAlumni, partnerCompanies, fea
 
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {featuredAlumni.map((alumni, idx) => (
-                                <Card key={idx} size="sm" className="overflow-hidden">
-                                    <CardContent className="pt-4 pb-3">
-                                        <div className="flex items-center gap-3 mb-3">
-                                            <div className="w-11 h-11 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-white font-semibold text-sm shrink-0">
-                                                {alumni.photo ? (
-                                                    <img src={alumni.photo} alt="" className="w-full h-full rounded-full object-cover" />
-                                                ) : (
-                                                    abbreviateName(alumni.name).charAt(0)
-                                                )}
-                                            </div>
-                                            <div className="min-w-0">
-                                                <p className="text-sm font-semibold truncate" style={{ color: '#0f1f3d' }}>
-                                                    {abbreviateName(alumni.name)}
-                                                </p>
-                                                <p className="text-xs truncate" style={{ color: '#64748b' }}>
-                                                    {alumni.major || '-'}
-                                                </p>
-                                            </div>
-                                        </div>
-
-                                        {alumni.skills.length > 0 && (
-                                            <div className="flex flex-wrap gap-1.5 mb-2">
-                                                {alumni.skills.map((skill, i) => (
-                                                    <Badge key={i} variant="secondary" className="text-[11px]">
-                                                        {skill}
-                                                    </Badge>
-                                                ))}
-                                            </div>
-                                        )}
-
-                                        <div className="flex items-center gap-1.5 mt-3 pt-3 border-t border-gray-100">
-                                            <span className="w-2 h-2 rounded-full bg-green-500 inline-block" />
-                                            <span className="text-xs font-medium text-green-600">Open to Work</span>
-                                        </div>
-                                    </CardContent>
-                                </Card>
+                                <AlumniCard
+                                    key={idx}
+                                    alumni={alumni}
+                                    onDetail={(a) => setSelectedAlumni(a)}
+                                />
                             ))}
                         </div>
 
@@ -340,9 +309,11 @@ export default function Welcome({ latestJobs, totalAlumni, partnerCompanies, fea
                     {latestJobs.length > 0 ? (
                         <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                             {latestJobs.map((job, idx) => (
-                                <div
+                                <button
                                     key={idx}
-                                    className="group rounded-xl border bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
+                                    type="button"
+                                    onClick={() => setSelectedJob(job)}
+                                    className="group rounded-xl border bg-white p-6 shadow-sm text-left transition hover:-translate-y-1 hover:shadow-lg cursor-pointer"
                                     style={{
                                         borderColor: '#e8edf5',
                                         boxShadow:
@@ -359,7 +330,7 @@ export default function Welcome({ latestJobs, totalAlumni, partnerCompanies, fea
                                         <Briefcase className="h-5 w-5" />
                                     </div>
                                     <h3
-                                        className="mt-4 font-semibold"
+                                        className="mt-4 font-semibold line-clamp-2"
                                         style={{ color: '#0f1f3d' }}
                                     >
                                         {job.title}
@@ -391,7 +362,7 @@ export default function Welcome({ latestJobs, totalAlumni, partnerCompanies, fea
                                             <span>{job.location}</span>
                                         </div>
                                     </div>
-                                </div>
+                                </button>
                             ))}
                         </div>
                     ) : (
@@ -604,6 +575,18 @@ export default function Welcome({ latestJobs, totalAlumni, partnerCompanies, fea
                     </div>
                 </div>
             </footer>
+
+            <JobDetailModal
+                job={selectedJob}
+                open={!!selectedJob}
+                onOpenChange={(open) => { if (!open) setSelectedJob(null); }}
+            />
+
+            <AlumniDetailModal
+                alumni={selectedAlumni}
+                open={!!selectedAlumni}
+                onOpenChange={(open) => { if (!open) setSelectedAlumni(null); }}
+            />
         </GuestLayout>
     );
 }

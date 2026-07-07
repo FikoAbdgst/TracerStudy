@@ -199,4 +199,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('/conversations/{conversation}', [ChatController::class, 'destroy'])->name('messages.destroy');
 });
 
+Route::get('/perusahaan/{company}', [GuestController::class, 'showCompany'])->name('guest.company.show');
+
 require __DIR__.'/auth.php';

@@ -55,14 +55,15 @@ export default function CompanyDetail({ company }) {
 
             {/* Back link */}
             <div className="mx-auto max-w-4xl px-4 pt-6 sm:px-6 lg:px-8">
-                <Link
-                    href="/"
+                <button
+                    type="button"
+                    onClick={() => window.location.href = '/'}
                     className="inline-flex items-center gap-1.5 text-sm font-medium transition hover:opacity-70"
                     style={{ color: '#64748b' }}
                 >
                     <ArrowLeft className="h-4 w-4" />
                     Kembali
-                </Link>
+                </button>
             </div>
 
             <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 lg:px-8 space-y-6">

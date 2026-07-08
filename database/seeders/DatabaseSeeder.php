@@ -145,6 +145,8 @@ class DatabaseSeeder extends Seeder
             'description' => 'Perusahaan IT Consultant yang berfokus pada pengembangan ERP dan Sistem Informasi Enterprise.',
             'industry' => 'Teknologi Informasi',
             'website' => 'https://inovasidinamika.com',
+            'latitude' => -6.229728,
+            'longitude' => 106.829430,
             'verification_status' => 'verified',
         ]);
 
@@ -174,6 +176,8 @@ class DatabaseSeeder extends Seeder
             'description' => 'Lembaga keuangan perbankan terkemuka di Indonesia yang menyediakan berbagai solusi finansial nasabah.',
             'industry' => 'Perbankan & Keuangan',
             'website' => 'https://mandirisejahtera.co.id',
+            'latitude' => -6.224309,
+            'longitude' => 106.815782,
             'verification_status' => 'verified',
         ]);
 
@@ -203,6 +207,8 @@ class DatabaseSeeder extends Seeder
             'description' => 'Perusahaan manufaktur berskala nasional yang bergerak di bidang pengolahan makanan ringan dan minuman kemasan.',
             'industry' => 'Manufaktur',
             'website' => 'https://nusantarafood.com',
+            'latitude' => -6.331131,
+            'longitude' => 107.143531,
             'verification_status' => 'verified',
         ]);
 
@@ -232,6 +238,8 @@ class DatabaseSeeder extends Seeder
             'description' => 'Creative agency yang bergerak di bidang pengelolaan brand digital, social media management, dan content production.',
             'industry' => 'Media & Kreatif',
             'website' => 'https://circlemedia.id',
+            'latitude' => -6.895456,
+            'longitude' => 107.610772,
             'verification_status' => 'verified',
         ]);
 
@@ -299,6 +307,8 @@ class DatabaseSeeder extends Seeder
             'phone_number' => '081234567890',
             'address' => 'Bandung, Jawa Barat',
             'employment_status' => 'Bekerja',
+            'position' => 'Full Stack Developer',
+            'company_name' => 'PT Inovasi Dinamika',
             'is_open_to_work' => true,
             'judul_skripsi' => 'Sistem Informasi Tracer Study Berbasis Web Menggunakan Laravel dan Inertia.js',
             'portofolio_proyek' => [
@@ -327,6 +337,8 @@ class DatabaseSeeder extends Seeder
             'phone_number' => '089876543210',
             'address' => 'Jakarta Selatan',
             'employment_status' => 'Bekerja',
+            'position' => 'System Analyst',
+            'company_name' => 'PT Solusi Teknologi Nusantara',
             'is_open_to_work' => true,
             'judul_skripsi' => 'Pengembangan Sistem ERP Modul Inventory Pada Perusahaan Manufaktur Menggunakan Metode Waterfall',
             'portofolio_proyek' => [
@@ -356,6 +368,8 @@ class DatabaseSeeder extends Seeder
             'phone_number' => '082145678901',
             'address' => 'Bandung, Jawa Barat',
             'employment_status' => 'Bekerja',
+            'position' => 'Staff Akuntansi',
+            'company_name' => 'PT Koperasi Mardira Sejahtera',
             'is_open_to_work' => false,
             'judul_skripsi' => 'Perancangan Sistem Informasi Akuntansi Penerimaan dan Pengeluaran Kas Pada Koperasi Simpan Pinjam',
             'portofolio_proyek' => [
@@ -384,6 +398,8 @@ class DatabaseSeeder extends Seeder
             'phone_number' => '085678901234',
             'address' => 'Jakarta Selatan',
             'employment_status' => 'Bekerja',
+            'position' => 'Software Engineer',
+            'company_name' => 'PT Digital Kreasi Indonesia',
             'is_open_to_work' => false,
             'judul_skripsi' => 'Implementasi Algoritma AHP Untuk Sistem Pendukung Keputusan Seleksi Penerimaan Karyawan',
             'portofolio_proyek' => [

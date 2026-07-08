@@ -6,7 +6,6 @@ import {
     FolderKanban,
     ExternalLink,
     Building2,
-    Award,
     Quote,
 } from 'lucide-react';
 import {
@@ -17,40 +16,28 @@ import {
 } from '@/Components/ui/dialog';
 import { Badge } from '@/Components/ui/badge';
 
-const abbreviateName = (name) => {
-    if (!name) return '';
-    const parts = name.trim().split(/\s+/);
-    if (parts.length === 1) return parts[0];
-    return parts[0] + ' ' + parts[1].charAt(0) + '.';
-};
-
-const statusConfig = {
-    'Bekerja': { label: 'Bekerja', dot: 'bg-emerald-500', bg: 'bg-emerald-50', text: 'text-emerald-700', icon: Briefcase },
-    'Mencari Kerja': { label: 'Mencari Kerja', dot: 'bg-amber-500', bg: 'bg-amber-50', text: 'text-amber-700', icon: Briefcase },
-    'Tidak Bekerja': { label: 'Tidak Bekerja', dot: 'bg-slate-400', bg: 'bg-slate-50', text: 'text-slate-600', icon: Briefcase },
-};
-
 export default function AlumniDetailModal({ alumni, open, onOpenChange }) {
     if (!alumni) return null;
 
-    const status = statusConfig[alumni.employment_status] || statusConfig['Mencari Kerja'];
-    const initial = abbreviateName(alumni.name).charAt(0).toUpperCase();
+    const isOpenToWork = alumni.employment_status === 'Mencari Kerja';
+    const initial = alumni.name
+        ? alumni.name.charAt(0).toUpperCase()
+        : '?';
     const projects = alumni.portofolio_proyek || [];
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent
-                className="sm:max-w-xl max-h-[85vh] overflow-y-auto !bg-white"
+                className="sm:max-w-xl max-h-[85vh] overflow-hidden !bg-white "
                 style={{ backgroundColor: 'white' }}
             >
-                {/* ===== HERO SECTION ===== */}
+                {/* ===== HEADER HERO ===== */}
                 <div
                     className="relative -mx-4 -mt-4 rounded-t-xl px-4 pb-6 pt-8 sm:-mx-6 sm:-mt-6 sm:px-6"
                     style={{
                         background: 'linear-gradient(135deg, #1a3560 0%, #0f1f3d 100%)',
                     }}
                 >
-                    {/* Decorative dot pattern */}
                     <div
                         className="absolute inset-0 opacity-[0.06] rounded-t-xl"
                         style={{
@@ -75,13 +62,14 @@ export default function AlumniDetailModal({ alumni, open, onOpenChange }) {
                             {alumni.photo ? (
                                 <img
                                     src={alumni.photo}
-                                    alt=""
+                                    alt="Foto alumni"
                                     className="h-full w-full rounded-2xl object-cover"
                                 />
                             ) : (
                                 initial
                             )}
                         </div>
+
                         <div className="min-w-0 text-white">
                             <h3 className="text-xl font-bold leading-tight">
                                 {alumni.name}
@@ -108,24 +96,36 @@ export default function AlumniDetailModal({ alumni, open, onOpenChange }) {
                 </div>
 
                 <div className="space-y-5">
-                    {/* ===== STATUS + COMPANY ===== */}
-                    <div className="flex flex-wrap items-center gap-3">
-                        <span
-                            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${status.bg} ${status.text}`}
-                        >
-                            <span className={`h-1.5 w-1.5 rounded-full ${status.dot}`} />
-                            {status.label}
-                        </span>
-                        {alumni.employment_status === 'Bekerja' && alumni.company_name && (
-                            <span
-                                className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium"
-                                style={{
-                                    backgroundColor: '#e8f0fb',
-                                    color: '#1a3560',
-                                }}
-                            >
-                                <Building2 className="h-3 w-3" />
-                                {alumni.company_name}
+                    {/* ===== STATUS ===== */}
+                    <div className="flex flex-wrap items-center gap-2">
+                        {isOpenToWork ? (
+                            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                                <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                                Open to Work
+                            </span>
+                        ) : alumni.employment_status === 'Bekerja' ? (
+                            <>
+                                <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+                                    <span className="h-2 w-2 rounded-full bg-blue-500" />
+                                    Sudah Bekerja
+                                </span>
+                                {alumni.company_name && (
+                                    <span
+                                        className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium"
+                                        style={{
+                                            backgroundColor: '#e8f0fb',
+                                            color: '#1a3560',
+                                        }}
+                                    >
+                                        <Building2 className="h-3 w-3" />
+                                        {alumni.company_name}
+                                    </span>
+                                )}
+                            </>
+                        ) : (
+                            <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600">
+                                <span className="h-2 w-2 rounded-full bg-slate-400" />
+                                {alumni.employment_status || '—'}
                             </span>
                         )}
                     </div>
@@ -137,7 +137,6 @@ export default function AlumniDetailModal({ alumni, open, onOpenChange }) {
                                 className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider"
                                 style={{ color: '#64748b' }}
                             >
-                                <Award className="h-3.5 w-3.5" />
                                 Keahlian
                             </h4>
                             <div className="flex flex-wrap gap-1.5">
@@ -154,7 +153,7 @@ export default function AlumniDetailModal({ alumni, open, onOpenChange }) {
                         </div>
                     )}
 
-                    {/* ===== JUDUL SKRIPSI ===== */}
+                    {/* ===== SECTION AKADEMIK: JUDUL SKRIPSI ===== */}
                     {alumni.judul_skripsi && (
                         <div>
                             <h4
@@ -162,7 +161,7 @@ export default function AlumniDetailModal({ alumni, open, onOpenChange }) {
                                 style={{ color: '#64748b' }}
                             >
                                 <BookOpen className="h-3.5 w-3.5" />
-                                Judul Skripsi
+                                Judul Skripsi / Tugas Akhir
                             </h4>
                             <div
                                 className="rounded-lg border p-3.5"
@@ -187,7 +186,7 @@ export default function AlumniDetailModal({ alumni, open, onOpenChange }) {
                         </div>
                     )}
 
-                    {/* ===== PROYEK TERBAIK ===== */}
+                    {/* ===== SECTION PORTOFOLIO: PROYEK TERBAIK ===== */}
                     {projects.length > 0 && (
                         <div>
                             <h4

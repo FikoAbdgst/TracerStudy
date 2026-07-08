@@ -25,6 +25,7 @@ class AlumniProfile extends Model
         'photo_path',
         'is_open_to_work',
         'employment_status',
+        'position',
         'company_name',
         'privacy_hide_phone',
         'privacy_hide_address',

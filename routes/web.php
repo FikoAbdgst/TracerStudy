@@ -28,6 +28,11 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', [GuestController::class, 'index']);
 
+// Public Explorer Pages
+Route::get('/alumni-explorer', [GuestController::class, 'exploreAlumni'])->name('guest.explore.alumni');
+Route::get('/perusahaan-explorer', [GuestController::class, 'exploreCompany'])->name('guest.explore.company');
+Route::get('/lowongan-explorer', [GuestController::class, 'exploreJobs'])->name('guest.explore.jobs');
+
 Route::middleware('auth')->group(function () {
     Route::get('/storage/private/{path}', PrivateFileController::class)
         ->where('path', '.*')

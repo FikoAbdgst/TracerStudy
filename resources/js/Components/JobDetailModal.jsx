@@ -19,6 +19,7 @@ import {
     DialogTitle,
 } from '@/Components/ui/dialog';
 import { Badge } from '@/Components/ui/badge';
+import MapWidget from '@/Components/MapWidget';
 
 export default function JobDetailModal({ job, open, onOpenChange }) {
     if (!job) return null;
@@ -146,6 +147,14 @@ export default function JobDetailModal({ job, open, onOpenChange }) {
                         ))}
                     </div>
                 )}
+
+                {/* Map */}
+                <MapWidget
+                    latitude={job.latitude}
+                    longitude={job.longitude}
+                    label={job.company}
+                    height={160}
+                />
 
                 {/* Description */}
                 {job.description && (

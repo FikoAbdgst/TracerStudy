@@ -243,6 +243,19 @@ export default function Welcome({ latestJobs, totalAlumni, partnerCompanies, fea
                             ))}
                         </div>
 
+                        <div className="mt-8 text-center">
+                            <Link
+                                href={route('guest.explore.company')}
+                                className="inline-flex items-center gap-2 rounded-xl px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:shadow-md"
+                                style={{
+                                    background:
+                                        'linear-gradient(135deg, #1a3560, #0f1f3d)',
+                                }}
+                            >
+                                Eksplor Perusahaan Lainnya
+                                <ArrowRight className="h-4 w-4" />
+                            </Link>
+                        </div>
                     </div>
                 </section>
             )}
@@ -280,10 +293,10 @@ export default function Welcome({ latestJobs, totalAlumni, partnerCompanies, fea
                                 className="rounded-full px-8"
                                 asChild
                             >
-                                <a href={route('login')}>
-                                    Eksplorasi Ratusan Talenta Lainnya
+                                <Link href={route('guest.explore.alumni')}>
+                                    Lihat Semua Alumni
                                     <ArrowRight className="w-4 h-4 ml-1" />
-                                </a>
+                                </Link>
                             </Button>
                         </div>
                     </div>
@@ -385,18 +398,17 @@ export default function Welcome({ latestJobs, totalAlumni, partnerCompanies, fea
 
                     {latestJobs.length > 0 && (
                         <div className="mt-8 text-center">
-                            <a
-                                href={waLink(
-                                    'Halo, saya ingin melihat informasi lowongan kerja yang tersedia untuk alumni.'
-                                )}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-2 text-sm font-semibold transition"
-                                style={{ color: '#f97316' }}
+                            <Link
+                                href={route('guest.explore.jobs')}
+                                className="inline-flex items-center gap-2 rounded-xl px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:shadow-md"
+                                style={{
+                                    background:
+                                        'linear-gradient(135deg, #1a3560, #0f1f3d)',
+                                }}
                             >
                                 Lihat Semua Lowongan
                                 <ArrowRight className="h-4 w-4" />
-                            </a>
+                            </Link>
                         </div>
                     )}
                 </div>

@@ -201,6 +201,19 @@ const ViewMode = ({ profile, data }) => {
                     </div>
                 </ViewSection>
 
+                {(data.employment_status === 'Bekerja' || data.employment_status === 'Wiraswasta') && (
+                    <ViewSection title="Data Pekerjaan" icon="🏢" delay={0.18}>
+                        <div style={{ padding: '14px 0 6px' }}>
+                            <ProfileField
+                                label={data.employment_status === 'Wiraswasta' ? 'Nama / Jenis Usaha' : 'Nama Perusahaan / Tempat Kerja'}
+                                value={data.company_name}
+                            />
+                            <ProfileField label="Jabatan / Posisi" value={data.position} />
+                            <ProfileField label="Sektor Industri" value={data.job_sector} />
+                        </div>
+                    </ViewSection>
+                )}
+
             </div>
         </div>
     );
@@ -672,7 +685,15 @@ const EditMode = ({ data, setData, errors, processing, submit, programStudis, ma
                                     }}>
                                         <input type="radio" name="employment_status" value={opt.value}
                                             checked={data.employment_status === opt.value}
-                                            onChange={e => setData('employment_status', e.target.value)}
+                                            onChange={e => {
+                                                const val = e.target.value;
+                                                setData('employment_status', val);
+                                                if (val !== 'Bekerja' && val !== 'Wiraswasta') {
+                                                    setData('company_name', '');
+                                                    setData('position', '');
+                                                    setData('job_sector', '');
+                                                }
+                                            }}
                                             style={{ width: 16, height: 16, accentColor: T.orange, flexShrink: 0 }}
                                         />
                                         <span style={{ fontSize: 13, fontWeight: data.employment_status === opt.value ? 700 : 500, color: data.employment_status === opt.value ? T.orange : T.navy }}>
@@ -684,6 +705,44 @@ const EditMode = ({ data, setData, errors, processing, submit, programStudis, ma
                             <InputError className="mt-2" message={errors.employment_status} />
                         </div>
                     </Section>
+
+                    {/* ── Data Pekerjaan (hanya muncul jika Bekerja/Wiraswasta) ── */}
+                    {(data.employment_status === 'Bekerja' || data.employment_status === 'Wiraswasta') && (
+                        <Section title="Data Pekerjaan" icon="🏢" delay={0.117}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: '4px 0' }}>
+                                <div>
+                                    <FieldLabel required>
+                                        {data.employment_status === 'Wiraswasta' ? 'Nama / Jenis Usaha' : 'Nama Perusahaan / Tempat Kerja'}
+                                    </FieldLabel>
+                                    <input style={fieldBase}
+                                        placeholder={data.employment_status === 'Wiraswasta' ? 'Contoh: Toko Kreatif Mandiri' : 'Contoh: PT Maju Bersama'}
+                                        value={data.company_name}
+                                        onChange={e => setData('company_name', e.target.value)}
+                                        onFocus={onFocus} onBlur={onBlur}
+                                    />
+                                    <InputError message={errors.company_name} className="mt-1.5" />
+                                </div>
+                                <div>
+                                    <FieldLabel required>Jabatan / Posisi</FieldLabel>
+                                    <input style={fieldBase} placeholder="Contoh: Software Engineer"
+                                        value={data.position}
+                                        onChange={e => setData('position', e.target.value)}
+                                        onFocus={onFocus} onBlur={onBlur}
+                                    />
+                                    <InputError message={errors.position} className="mt-1.5" />
+                                </div>
+                                <div>
+                                    <FieldLabel>Sektor Industri</FieldLabel>
+                                    <input style={fieldBase} placeholder="Contoh: Teknologi Informasi"
+                                        value={data.job_sector}
+                                        onChange={e => setData('job_sector', e.target.value)}
+                                        onFocus={onFocus} onBlur={onBlur}
+                                    />
+                                    <InputError message={errors.job_sector} className="mt-1.5" />
+                                </div>
+                            </div>
+                        </Section>
+                    )}
 
                     {/* ── Open to Work Toggle ── */}
                     <Section title="Ketersediaan" icon="🔍" delay={0.12}>
@@ -860,6 +919,9 @@ export default function EditProfile({ profile, programStudis = [], keahlianMaste
         cv_file: null,
         is_open_to_work: profile?.is_open_to_work ?? false,
         employment_status: profile?.employment_status || '',
+        company_name: profile?.company_name || '',
+        position: profile?.position || '',
+        job_sector: profile?.job_sector || '',
         privacy_hide_phone: profile?.privacy_hide_phone ?? false,
         privacy_hide_address: profile?.privacy_hide_address ?? false,
         judul_skripsi: profile?.judul_skripsi || '',

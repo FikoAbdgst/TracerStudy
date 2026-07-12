@@ -137,7 +137,7 @@ class GuestController extends Controller
             ->whereHas('user')
             ->with('user')
             ->when($search, fn ($q, $s) => $q->where(function ($sub) use ($s) {
-                $keyword = '%' . mb_strtolower($s) . '%';
+                $keyword = '%'.mb_strtolower($s).'%';
                 $sub->whereHas('user', fn ($u) => $u->whereRaw('LOWER(name) LIKE ?', [$keyword]))
                     ->orWhereRaw('LOWER(major) LIKE ?', [$keyword])
                     ->orWhereRaw('LOWER(position) LIKE ?', [$keyword])
@@ -152,23 +152,23 @@ class GuestController extends Controller
         }
 
         $alumni = $alumni->through(fn ($alumni) => [
-                'name' => $alumni->user->name,
-                'major' => $alumni->major,
-                'nim' => $alumni->nim,
-                'skills' => $alumni->skills ?? [],
-                'photo' => $alumni->photo_path ? Storage::url($alumni->photo_path) : null,
-                'judul_skripsi' => $alumni->judul_skripsi,
-                'portofolio_proyek' => collect($alumni->portofolio_proyek ?? [])->map(fn ($p) => [
-                    'nama_proyek' => $p['nama_proyek'] ?? null,
-                    'deskripsi_singkat' => $p['deskripsi_singkat'] ?? null,
-                    'tautan' => $p['tautan'] ?? null,
-                ]),
-                'employment_status' => $alumni->employment_status,
-                'position' => $alumni->position,
-                'company_name' => $alumni->company_name,
-                'graduation_year' => $alumni->graduation_year,
-                'jenjang_pendidikan' => $alumni->jenjang_pendidikan,
-            ]);
+            'name' => $alumni->user->name,
+            'major' => $alumni->major,
+            'nim' => $alumni->nim,
+            'skills' => $alumni->skills ?? [],
+            'photo' => $alumni->photo_path ? Storage::url($alumni->photo_path) : null,
+            'judul_skripsi' => $alumni->judul_skripsi,
+            'portofolio_proyek' => collect($alumni->portofolio_proyek ?? [])->map(fn ($p) => [
+                'nama_proyek' => $p['nama_proyek'] ?? null,
+                'deskripsi_singkat' => $p['deskripsi_singkat'] ?? null,
+                'tautan' => $p['tautan'] ?? null,
+            ]),
+            'employment_status' => $alumni->employment_status,
+            'position' => $alumni->position,
+            'company_name' => $alumni->company_name,
+            'graduation_year' => $alumni->graduation_year,
+            'jenjang_pendidikan' => $alumni->jenjang_pendidikan,
+        ]);
 
         return Inertia::render('Guest/ExploreAlumni', [
             'alumni' => $alumni,
@@ -185,7 +185,7 @@ class GuestController extends Controller
             ->whereHas('mouDocuments', fn ($q) => $q->where('status', 'active'))
             ->with(['jobPostings' => fn ($q) => $q->where('is_active', true)])
             ->when($search, fn ($q, $s) => $q->where(function ($sub) use ($s) {
-                $keyword = '%' . mb_strtolower($s) . '%';
+                $keyword = '%'.mb_strtolower($s).'%';
                 $sub->whereRaw('LOWER(name) LIKE ?', [$keyword])
                     ->orWhereRaw('LOWER(industry) LIKE ?', [$keyword])
                     ->orWhereRaw('LOWER(description) LIKE ?', [$keyword])
@@ -200,25 +200,25 @@ class GuestController extends Controller
         }
 
         $companies->through(fn ($company) => [
-                'id' => $company->id,
-                'name' => $company->name,
-                'industry' => $company->industry,
-                'description' => $company->description,
-                'address' => $company->address,
-                'website' => $company->website,
-                'latitude' => $company->latitude,
-                'longitude' => $company->longitude,
-                'jobPostings' => $company->jobPostings->map(fn ($job) => [
-                    'id' => $job->id,
-                    'title' => $job->title,
-                    'description' => $job->description,
-                    'location' => $job->location,
-                    'salary_range' => $job->salary_range,
-                    'work_model' => $job->work_model,
-                    'min_education' => $job->min_education,
-                    'min_experience' => $job->min_experience,
-                ]),
-            ]);
+            'id' => $company->id,
+            'name' => $company->name,
+            'industry' => $company->industry,
+            'description' => $company->description,
+            'address' => $company->address,
+            'website' => $company->website,
+            'latitude' => $company->latitude,
+            'longitude' => $company->longitude,
+            'jobPostings' => $company->jobPostings->map(fn ($job) => [
+                'id' => $job->id,
+                'title' => $job->title,
+                'description' => $job->description,
+                'location' => $job->location,
+                'salary_range' => $job->salary_range,
+                'work_model' => $job->work_model,
+                'min_education' => $job->min_education,
+                'min_experience' => $job->min_experience,
+            ]),
+        ]);
 
         return Inertia::render('Guest/ExploreCompany', [
             'companies' => $companies,
@@ -234,7 +234,7 @@ class GuestController extends Controller
         $query = JobPosting::with('company')
             ->where('is_active', true)
             ->when($search, fn ($q, $s) => $q->where(function ($sub) use ($s) {
-                $keyword = '%' . mb_strtolower($s) . '%';
+                $keyword = '%'.mb_strtolower($s).'%';
                 $sub->whereRaw('LOWER(title) LIKE ?', [$keyword])
                     ->orWhereRaw('LOWER(location) LIKE ?', [$keyword])
                     ->orWhereHas('company', fn ($c) => $c->whereRaw('LOWER(name) LIKE ?', [$keyword]));
@@ -248,23 +248,23 @@ class GuestController extends Controller
         }
 
         $jobs->through(fn ($job) => [
-                'id' => $job->id,
-                'title' => $job->title,
-                'company' => $job->company->name,
-                'company_id' => $job->company_id,
-                'description' => $job->description,
-                'requirements' => $job->requirements,
-                'location' => $job->location,
-                'salary_range' => $job->salary_range,
-                'work_model' => $job->work_model,
-                'min_education' => $job->min_education,
-                'min_experience' => $job->min_experience,
-                'max_age' => $job->max_age,
-                'job_type' => $job->job_type,
-                'deadline' => $job->deadline,
-                'latitude' => $job->latitude ?? $job->company?->latitude,
-                'longitude' => $job->longitude ?? $job->company?->longitude,
-            ]);
+            'id' => $job->id,
+            'title' => $job->title,
+            'company' => $job->company->name,
+            'company_id' => $job->company_id,
+            'description' => $job->description,
+            'requirements' => $job->requirements,
+            'location' => $job->location,
+            'salary_range' => $job->salary_range,
+            'work_model' => $job->work_model,
+            'min_education' => $job->min_education,
+            'min_experience' => $job->min_experience,
+            'max_age' => $job->max_age,
+            'job_type' => $job->job_type,
+            'deadline' => $job->deadline,
+            'latitude' => $job->latitude ?? $job->company?->latitude,
+            'longitude' => $job->longitude ?? $job->company?->longitude,
+        ]);
 
         return Inertia::render('Guest/ExploreJobs', [
             'jobs' => $jobs,

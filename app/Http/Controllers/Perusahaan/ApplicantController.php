@@ -119,13 +119,13 @@ class ApplicantController extends Controller
 
         // Prevent changing status if already diterima or ditolak (final)
         if (in_array($lamaran->status, ['diterima', 'ditolak'])) {
-            return back()->with('error', 'Status lamaran sudah final ("' . $lamaran->status . '"). Tidak dapat diubah lagi.');
+            return back()->with('error', 'Status lamaran sudah final ("'.$lamaran->status.'"). Tidak dapat diubah lagi.');
         }
 
         // Prevent re-setting the same non-menunggu status
         if (in_array($validated['status'], ['wawancara', 'diterima', 'ditolak'])
             && $lamaran->status === $validated['status']) {
-            return back()->with('error', 'Status lamaran ini sudah ditetapkan sebagai "' . $validated['status'] . '". Tidak dapat memperbarui ke status yang sama.');
+            return back()->with('error', 'Status lamaran ini sudah ditetapkan sebagai "'.$validated['status'].'". Tidak dapat memperbarui ke status yang sama.');
         }
 
         $lamaran->update($validated);

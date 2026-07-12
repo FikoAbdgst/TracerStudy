@@ -286,7 +286,7 @@ class ChatController extends Controller
             ->afterCleared($clearedAt)
             ->when($since, fn ($q) => $q->where(function ($sub) use ($since) {
                 $sub->where('created_at', '>', $since)
-                     ->orWhere('updated_at', '>', $since);
+                    ->orWhere('updated_at', '>', $since);
             }))
             ->orderBy('created_at')
             ->get()
@@ -315,21 +315,21 @@ class ChatController extends Controller
         $query = $request->input('q');
 
         $alumni = AlumniProfile::when($query, function ($q) use ($query) {
-                $lowered = mb_strtolower($query);
-                $q->where(function ($sub) use ($lowered) {
-                    $sub->whereRaw('LOWER(major) LIKE ?', ["%{$lowered}%"])
-                        ->orWhereHas('user', fn ($u) => $u->whereRaw('LOWER(name) LIKE ?', ["%{$lowered}%"]));
-                });
-            })
+            $lowered = mb_strtolower($query);
+            $q->where(function ($sub) use ($lowered) {
+                $sub->whereRaw('LOWER(major) LIKE ?', ["%{$lowered}%"])
+                    ->orWhereHas('user', fn ($u) => $u->whereRaw('LOWER(name) LIKE ?', ["%{$lowered}%"]));
+            });
+        })
             ->with('user')
             ->limit(20)
             ->get()
             ->map(fn ($p) => [
-                'id' => $p->user->id,
-                'name' => $p->user->name,
-                'major' => $p->major,
-                'nim' => $p->nim,
-            ]);
+            'id' => $p->user->id,
+            'name' => $p->user->name,
+            'major' => $p->major,
+            'nim' => $p->nim,
+        ]);
 
         return response()->json(['alumni' => $alumni]);
     }
@@ -441,7 +441,7 @@ class ChatController extends Controller
         $conversation->users()->attach([$companyUser->id, $alumniUser->id]);
 
         $alumniUser->notify(new SystemNotification(
-            'Pesan Baru dari ' . ($company->name ?? 'Perusahaan'),
+            'Pesan Baru dari '.($company->name ?? 'Perusahaan'),
             'Anda memiliki percakapan baru.',
             route('messages.index', ['conversation' => $conversation->id]),
             'chat'

@@ -10,13 +10,26 @@ const T = {
     muted: '#94a3b8', mutedDark: '#64748b',
     green: '#16a34a', greenLight: '#f0fdf4',
     red: '#dc2626',
+    purple: '#7c3aed', purpleLight: '#f5f3ff',
     yellow: '#eab308', yellowLight: '#fef9c3',
+};
+
+const getStatusBadge = (status) => {
+    switch (status) {
+        case 'Mencari Kerja':
+            return { color: T.green, bg: T.greenLight, label: 'Mencari Kerja' };
+        case 'Wirausaha':
+            return { color: T.purple, bg: T.purpleLight, label: 'Wirausaha' };
+        default:
+            return { color: T.green, bg: T.greenLight, label: status || 'Open to Work' };
+    }
 };
 
 const SavedCard = ({ alumni }) => {
     const p = alumni;
     const totalSkills = p.skills?.length ?? 0;
     const [saved, setSaved] = useState(true);
+    const statusBadge = getStatusBadge(p.employment_status);
 
     const removeBookmark = (e) => {
         e.preventDefault();
@@ -90,8 +103,8 @@ const SavedCard = ({ alumni }) => {
                 )}
 
                 <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', gap: 6, paddingTop: 8, borderTop: `1px solid ${T.borderSoft}` }}>
-                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: T.green }} />
-                    <span style={{ fontSize: 11, fontWeight: 600, color: T.green }}>Open to Work</span>
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: statusBadge.color }} />
+                    <span style={{ fontSize: 11, fontWeight: 600, color: statusBadge.color }}>{statusBadge.label}</span>
                     <span style={{ marginLeft: 'auto', fontSize: 10.5, fontWeight: 600, color: T.yellow, background: T.yellowLight, padding: '2px 8px', borderRadius: 12 }}>
                         ⭐ Tersimpan
                     </span>

@@ -10,48 +10,8 @@ const T = {
     muted: '#94a3b8', mutedDark: '#64748b',
     green: '#16a34a', greenLight: '#f0fdf4',
     red: '#dc2626', redLight: '#fff1f2',
+    gray: '#6b7280', grayLight: '#f3f4f6',
 };
-
-/* ─── Custom Switch ──────────────────────────────────────────────────────── */
-function CustomSwitch({ checked, onChange }) {
-    return (
-        <button
-            type="button"
-            role="switch"
-            aria-checked={checked}
-            onClick={onChange}
-            style={{
-                position: 'relative',
-                display: 'inline-flex',
-                alignItems: 'center',
-                width: 48,
-                height: 26,
-                borderRadius: 999,
-                border: 'none',
-                cursor: 'pointer',
-                padding: 3,
-                transition: 'background 0.22s cubic-bezier(0.22,1,0.36,1)',
-                background: checked ? T.orange : '#cbd5e1',
-                boxShadow: checked
-                    ? '0 0 0 3px rgba(249,115,22,0.18), inset 0 1px 2px rgba(0,0,0,0.08)'
-                    : 'inset 0 1px 2px rgba(0,0,0,0.08)',
-                flexShrink: 0,
-                outline: 'none',
-            }}
-        >
-            <span style={{
-                display: 'block',
-                width: 20,
-                height: 20,
-                borderRadius: '50%',
-                background: '#fff',
-                boxShadow: '0 1px 4px rgba(0,0,0,0.18)',
-                transform: checked ? 'translateX(22px)' : 'translateX(0)',
-                transition: 'transform 0.22s cubic-bezier(0.22,1,0.36,1)',
-            }} />
-        </button>
-    );
-}
 
 /* ─── Modal ──────────────────────────────────────────────────────────────── */
 function Modal({ open, onClose, title, children, footer, wide = false }) {
@@ -98,7 +58,7 @@ function Modal({ open, onClose, title, children, footer, wide = false }) {
 }
 
 /* ─── Alert Dialog — konsisten dengan desain proyek ─────────────────────── */
-function AlertDialog({ open, onClose, onConfirm, title, message, processing }) {
+function AlertDialog({ open, onClose, onConfirm, title, message, processing, confirmLabel, confirmIcon }) {
     const [visible, setVisible] = useState(false);
     const [render, setRender] = useState(false);
 
@@ -115,7 +75,6 @@ function AlertDialog({ open, onClose, onConfirm, title, message, processing }) {
             display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
             opacity: visible ? 1 : 0, transition: 'opacity 0.25s ease',
         }}>
-            {/* Backdrop — sama persis dengan Modal */}
             <div onClick={!processing ? onClose : undefined} style={{ position: 'absolute', inset: 0, background: 'rgba(10,20,40,0.45)', backdropFilter: 'blur(3px)', cursor: 'default' }} />
 
             <div style={{
@@ -128,22 +87,22 @@ function AlertDialog({ open, onClose, onConfirm, title, message, processing }) {
                 transition: 'opacity 0.25s ease, transform 0.25s cubic-bezier(0.22,1,0.36,1)',
                 overflow: 'hidden',
             }}>
-                {/* Header — sama dengan Modal */}
                 <div style={{
                     padding: '18px 22px 14px',
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     borderBottom: `1px solid ${T.borderSoft}`, flexShrink: 0,
                 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        {/* Icon kecil inline — tidak mencolok, selaras */}
                         <div style={{
                             width: 30, height: 30, borderRadius: 8,
                             background: T.redLight, color: T.red,
                             display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                         }}>
-                            <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
+                            {confirmIcon || (
+                                <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                                </svg>
+                            )}
                         </div>
                         <span style={{ fontSize: 15, fontWeight: 800, color: T.navy }}>{title}</span>
                     </div>
@@ -158,12 +117,10 @@ function AlertDialog({ open, onClose, onConfirm, title, message, processing }) {
                     </button>
                 </div>
 
-                {/* Body */}
                 <div style={{ padding: '16px 22px 20px' }}>
                     <p style={{ fontSize: 13, color: T.mutedDark, lineHeight: 1.65, margin: 0 }}>{message}</p>
                 </div>
 
-                {/* Footer — sama dengan Modal */}
                 <div style={{ height: 1, background: T.borderSoft, flexShrink: 0 }} />
                 <div style={{ padding: '14px 22px', display: 'flex', justifyContent: 'flex-end', gap: 8, flexShrink: 0 }}>
                     <button
@@ -187,11 +144,11 @@ function AlertDialog({ open, onClose, onConfirm, title, message, processing }) {
                         disabled={processing}
                         style={{
                             height: 36, padding: '0 18px', borderRadius: 8, border: 'none',
-                            background: processing ? T.muted : T.red,
+                            background: processing ? T.muted : T.orange,
                             color: '#fff', fontSize: 13, fontWeight: 700,
                             cursor: processing ? 'not-allowed' : 'pointer',
                             fontFamily: 'inherit', transition: 'all 0.15s',
-                            boxShadow: processing ? 'none' : '0 2px 8px rgba(220,38,38,0.25)',
+                            boxShadow: processing ? 'none' : '0 2px 8px rgba(249,115,22,0.25)',
                             display: 'flex', alignItems: 'center', gap: 6,
                         }}
                         onMouseEnter={e => { if (!processing) e.currentTarget.style.filter = 'brightness(0.9)'; }}
@@ -202,14 +159,14 @@ function AlertDialog({ open, onClose, onConfirm, title, message, processing }) {
                                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ animation: 'spin 0.8s linear infinite' }}>
                                     <path strokeLinecap="round" d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
                                 </svg>
-                                Menghapus...
+                                Memproses...
                             </>
                         ) : (
                             <>
                                 <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
                                 </svg>
-                                Ya, Hapus
+                                {confirmLabel || 'Ya, Tutup'}
                             </>
                         )}
                     </button>
@@ -239,9 +196,13 @@ export default function TracerStudyIndex({ forms }) {
     const [isEditing, setIsEditing] = useState(false);
     const [selectedId, setSelectedId] = useState(null);
 
-    const [alertOpen, setAlertOpen] = useState(false);
+    const [deleteAlertOpen, setDeleteAlertOpen] = useState(false);
     const [idToDelete, setIdToDelete] = useState(null);
     const [isDeleting, setIsDeleting] = useState(false);
+
+    const [closeAlertOpen, setCloseAlertOpen] = useState(false);
+    const [idToClose, setIdToClose] = useState(null);
+    const [isClosing, setIsClosing] = useState(false);
 
     const { data, setData, post, put, processing, reset } = useForm({
         title: '', description: '', questions: [],
@@ -260,15 +221,24 @@ export default function TracerStudyIndex({ forms }) {
         else post(route('adminkampus.tracer.store'), { onSuccess: () => setModalOpen(false) });
     };
 
-    const toggleStatus = (id) => router.patch(route('adminkampus.tracer.toggle', id), {}, { preserveScroll: true });
+    const confirmClose = (id) => { setIdToClose(id); setCloseAlertOpen(true); };
 
-    const confirmDelete = (id) => { setIdToDelete(id); setAlertOpen(true); };
+    const executeClose = () => {
+        setIsClosing(true);
+        router.patch(route('adminkampus.tracer.close', idToClose), {}, {
+            preserveScroll: true,
+            onSuccess: () => { setCloseAlertOpen(false); setIdToClose(null); },
+            onFinish: () => setIsClosing(false),
+        });
+    };
+
+    const confirmDelete = (id) => { setIdToDelete(id); setDeleteAlertOpen(true); };
 
     const executeDelete = () => {
         setIsDeleting(true);
         router.delete(route('adminkampus.tracer.destroy', idToDelete), {
             preserveScroll: true,
-            onSuccess: () => { setAlertOpen(false); setIdToDelete(null); },
+            onSuccess: () => { setDeleteAlertOpen(false); setIdToDelete(null); },
             onFinish: () => setIsDeleting(false),
         });
     };
@@ -311,7 +281,7 @@ export default function TracerStudyIndex({ forms }) {
                         <p style={{ fontSize: 13, color: T.muted, margin: 0, flex: 1 }}>
                             Total <span style={{ fontWeight: 700, color: T.navy }}>{forms.length}</span> kuesioner
                             {forms.filter(f => f.is_active).length > 0 && (
-                                <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: T.orangeLight, color: T.orange }}>
+                                <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: T.greenLight, color: T.green }}>
                                     {forms.filter(f => f.is_active).length} Aktif
                                 </span>
                             )}
@@ -335,7 +305,7 @@ export default function TracerStudyIndex({ forms }) {
                         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                             <thead>
                                 <tr style={{ background: T.bg, borderBottom: `1px solid ${T.border}` }}>
-                                    {['Judul Kuesioner', 'Pertanyaan', 'Status (Aktif/Draft)', 'Aksi'].map((h, i) => (
+                                    {['Judul Kuesioner', 'Pertanyaan', 'Status', 'Aksi'].map((h, i) => (
                                         <th key={i} style={{ padding: '12px 14px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#374151', textAlign: i === 3 ? 'right' : 'left' }}>{h}</th>
                                     ))}
                                 </tr>
@@ -353,22 +323,46 @@ export default function TracerStudyIndex({ forms }) {
                                             </span>
                                         </td>
                                         <td style={{ padding: '14px' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                                <CustomSwitch
-                                                    checked={form.is_active}
-                                                    onChange={() => toggleStatus(form.id)}
-                                                />
-                                                <span style={{
-                                                    fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20,
-                                                    background: form.is_active ? T.orangeLight : T.borderSoft,
-                                                    color: form.is_active ? T.orange : T.mutedDark,
-                                                }}>
-                                                    {form.is_active ? 'Status Aktif' : 'Draft Tersimpan'}
-                                                </span>
-                                            </div>
+                                            <span style={{
+                                                fontSize: 11, fontWeight: 700, padding: '4px 12px', borderRadius: 20,
+                                                background: form.is_active ? T.greenLight : T.grayLight,
+                                                color: form.is_active ? T.green : T.gray,
+                                                display: 'inline-flex', alignItems: 'center', gap: 5,
+                                            }}>
+                                                <span style={{ width: 7, height: 7, borderRadius: '50%', background: form.is_active ? T.green : T.gray, flexShrink: 0 }} />
+                                                {form.is_active ? 'Aktif' : 'Ditutup (Arsip)'}
+                                            </span>
                                         </td>
                                         <td style={{ padding: '14px', textAlign: 'right' }}>
-                                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 6 }}>
+                                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 6, flexWrap: 'wrap' }}>
+                                                {form.is_active ? (
+                                                    <button
+                                                        onClick={() => confirmClose(form.id)}
+                                                        style={{
+                                                            height: 32, padding: '0 12px', borderRadius: 7,
+                                                            border: `1.5px solid ${T.orange}`, background: T.orangeLight,
+                                                            color: T.orange, fontSize: 12, fontWeight: 700,
+                                                            cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.14s',
+                                                            display: 'inline-flex', alignItems: 'center', gap: 5,
+                                                        }}
+                                                        onMouseEnter={e => { e.currentTarget.style.background = '#ffedd5'; e.currentTarget.style.borderColor = '#fb923c'; }}
+                                                        onMouseLeave={e => { e.currentTarget.style.background = T.orangeLight; e.currentTarget.style.borderColor = T.orange; }}
+                                                    >
+                                                        <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>
+                                                        Tutup Kuesioner
+                                                    </button>
+                                                ) : (
+                                                    <span style={{
+                                                        height: 32, padding: '0 12px', borderRadius: 7,
+                                                        border: `1.5px solid ${T.borderSoft}`, background: T.grayLight,
+                                                        color: T.gray, fontSize: 12, fontWeight: 600,
+                                                        display: 'inline-flex', alignItems: 'center', gap: 5,
+                                                        cursor: 'not-allowed', userSelect: 'none',
+                                                    }}>
+                                                        <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                                                        Sudah Ditutup
+                                                    </span>
+                                                )}
                                                 <Link href={route('adminkampus.tracer.responses', form.id)}>
                                                     <button style={{
                                                         height: 32, padding: '0 12px', borderRadius: 7,
@@ -415,14 +409,26 @@ export default function TracerStudyIndex({ forms }) {
                 </div>
             </div>
 
-            {/* Alert Dialog — konsisten dengan desain proyek */}
+            {/* Close Confirmation Alert */}
             <AlertDialog
-                open={alertOpen}
-                onClose={() => !isDeleting && setAlertOpen(false)}
+                open={closeAlertOpen}
+                onClose={() => !isClosing && setCloseAlertOpen(false)}
+                onConfirm={executeClose}
+                processing={isClosing}
+                title="Tutup Kuesioner?"
+                message="Kuesioner yang ditutup tidak akan bisa dibuka kembali oleh admin. Kuesioner ini akan berstatus arsip secara permanen. Pastikan semua data jawaban sudah terkumpul sebelum menutup."
+                confirmLabel="Ya, Tutup Permanen"
+            />
+
+            {/* Delete Alert */}
+            <AlertDialog
+                open={deleteAlertOpen}
+                onClose={() => !isDeleting && setDeleteAlertOpen(false)}
                 onConfirm={executeDelete}
                 processing={isDeleting}
                 title="Hapus Kuesioner?"
                 message="Tindakan ini tidak dapat dibatalkan. Semua daftar pertanyaan dan jawaban dari alumni terkait kuesioner ini akan dihapus secara permanen dari sistem."
+                confirmLabel="Ya, Hapus"
             />
 
             {/* Form Builder Modal */}

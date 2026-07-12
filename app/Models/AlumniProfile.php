@@ -27,6 +27,7 @@ class AlumniProfile extends Model
         'employment_status',
         'position',
         'company_name',
+        'job_sector',
         'privacy_hide_phone',
         'privacy_hide_address',
         'privacy_allow_search',

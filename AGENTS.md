@@ -8,7 +8,7 @@
 |-------|------|--------|
 | Backend | Laravel 13, PHP 8.3+ | Monolithic — all routes in `routes/web.php` (no `routes/api.php`) |
 | Frontend | React 18, Inertia.js 2, Tailwind 3, PostCSS | `.jsx` only, no TS; entrypoint `resources/js/app.jsx` |
-| UI | shadcn/ui `radix-nova` | `Components/ui/`; `@radix-ui/react-slot`; lucide-react; oklch CSS vars in `app.css`; `@tailwindcss/forms` in devDeps but **not** in tailwind config plugins |
+| UI | shadcn/ui `radix-nova` | `Components/ui/`; `@radix-ui/react-slot`; lucide-react; CSS vars in `app.css`; `@tailwindcss/forms` in devDeps but **not** in tailwind config plugins |
 | DB | PostgreSQL (dev), SQLite `:memory:` (test) | `.env` uses pgsql; `.env.example` defaults to SQLite; phpunit.xml overrides to `:memory:` |
 | Auth | Breeze + Sanctum | `verified` middleware used but `MustVerifyEmail` NOT on User model; session/cache/queue all `database` driver |
 | Roles | Spatie Permission v7 | `Super Admin`, `Admin Kampus`, `Admin PT`, `Alumni` |
@@ -34,7 +34,7 @@
 | `Admin PT` | `/perusahaan` | `Perusahaan/` | `Perusahaan/` |
 | `Alumni` | `/alumni` | `Alumni/` | `Alumni/` |
 
-Forum at `/alumni/forum` for `Alumni|Super Admin|Admin Kampus`. Guest landing at `/` renders `Welcome`. Guest can view `/perusahaan/{company}` company detail.
+Forum at `/alumni/forum` for `Alumni|Super Admin|Admin Kampus`. Guest routes: `/` (landing), `/perusahaan/{company}`, `/alumni-explorer`, `/perusahaan-explorer`, `/lowongan-explorer`.
 
 Login redirect in `AuthenticatedSessionController` — not middleware. Admin PT users with `verification_status === 'rejected'` are locked out on login.
 
@@ -68,5 +68,6 @@ Login redirect in `AuthenticatedSessionController` — not middleware. Admin PT 
 - `ForumTopic.slug` not-null — `booted()` auto-fills from title; `attachment` JSON yields computed `attachment_urls` accessor
 - Forum topic/reply create routes throttled: `throttle:3,10` and `throttle:5,10`
 - `POST /api/master-data/keahlian/quick-add` is in `web.php` with **no auth middleware** — publicly accessible
+- **CSS vars mismatch** — `app.css` has a shadowed `:root` (hsl format) inside `@layer base` (oklch format); `tailwind.config.js` uses `hsl(var(...))` which picks up the outer `:root` values. Changing one without the other breaks colors.
 - `IndustrySektor` and `ProgramStudi` models exist but are **unused** — master data via `MasterCategory`/`MasterItem`
 - Test logins (all `password123`): `superadmin@sitami.ac.id`, `adminkampus@sitami.ac.id`, `fiko@alumni.sitami.ac.id`, `hrd@inovasidinamika.com`; full list in `database/seeders/DatabaseSeeder.php`

@@ -5,8 +5,11 @@ namespace App\Http\Controllers\Alumni;
 use App\Http\Controllers\Controller;
 use App\Models\AlumniProfile;
 use App\Models\MasterCategory;
+use App\Models\TracerStudyForm;
+use App\Models\TracerStudyResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
@@ -53,6 +56,9 @@ class AlumniProfileController extends Controller
             'portofolio_proyek.*.deskripsi_singkat' => 'nullable|string|max:1000',
             'portofolio_proyek.*.tautan' => 'nullable|string|url|max:500',
             'employment_status' => 'required|string|in:Bekerja,Mencari Kerja,Wiraswasta',
+            'company_name' => 'required_if:employment_status,Bekerja,Wiraswasta|nullable|string|max:255',
+            'position' => 'nullable|string|max:255',
+            'job_sector' => 'nullable|string|max:255',
             'privacy_hide_phone' => 'boolean',
             'privacy_hide_address' => 'boolean',
         ], [
@@ -83,13 +89,69 @@ class AlumniProfileController extends Controller
         }
         unset($validated['cv_file']);
 
-        if ($alumni) {
-            $alumni->update($validated);
-        } else {
-            $validated['user_id'] = $user->id;
-            AlumniProfile::create($validated);
+        $validated['is_open_to_work'] = $this->deriveOpenToWork($validated['employment_status']);
+
+        if (! in_array($validated['employment_status'], ['Bekerja', 'Wiraswasta'])) {
+            $validated['company_name'] = null;
+            $validated['position'] = null;
+            $validated['job_sector'] = null;
         }
 
+        DB::transaction(function () use ($validated, $user, $alumni) {
+            if ($alumni) {
+                $alumni->update($validated);
+            } else {
+                $validated['user_id'] = $user->id;
+                AlumniProfile::create($validated);
+            }
+
+            $this->syncEmploymentToResponse($alumni ?? AlumniProfile::where('user_id', $user->id)->first(), $validated['employment_status']);
+        });
+
         return back()->with('message', 'Profil profesional berhasil diperbarui!');
+    }
+
+    /**
+     * Conditional Sync: propagate employment_status change to the active TracerStudyResponse.
+     *
+     * Only touches the response when BOTH conditions are met:
+     *  1. There is an active (open) TracerStudyForm.
+     *  2. The alumni already has a response for that active form.
+     *
+     * When no active form exists (all forms closed/archived), the historical
+     * response data is left untouched as a reporting snapshot.
+     */
+    private function syncEmploymentToResponse(?AlumniProfile $alumni, string $statusPekerjaan): void
+    {
+        if (! $alumni) {
+            return;
+        }
+
+        $activeForm = TracerStudyForm::where('is_active', true)->first();
+
+        if (! $activeForm) {
+            return;
+        }
+
+        $response = TracerStudyResponse::where('alumni_id', $alumni->id)
+            ->where('tracer_study_form_id', $activeForm->id)
+            ->first();
+
+        if ($response) {
+            $response->update([
+                'status_pekerjaan' => $statusPekerjaan,
+                'nama_perusahaan' => $alumni->company_name,
+            ]);
+        }
+    }
+
+    /**
+     * Derive the is_open_to_work flag from employment status.
+     *
+     * SSOT rule: alumni is "open to work" only when actively seeking employment.
+     */
+    private function deriveOpenToWork(string $statusPekerjaan): bool
+    {
+        return $statusPekerjaan === 'Mencari Kerja';
     }
 }

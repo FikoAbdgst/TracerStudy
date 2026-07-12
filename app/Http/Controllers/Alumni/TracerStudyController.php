@@ -8,6 +8,7 @@ use App\Models\TracerStudyForm;
 use App\Models\TracerStudyResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class TracerStudyController extends Controller
@@ -60,30 +61,30 @@ class TracerStudyController extends Controller
         $validated = $request->validate([
             'status_pekerjaan' => 'required|string|in:Bekerja,Mencari Kerja,Wiraswasta',
             'nama_perusahaan' => 'nullable|string|max:255',
-            'kesesuaian_bidang' => 'nullable|string|max:255',
             'answers' => 'nullable|array',
         ]);
 
-        $isOpen = $validated['status_pekerjaan'] === 'Mencari Kerja';
+        DB::transaction(function () use ($validated, $alumniProfile, $kuesioner) {
+            $isBekerja = $validated['status_pekerjaan'] === 'Bekerja';
 
-        $alumniProfile->update([
-            'employment_status' => $validated['status_pekerjaan'],
-            'company_name' => $validated['nama_perusahaan'] ?? $alumniProfile->company_name,
-            'is_open_to_work' => $isOpen,
-        ]);
+            $alumniProfile->update([
+                'employment_status' => $validated['status_pekerjaan'],
+                'company_name' => $isBekerja ? ($validated['nama_perusahaan'] ?? null) : null,
+                'is_open_to_work' => $this->deriveOpenToWork($validated['status_pekerjaan']),
+            ]);
 
-        TracerStudyResponse::updateOrCreate(
-            [
-                'alumni_id' => $alumniProfile->id,
-                'tracer_study_form_id' => $kuesioner->id,
-            ],
-            [
-                'status_pekerjaan' => $validated['status_pekerjaan'],
-                'nama_perusahaan' => $validated['nama_perusahaan'] ?? null,
-                'kesesuaian_bidang' => $validated['kesesuaian_bidang'] ?? null,
-                'answers' => $validated['answers'] ?? [],
-            ]
-        );
+            TracerStudyResponse::updateOrCreate(
+                [
+                    'alumni_id' => $alumniProfile->id,
+                    'tracer_study_form_id' => $kuesioner->id,
+                ],
+                [
+                    'status_pekerjaan' => $validated['status_pekerjaan'],
+                    'nama_perusahaan' => $validated['nama_perusahaan'] ?? null,
+                    'answers' => $validated['answers'] ?? [],
+                ]
+            );
+        });
 
         return redirect()->route('alumni.kuesioner')->with('message', 'Terima kasih telah mengisi Kuesioner Tracer Study!');
     }
@@ -101,5 +102,15 @@ class TracerStudyController extends Controller
             ->delete();
 
         return back()->with('message', 'Jawaban kuesioner berhasil dihapus.');
+    }
+
+    /**
+     * Derive the is_open_to_work flag from employment status.
+     *
+     * SSOT rule: alumni is "open to work" only when actively seeking employment.
+     */
+    private function deriveOpenToWork(string $statusPekerjaan): bool
+    {
+        return $statusPekerjaan === 'Mencari Kerja';
     }
 }

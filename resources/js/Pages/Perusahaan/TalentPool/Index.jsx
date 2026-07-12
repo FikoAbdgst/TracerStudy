@@ -15,10 +15,22 @@ const T = {
     yellow: '#eab308',
 };
 
+const getStatusBadge = (status) => {
+    switch (status) {
+        case 'Mencari Kerja':
+            return { color: T.green, bg: T.greenLight, label: 'Mencari Kerja' };
+        case 'Wirausaha':
+            return { color: T.purple, bg: T.purpleLight, label: 'Wirausaha' };
+        default:
+            return { color: T.green, bg: T.greenLight, label: status || 'Open to Work' };
+    }
+};
+
 const AlumniCard = ({ alumni }) => {
     const p = alumni;
     const totalSkills = p.skills?.length ?? 0;
     const [saved, setSaved] = useState(p.is_saved ?? false);
+    const statusBadge = getStatusBadge(p.employment_status);
 
     const toggleBookmark = (e) => {
         e.preventDefault();
@@ -93,8 +105,8 @@ const AlumniCard = ({ alumni }) => {
                 )}
 
                 <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', gap: 6, paddingTop: 8, borderTop: `1px solid ${T.borderSoft}` }}>
-                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: T.green }} />
-                    <span style={{ fontSize: 11, fontWeight: 600, color: T.green }}>Open to Work</span>
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: statusBadge.color }} />
+                    <span style={{ fontSize: 11, fontWeight: 600, color: statusBadge.color }}>{statusBadge.label}</span>
                 </div>
             </div>
         </Link>

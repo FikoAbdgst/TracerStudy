@@ -109,7 +109,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/tracer-study', [TracerStudyController::class, 'store'])->name('tracer.store');
         Route::put('/tracer-study/{tracer}', [TracerStudyController::class, 'update'])->name('tracer.update');
         Route::delete('/tracer-study/{tracer}', [TracerStudyController::class, 'destroy'])->name('tracer.destroy');
-        Route::patch('/tracer-study/{tracer}/toggle', [TracerStudyController::class, 'toggleActive'])->name('tracer.toggle');
+        Route::patch('/tracer-study/{tracer}/close', [TracerStudyController::class, 'close'])->name('tracer.close');
         Route::get('/tracer-study/{tracer}/responses', [TracerStudyController::class, 'responses'])->name('tracer.responses');
 
         Route::get('/tinjau-lowongan', [ReviewJobController::class, 'index'])->name('tinjau-lowongan');

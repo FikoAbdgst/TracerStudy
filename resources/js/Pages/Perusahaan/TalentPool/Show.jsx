@@ -10,6 +10,7 @@ const T = {
     muted: '#94a3b8', mutedDark: '#64748b',
     green: '#16a34a', greenLight: '#f0fdf4',
     red: '#dc2626', redLight: '#fff1f2',
+    purple: '#7c3aed', purpleLight: '#f5f3ff',
     yellow: '#eab308', yellowLight: '#fef9c3',
 };
 
@@ -45,8 +46,20 @@ const SectionCard = ({ title, icon, children }) => (
     </div>
 );
 
+const getStatusBadge = (status) => {
+    switch (status) {
+        case 'Mencari Kerja':
+            return { color: T.green, bg: T.greenLight, label: 'Mencari Kerja' };
+        case 'Wirausaha':
+            return { color: T.purple, bg: T.purpleLight, label: 'Wirausaha' };
+        default:
+            return { color: T.green, bg: T.greenLight, label: status || 'Open to Work' };
+    }
+};
+
 export default function TalentPoolShow({ alumni, company, jobList }) {
     const p = alumni;
+    const statusBadge = getStatusBadge(p.employment_status);
     const [saved, setSaved] = useState(p.is_saved ?? false);
     const [inviteOpen, setInviteOpen] = useState(false);
     const [selectedJobId, setSelectedJobId] = useState('');
@@ -141,8 +154,8 @@ export default function TalentPoolShow({ alumni, company, jobList }) {
                             {p.jenjang_pendidikan ? `${p.jenjang_pendidikan} — ` : ''}{p.major || 'Prodi tidak diisi'} · Lulus {p.graduation_year || '—'}
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6 }}>
-                            <span style={{ width: 8, height: 8, borderRadius: '50%', background: T.green }} />
-                            <span style={{ fontSize: 11.5, fontWeight: 600, color: T.green }}>Open to Work</span>
+                            <span style={{ width: 8, height: 8, borderRadius: '50%', background: statusBadge.color }} />
+                            <span style={{ fontSize: 11.5, fontWeight: 600, color: statusBadge.color }}>{statusBadge.label}</span>
                         </div>
                     </div>
 

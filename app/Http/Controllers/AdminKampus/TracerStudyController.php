@@ -27,9 +27,11 @@ class TracerStudyController extends Controller
             'questions' => 'nullable|array',
         ]);
 
-        TracerStudyForm::create($validated);
+        TracerStudyForm::where('is_active', true)->update(['is_active' => false]);
 
-        return back()->with('message', 'Form kuesioner berhasil dibuat.');
+        TracerStudyForm::create([...$validated, 'is_active' => true]);
+
+        return back()->with('message', 'Form kuesioner berhasil dibuat dan diaktifkan.');
     }
 
     public function update(Request $request, TracerStudyForm $tracer)
@@ -52,16 +54,15 @@ class TracerStudyController extends Controller
         return back()->with('message', 'Form dihapus.');
     }
 
-    public function toggleActive(TracerStudyForm $tracer)
+    public function close(TracerStudyForm $tracer)
     {
         if (! $tracer->is_active) {
-            TracerStudyForm::where('id', '!=', $tracer->id)->update(['is_active' => false]);
-            $tracer->update(['is_active' => true]);
-        } else {
-            $tracer->update(['is_active' => false]);
+            return back()->with('error', 'Kuesioner yang sudah ditutup tidak dapat dibuka kembali.');
         }
 
-        return back()->with('message', 'Status kuesioner berhasil diperbarui.');
+        $tracer->update(['is_active' => false]);
+
+        return back()->with('message', 'Kuesioner berhasil ditutup secara permanen.');
     }
 
     public function responses(TracerStudyForm $tracer)

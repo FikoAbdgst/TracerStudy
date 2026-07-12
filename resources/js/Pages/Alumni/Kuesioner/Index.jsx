@@ -29,15 +29,12 @@ const STATUS_LABELS = {
     'Wiraswasta': { icon: '🚀', color: T.green },
 };
 
-const KESESUAIAN_OPTIONS = ['Sesuai', 'Cukup Sesuai', 'Kurang Sesuai', 'Tidak Sesuai'];
-
 export default function KuesionerIndex({ kuesioner, existingResponse, profile, industries }) {
     const [showForm, setShowForm] = useState(!existingResponse);
 
     const { data, setData, post, processing } = useForm({
         status_pekerjaan: existingResponse?.status_pekerjaan || profile?.employment_status || '',
         nama_perusahaan: existingResponse?.nama_perusahaan || profile?.company_name || '',
-        kesesuaian_bidang: existingResponse?.kesesuaian_bidang || '',
         answers: existingResponse?.answers || {},
     });
 
@@ -100,7 +97,7 @@ export default function KuesionerIndex({ kuesioner, existingResponse, profile, i
                         <div style={{ background: '#fff', borderRadius: '0 0 14px 14px', border: `1px solid ${T.borderSoft}`, borderTop: 'none', padding: '24px 28px' }}>
 
                             {/* ════════════════════════════════════════ */}
-                            {/* BAGIAN A: 3 PERTANYAAN STATIS SISTEM   */}
+                            {/* BAGIAN A: PERTANYAAN STATIS SISTEM     */}
                             {/* ════════════════════════════════════════ */}
                             <div style={{ marginBottom: 28 }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
@@ -156,36 +153,6 @@ export default function KuesionerIndex({ kuesioner, existingResponse, profile, i
                                             onFocus={e => e.target.style.borderColor = T.orange}
                                             onBlur={e => e.target.style.borderColor = T.border}
                                         />
-                                    </div>
-                                )}
-
-                                {/* Q3: Kesesuaian Bidang (conditional on Bekerja/Wiraswasta) */}
-                                {(data.status_pekerjaan === 'Bekerja' || data.status_pekerjaan === 'Wiraswasta') && (
-                                    <div style={{ marginBottom: 16 }}>
-                                        <label style={{ display: 'block', fontSize: 14, fontWeight: 700, color: T.navy, marginBottom: 10 }}>
-                                            3. Kesesuaian Bidang Ilmu dengan Pekerjaan <span style={{ color: T.red }}>*</span>
-                                        </label>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                                            {KESESUAIAN_OPTIONS.map(opt => (
-                                                <label key={opt} style={{
-                                                    display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
-                                                    padding: '10px 14px', borderRadius: 8,
-                                                    border: `1.5px solid ${data.kesesuaian_bidang === opt ? T.orange : T.border}`,
-                                                    background: data.kesesuaian_bidang === opt ? T.orangeLight : T.bg,
-                                                    transition: 'all 0.2s',
-                                                }}>
-                                                    <input type="radio" name="kesesuaian_bidang" value={opt}
-                                                        checked={data.kesesuaian_bidang === opt}
-                                                        onChange={e => setData('kesesuaian_bidang', e.target.value)}
-                                                        style={{ width: 16, height: 16, accentColor: T.orange, flexShrink: 0 }}
-                                                        required
-                                                    />
-                                                    <span style={{ fontSize: 13.5, fontWeight: data.kesesuaian_bidang === opt ? 700 : 500, color: data.kesesuaian_bidang === opt ? T.orange : T.navy }}>
-                                                        {opt}
-                                                    </span>
-                                                </label>
-                                            ))}
-                                        </div>
                                     </div>
                                 )}
                             </div>
@@ -318,16 +285,10 @@ export default function KuesionerIndex({ kuesioner, existingResponse, profile, i
                                         {STATUS_LABELS[existingResponse?.status_pekerjaan]?.icon} {existingResponse?.status_pekerjaan}
                                     </span>
                                 </div>
-                                <div style={{ marginBottom: 10, paddingBottom: 10, borderBottom: `1px dashed #fde68a` }}>
+                                <div>
                                     <div style={{ fontSize: 12, fontWeight: 700, color: '#92400e', marginBottom: 4 }}>Nama Perusahaan / Instansi / Usaha</div>
                                     <div style={{ fontSize: 13.5, color: T.navy, padding: '8px 12px', borderRadius: 6, background: '#fff' }}>
                                         {existingResponse?.nama_perusahaan || <em style={{ color: T.muted }}>Tidak diisi</em>}
-                                    </div>
-                                </div>
-                                <div>
-                                    <div style={{ fontSize: 12, fontWeight: 700, color: '#92400e', marginBottom: 4 }}>Kesesuaian Bidang Ilmu dengan Pekerjaan</div>
-                                    <div style={{ fontSize: 13.5, color: T.navy }}>
-                                        {existingResponse?.kesesuaian_bidang || <em style={{ color: T.muted }}>Tidak diisi</em>}
                                     </div>
                                 </div>
                             </div>

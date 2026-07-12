@@ -373,41 +373,80 @@ export default function LowonganIndex({ jobs, company, isVerified, verificationS
         let matchedCity = rawCity || '';
 
         if (matchedProv) {
+            const provLower = matchedProv.toLowerCase();
             const foundProv = Object.keys(wilayahData).find(
-                p => p.toLowerCase() === matchedProv.toLowerCase() ||
-                     p.toLowerCase().includes(matchedProv.toLowerCase()) ||
-                     matchedProv.toLowerCase().includes(p.toLowerCase())
+                p => p.toLowerCase() === provLower
             );
             if (foundProv) {
                 matchedProv = foundProv;
             } else {
-                const words = matchedProv.split(' ').filter(w => w.length > 3);
-                for (const word of words) {
-                    const fp = Object.keys(wilayahData).find(
-                        p => p.toLowerCase().includes(word.toLowerCase())
-                    );
-                    if (fp) { matchedProv = fp; break; }
+                const foundProv2 = Object.keys(wilayahData).find(
+                    p => p.toLowerCase().startsWith(provLower) || provLower.startsWith(p.toLowerCase())
+                );
+                if (foundProv2) {
+                    matchedProv = foundProv2;
+                } else {
+                    const words = matchedProv.split(' ').filter(w => w.length > 4);
+                    for (const word of words) {
+                        const fp = Object.keys(wilayahData).find(
+                            p => p.toLowerCase().includes(word.toLowerCase())
+                        );
+                        if (fp) { matchedProv = fp; break; }
+                    }
                 }
             }
         }
 
         if (matchedCity && matchedProv && wilayahData[matchedProv]) {
+            const cityLower = matchedCity.toLowerCase();
             const foundCity = wilayahData[matchedProv].find(
-                k => k.toLowerCase() === matchedCity.toLowerCase() ||
-                     k.toLowerCase().includes(matchedCity.toLowerCase()) ||
-                     matchedCity.toLowerCase().includes(k.toLowerCase())
+                k => k.toLowerCase() === cityLower
             );
-            if (foundCity) matchedCity = foundCity;
+            if (foundCity) {
+                matchedCity = foundCity;
+            } else {
+                const foundCity2 = wilayahData[matchedProv].find(
+                    k => {
+                        const kLower = k.toLowerCase();
+                        return kLower.startsWith(cityLower) || cityLower.startsWith(kLower);
+                    }
+                );
+                if (foundCity2) {
+                    matchedCity = foundCity2;
+                } else {
+                    const withKab = wilayahData[matchedProv].find(
+                        k => k.toLowerCase().includes(cityLower) && k.toLowerCase().startsWith('kab')
+                    );
+                    if (withKab) matchedCity = withKab;
+                }
+            }
         }
 
         return { matchedProv, matchedCity };
     };
 
-    const handleAddressResolve = (lat, lng, address) => setData({ location: address, latitude: lat, longitude: lng });
+    const handleAddressResolve = (lat, lng, address) => {
+        setData('location', address);
+        setData('latitude', lat);
+        setData('longitude', lng);
+    };
 
-    const handleAddressData = (addr) => {
-        const cityFromMap = addr.city || addr.town || addr.village || addr.county || '';
-        const provFromMap = addr.state || '';
+    const handleAddressData = (addr, displayName) => {
+        const cityFromMap = addr.city || addr.town || addr.county || addr.village || '';
+        let provFromMap = addr.state || '';
+
+        if (!provFromMap && displayName) {
+            const parts = displayName.split(',').map(s => s.trim()).reverse();
+            const knownProvinces = Object.keys(wilayahData);
+            for (const part of parts) {
+                const normalized = normalizeProvince(part);
+                const match = knownProvinces.find(
+                    p => p.toLowerCase() === normalized.toLowerCase()
+                );
+                if (match) { provFromMap = match; break; }
+            }
+        }
+
         const { matchedProv, matchedCity } = matchWilayah(cityFromMap, provFromMap);
         setSelectedProvinsi(matchedProv);
         setSelectedKota(matchedCity);
@@ -418,9 +457,14 @@ export default function LowonganIndex({ jobs, company, isVerified, verificationS
         }
     };
 
+    const closeModal = () => {
+        reset(); clearErrors(); setData('requirements', []);
+        resetLocationState(); setIsEditing(false); setSelectedJob(null); setModalOpen(false);
+    };
+
     const openCreate = () => {
         reset(); clearErrors(); setData('requirements', []);
-        resetLocationState(); setIsEditing(false); setModalOpen(true);
+        resetLocationState(); setIsEditing(false); setSelectedJob(null); setModalOpen(true);
     };
 
     const normalizeWorkModel = (wm) => {
@@ -455,8 +499,8 @@ export default function LowonganIndex({ jobs, company, isVerified, verificationS
     const handleSubmit = e => {
         e.preventDefault();
         if (!isWeightValid) return;
-        if (isEditing) put(route('perusahaan.lowongan.update', selectedJob.id), { onSuccess: () => setModalOpen(false) });
-        else post(route('perusahaan.lowongan.store'), { onSuccess: () => setModalOpen(false) });
+        if (isEditing) put(route('perusahaan.lowongan.update', selectedJob.id), { onSuccess: closeModal });
+        else post(route('perusahaan.lowongan.store'), { onSuccess: closeModal });
     };
 
     const confirmDelete = (id) => { setIdToDelete(id); setAlertOpen(true); };
@@ -656,11 +700,11 @@ export default function LowonganIndex({ jobs, company, isVerified, verificationS
             {/* ════════════════════════════════════════════════════════════
                 FORM MODAL
             ════════════════════════════════════════════════════════════ */}
-            <Modal open={modalOpen} onClose={() => setModalOpen(false)}
+            <Modal open={modalOpen} onClose={closeModal}
                 title={isEditing ? 'Edit Lowongan' : 'Posting Lowongan Baru'}
                 wide
                 footer={<>
-                    <BtnGhost onClick={() => setModalOpen(false)}>Batal</BtnGhost>
+                    <BtnGhost onClick={closeModal}>Batal</BtnGhost>
                     <button type="submit" form="lowongan-form" disabled={processing || !isWeightValid}
                         style={{ height: 36, padding: '0 18px', borderRadius: 8, border: 'none', background: (processing || !isWeightValid) ? T.muted : T.orange, color: '#fff', fontSize: 13, fontWeight: 700, cursor: (processing || !isWeightValid) ? 'not-allowed' : 'pointer', fontFamily: 'inherit', boxShadow: (processing || !isWeightValid) ? 'none' : '0 2px 8px rgba(249,115,22,0.3)', transition: 'all 0.15s' }}>
                         {processing ? 'Menyimpan...' : 'Simpan Lowongan'}

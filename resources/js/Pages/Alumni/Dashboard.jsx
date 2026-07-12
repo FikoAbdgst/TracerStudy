@@ -51,10 +51,11 @@ const QuickLink = ({ label, desc, href, icon }) => (
     </Link>
 );
 
-export default function Dashboard({ auth, stats, recentApplications }) {
+export default function Dashboard({ auth, stats, recentApplications, employmentStatus }) {
     const name = auth?.user?.name ?? 'Alumni';
     const metrics = stats ?? { activeApplications: 0, pendingKuesioner: 0, forumPosts: 0 };
     const today = new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    const showNudge = employmentStatus === 'Tidak Terdeteksi';
 
     const statusMap = {
         pending: { bg: T.borderSoft, color: T.mutedDark, label: 'Terkirim' },
@@ -109,6 +110,41 @@ export default function Dashboard({ auth, stats, recentApplications }) {
                         {name.charAt(0).toUpperCase()}
                     </div>
                 </div>
+
+                {/* Nudge Banner for Tidak Terdeteksi */}
+                {showNudge && (
+                    <div style={{
+                        background: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)',
+                        borderRadius: 14, padding: '16px 22px', marginBottom: 20,
+                        display: 'flex', alignItems: 'center', gap: 14,
+                        border: '1px solid #fde68a',
+                        boxShadow: '0 4px 16px rgba(245,158,11,0.1)',
+                        animation: 'cardIn 0.38s 0.05s cubic-bezier(0.22,1,0.36,1) both',
+                    }}>
+                        <div style={{ width: 40, height: 40, borderRadius: 10, background: '#fbbf24', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>
+                            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>
+                        </div>
+                        <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: 13.5, fontWeight: 700, color: '#92400e', marginBottom: 2 }}>Status kerja belum terdeteksi</div>
+                            <div style={{ fontSize: 12, color: '#a16207', lineHeight: 1.5 }}>
+                                Perbarui profil atau isi Tracer Study agar kamu menerima notifikasi eksklusif lowongan kerja dari perusahaan mitra!
+                            </div>
+                        </div>
+                        <Link href={route('alumni.profile.edit')}>
+                            <button style={{
+                                height: 34, padding: '0 16px', borderRadius: 8, border: 'none',
+                                background: '#f59e0b', color: '#fff', fontSize: 12, fontWeight: 700,
+                                cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', flexShrink: 0,
+                                transition: 'all 0.15s',
+                            }}
+                                onMouseEnter={e => { e.currentTarget.style.background = '#d97706'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                                onMouseLeave={e => { e.currentTarget.style.background = '#f59e0b'; e.currentTarget.style.transform = 'none'; }}
+                            >
+                                Perbarui Profil
+                            </button>
+                        </Link>
+                    </div>
+                )}
 
                 {/* Stats */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14, marginBottom: 20 }}>

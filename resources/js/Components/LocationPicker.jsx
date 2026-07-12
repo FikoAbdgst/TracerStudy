@@ -87,7 +87,7 @@ export default function LocationPicker({ latitude, longitude, onLocationChange, 
                 onAddressResolve?.(lat, lng, data.display_name);
             }
             if (data?.address) {
-                onAddressData?.(data.address);
+                onAddressData?.(data.address, data.display_name);
             }
         } catch {
         } finally {

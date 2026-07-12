@@ -70,22 +70,47 @@ const EditMode = ({ data, setData, errors, processing, submit, industries, compa
     const [isResolvingAddress, setIsResolvingAddress] = useState(false);
 
     const matchWilayah = (cityName, provinceName) => {
-        // coba cocokkan nama kota/provinsi dari Nominatim ke wilayahData
         let matchedProv = provinceName || '';
         let matchedCity = cityName || '';
 
         if (matchedProv) {
+            const provLower = matchedProv.toLowerCase();
             const foundProv = Object.keys(wilayahData).find(
-                p => p.toLowerCase().includes(matchedProv.toLowerCase()) || matchedProv.toLowerCase().includes(p.toLowerCase())
+                p => p.toLowerCase() === provLower
             );
-            if (foundProv) matchedProv = foundProv;
+            if (foundProv) {
+                matchedProv = foundProv;
+            } else {
+                const foundProv2 = Object.keys(wilayahData).find(
+                    p => p.toLowerCase().startsWith(provLower) || provLower.startsWith(p.toLowerCase())
+                );
+                if (foundProv2) matchedProv = foundProv2;
+            }
         }
 
         if (matchedCity && matchedProv && wilayahData[matchedProv]) {
+            const cityLower = matchedCity.toLowerCase();
             const foundCity = wilayahData[matchedProv].find(
-                k => k.toLowerCase().includes(matchedCity.toLowerCase()) || matchedCity.toLowerCase().includes(k.toLowerCase())
+                k => k.toLowerCase() === cityLower
             );
-            if (foundCity) matchedCity = foundCity;
+            if (foundCity) {
+                matchedCity = foundCity;
+            } else {
+                const foundCity2 = wilayahData[matchedProv].find(
+                    k => {
+                        const kLower = k.toLowerCase();
+                        return kLower.startsWith(cityLower) || cityLower.startsWith(kLower);
+                    }
+                );
+                if (foundCity2) {
+                    matchedCity = foundCity2;
+                } else {
+                    const withKab = wilayahData[matchedProv].find(
+                        k => k.toLowerCase().includes(cityLower) && k.toLowerCase().startsWith('kab')
+                    );
+                    if (withKab) matchedCity = withKab;
+                }
+            }
         }
 
         return { matchedProv, matchedCity };
@@ -106,9 +131,28 @@ const EditMode = ({ data, setData, errors, processing, submit, industries, compa
         setData('longitude', lng);
     };
 
-    const handleAddressData = (addr) => {
-        const cityFromMap = addr.city || addr.town || addr.village || addr.county || '';
-        const provFromMap = addr.state || '';
+    const handleAddressData = (addr, displayName) => {
+        const cityFromMap = addr.city || addr.town || addr.county || addr.village || '';
+        let provFromMap = addr.state || '';
+
+        if (!provFromMap && displayName) {
+            const provinceAliases = {
+                'Daerah Khusus Ibukota Jakarta': 'DKI Jakarta',
+                'Jakarta Raya': 'DKI Jakarta',
+                'Daerah Istimewa Yogyakarta': 'DI Yogyakarta',
+                'Yogyakarta': 'DI Yogyakarta',
+            };
+            const parts = displayName.split(',').map(s => s.trim()).reverse();
+            const knownProvinces = Object.keys(wilayahData);
+            for (const part of parts) {
+                const normalized = provinceAliases[part] || part;
+                const match = knownProvinces.find(
+                    p => p.toLowerCase() === normalized.toLowerCase()
+                );
+                if (match) { provFromMap = match; break; }
+            }
+        }
+
         const { matchedProv, matchedCity } = matchWilayah(cityFromMap, provFromMap);
         setSelectedProvinsi(matchedProv);
         setSelectedKota(matchedCity);

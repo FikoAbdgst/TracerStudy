@@ -8,7 +8,7 @@
 |-------|------|--------|
 | Backend | Laravel 13, PHP 8.3+ | Monolithic — all routes in `routes/web.php` (no `routes/api.php`) |
 | Frontend | React 18, Inertia.js 2, Tailwind 3, PostCSS | `.jsx` only, no TS; entrypoint `resources/js/app.jsx` |
-| UI | shadcn/ui `radix-nova` | `Components/ui/`; `@radix-ui/react-slot`; lucide-react; CSS vars in `app.css`; `@tailwindcss/forms` in devDeps but **not** in tailwind config plugins |
+| UI | shadcn/ui `radix-nova` | `Components/ui/` (capital C); `@radix-ui/react-slot`; lucide-react; CSS vars in `app.css`; `@tailwindcss/forms` in devDeps but **not** in tailwind config plugins |
 | DB | PostgreSQL (dev), SQLite `:memory:` (test) | `.env` uses pgsql; `.env.example` defaults to SQLite; phpunit.xml overrides to `:memory:` |
 | Auth | Breeze + Sanctum | `verified` middleware used but `MustVerifyEmail` NOT on User model; session/cache/queue all `database` driver |
 | Roles | Spatie Permission v7 | `Super Admin`, `Admin Kampus`, `Admin PT`, `Alumni` |
@@ -49,7 +49,7 @@ Login redirect in `AuthenticatedSessionController` — not middleware. Admin PT 
 - **`cn()`** — `@/lib/utils` exports `clsx` + `tailwind-merge`
 - **Components** — `components.json` aliases point to `@/components/ui` (lowercase `components/`), actual files at `Components/ui/` (capital C); imports use `@/Components/ui/...`
 - **Notifications** — `SystemNotification($title, $body, $url, $type)` via database channel only; polled via `auth.user.notifications`
-- **Messaging** — poll-based (no broadcasting); `Super Admin` fully blocked from chat (`authorizeAccess()` aborts 403); `Admin PT` blocked from `searchAlumni()` and `startAlumni()`
+- **Messaging** — poll-based (no broadcasting); `Super Admin` fully blocked from chat (`authorizeAccess()` aborts 403); `Admin PT` gets empty results from `searchAlumni()` (returns `[]`, not 403) and is blocked from `startAlumni()` (aborts 403)
 - **SPK matching** — `App\Helpers\TextSimilarity::calculate()` (TF-IDF Cosine Similarity); `JobPosting` has `weight_*` columns
 - **Master data** — `MasterCategory` (tabs: Keahlian, Sektor Industri, Program Studi) → `MasterItem` (values)
 - **Maps** — `react-leaflet` + `leaflet`

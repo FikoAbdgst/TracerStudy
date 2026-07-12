@@ -1,4 +1,6 @@
+import { useState, useEffect, useRef } from 'react';
 import { usePage, router, Link } from '@inertiajs/react';
+import axios from 'axios';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -12,18 +14,44 @@ const typeConfig = {
     mou_approved: { dot: '#15803d', bg: '#f0fdf4', icon: '📄' },
     forum_reply: { dot: '#0369a1', bg: '#f0f9ff', icon: '💬' },
     chat: { dot: '#0891b2', bg: '#ecfeff', icon: '💬' },
+    lowongan: { dot: '#ea580c', bg: '#fff7ed', icon: '💼' },
     warning: { dot: '#dc2626', bg: '#fef2f2', icon: '⚠️' },
     system: { dot: '#64748b', bg: '#f8fafc', icon: '🔔' },
 };
 
 export default function NotificationDropdown() {
     const { auth } = usePage().props;
-    const notifications = auth?.user?.notifications ?? [];
-    const unreadCount = auth?.user?.unread_count ?? 0;
+    const [notifications, setNotifications] = useState(auth?.user?.notifications ?? []);
+    const [unreadCount, setUnreadCount] = useState(auth?.user?.unread_count ?? 0);
+    const intervalRef = useRef(null);
+
+    useEffect(() => {
+        setNotifications(auth?.user?.notifications ?? []);
+        setUnreadCount(auth?.user?.unread_count ?? 0);
+    }, [auth?.user?.notifications, auth?.user?.unread_count]);
+
+    useEffect(() => {
+        intervalRef.current = setInterval(() => {
+            axios.get(route('notifications.poll'))
+                .then(res => {
+                    setNotifications(res.data.notifications);
+                    setUnreadCount(res.data.unread_count);
+                })
+                .catch(() => {});
+        }, 10000);
+
+        return () => clearInterval(intervalRef.current);
+    }, []);
 
     const handleClick = (e, notif) => {
         e.preventDefault();
-        router.post(route('notifications.read', notif.id));
+        router.post(route('notifications.read', notif.id), {}, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setNotifications(prev => prev.filter(n => n.id !== notif.id));
+                setUnreadCount(prev => Math.max(0, prev - 1));
+            },
+        });
     };
 
     return (

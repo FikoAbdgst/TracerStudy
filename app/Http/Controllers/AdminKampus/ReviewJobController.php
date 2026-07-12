@@ -10,9 +10,7 @@ class ReviewJobController extends Controller
 {
     public function index()
     {
-        // Tarik semua lowongan aktif beserta data perusahaannya
-        $jobs = JobPosting::with('company')
-            ->where('is_active', true)
+        $jobs = JobPosting::with('company', 'applications')
             ->latest()
             ->get();
 
@@ -21,7 +19,18 @@ class ReviewJobController extends Controller
         ]);
     }
 
-    // Aksi Tutup Paksa
+    public function show(JobPosting $job)
+    {
+        $job->load([
+            'company',
+            'applications.alumni.user',
+        ]);
+
+        return Inertia::render('AdminKampus/TinjauLowongan/Show', [
+            'job' => $job,
+        ]);
+    }
+
     public function forceClose(JobPosting $job)
     {
         $job->update(['is_active' => false]);

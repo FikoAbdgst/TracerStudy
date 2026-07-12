@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Head, router } from '@inertiajs/react';
+import React, { useState } from 'react';
+import { Head, Link } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 
 const T = {
@@ -7,55 +7,9 @@ const T = {
     orange: '#f97316', orangeLight: '#fff3eb',
     border: '#e2e8f0', borderSoft: '#f1f5f9', bg: '#f8fafc',
     muted: '#94a3b8', mutedDark: '#64748b',
+    green: '#16a34a', greenLight: '#f0fdf4',
     red: '#dc2626', redLight: '#fff1f2',
 };
-
-function Modal({ open, onClose, title, children, footer }) {
-    const [visible, setVisible] = useState(false);
-    const [render, setRender] = useState(false);
-    useEffect(() => {
-        if (open) { setRender(true); requestAnimationFrame(() => requestAnimationFrame(() => setVisible(true))); }
-        else { setVisible(false); const t = setTimeout(() => setRender(false), 260); return () => clearTimeout(t); }
-    }, [open]);
-    if (!render) return null;
-    return (
-        <div onClick={e => { if (e.target === e.currentTarget) onClose(); }} style={{
-            position: 'fixed', inset: 0, zIndex: 300,
-            background: 'rgba(10,20,40,0.45)', backdropFilter: 'blur(3px)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
-            opacity: visible ? 1 : 0, transition: 'opacity 0.25s ease',
-        }}>
-            <div style={{
-                background: '#fff', borderRadius: 16, width: '100%', maxWidth: 440,
-                boxShadow: '0 24px 60px rgba(10,20,40,0.2)', overflow: 'hidden',
-                opacity: visible ? 1 : 0,
-                transform: visible ? 'translateY(0) scale(1)' : 'translateY(10px) scale(0.97)',
-                transition: 'opacity 0.25s ease, transform 0.25s cubic-bezier(0.22,1,0.36,1)',
-            }}>
-                <div style={{ padding: '20px 22px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${T.borderSoft}` }}>
-                    <span style={{ fontSize: 15, fontWeight: 800, color: T.navy }}>{title}</span>
-                    <button onClick={onClose} style={{ width: 28, height: 28, borderRadius: 7, border: 'none', background: T.bg, color: T.mutedDark, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                        onMouseEnter={e => e.currentTarget.style.background = T.border}
-                        onMouseLeave={e => e.currentTarget.style.background = T.bg}>
-                        <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                    </button>
-                </div>
-                <div style={{ padding: '18px 22px' }}>{children}</div>
-                {footer && <>
-                    <div style={{ height: 1, background: T.borderSoft, margin: '0 22px' }} />
-                    <div style={{ padding: '14px 22px', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>{footer}</div>
-                </>}
-            </div>
-        </div>
-    );
-}
-
-const BtnGhost = ({ children, onClick }) => (
-    <button type="button" onClick={onClick} style={{ height: 36, padding: '0 14px', borderRadius: 8, border: `1.5px solid ${T.border}`, background: 'transparent', color: T.mutedDark, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}
-        onMouseEnter={e => { e.currentTarget.style.background = T.bg; }}
-        onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
-    >{children}</button>
-);
 
 const fieldBase = { height: 42, padding: '0 13px', border: `1.5px solid ${T.border}`, borderRadius: 9, background: T.bg, color: T.navy, fontSize: 13.5, outline: 'none', width: '100%', transition: 'all 0.18s', fontFamily: 'inherit', boxSizing: 'border-box' };
 const onFocus = e => { e.target.style.borderColor = T.navyMid; e.target.style.background = '#fff'; e.target.style.boxShadow = '0 0 0 3px rgba(26,53,96,0.09)'; };
@@ -63,32 +17,22 @@ const onBlur = e => { e.target.style.borderColor = T.border; e.target.style.back
 
 export default function TinjauLowonganIndex({ jobs }) {
     const [q, setQ] = useState('');
-    const [confirm, setConfirm] = useState(null); // job to force-close
-    const [closing, setClosing] = useState(false);
 
     const filtered = jobs.filter(job =>
         job.title.toLowerCase().includes(q.toLowerCase()) ||
         job.company?.name?.toLowerCase().includes(q.toLowerCase())
     );
 
-    const handleForceClose = () => {
-        setClosing(true);
-        router.patch(route('adminkampus.tinjau-lowongan.force-close', confirm.id), {}, {
-            preserveScroll: true,
-            onFinish: () => { setClosing(false); setConfirm(null); },
-        });
-    };
-
     return (
         <AuthenticatedLayout
             header={
                 <div>
-                    <h2 style={{ fontSize: 17, fontWeight: 800, color: T.navy, margin: 0, letterSpacing: '-0.01em' }}>Tinjau Lowongan Aktif</h2>
-                    <p style={{ fontSize: 12, color: T.muted, margin: '3px 0 0' }}>Pantau semua lowongan aktif — tutup paksa jika melanggar aturan</p>
+                    <h2 style={{ fontSize: 17, fontWeight: 800, color: T.navy, margin: 0, letterSpacing: '-0.01em' }}>Monitoring Lowongan & Pelamar</h2>
+                    <p style={{ fontSize: 12, color: T.muted, margin: '3px 0 0' }}>Pantau semua lowongan kerja dan jumlah pelamar dari mitra perusahaan</p>
                 </div>
             }
         >
-            <Head title="Tinjau Lowongan — SITAMI" />
+            <Head title="Monitoring Lowongan — SITAMI" />
 
             <style>{`
                 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
@@ -103,9 +47,9 @@ export default function TinjauLowonganIndex({ jobs }) {
 
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 18 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 0 3px rgba(34,197,94,0.2)' }} />
+                            <div style={{ width: 8, height: 8, borderRadius: '50%', background: T.navy, boxShadow: `0 0 0 3px ${T.navyLight}` }} />
                             <span style={{ fontSize: 13, color: T.mutedDark }}>
-                                <span style={{ fontWeight: 700, color: T.navy }}>{filtered.length}</span> lowongan aktif
+                                <span style={{ fontWeight: 700, color: T.navy }}>{filtered.length}</span> lowongan terdaftar
                             </span>
                         </div>
                         <div style={{ position: 'relative' }}>
@@ -121,8 +65,8 @@ export default function TinjauLowonganIndex({ jobs }) {
                         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                             <thead>
                                 <tr style={{ background: T.bg, borderBottom: `1px solid ${T.border}` }}>
-                                    {['Posisi Pekerjaan', 'Perusahaan', 'Lokasi', 'Aksi'].map((h, i) => (
-                                        <th key={i} style={{ padding: '10px 14px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#374151', textAlign: i === 3 ? 'right' : 'left' }}>{h}</th>
+                                    {['Posisi Pekerjaan', 'Perusahaan', 'Lokasi', 'Pelamar', 'Status', 'Aksi'].map((h, i) => (
+                                        <th key={i} style={{ padding: '10px 14px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#374151', textAlign: i >= 3 ? 'center' : 'left' }}>{h}</th>
                                     ))}
                                 </tr>
                             </thead>
@@ -142,26 +86,42 @@ export default function TinjauLowonganIndex({ jobs }) {
                                             </div>
                                         </td>
                                         <td style={{ padding: '13px 14px', fontSize: 13, color: T.muted }}>{job.location || '—'}</td>
-                                        <td style={{ padding: '13px 14px', textAlign: 'right' }}>
-                                            <button onClick={() => setConfirm(job)} style={{
-                                                height: 30, padding: '0 13px', borderRadius: 7,
-                                                border: `1.5px solid #fecaca`, background: T.redLight,
-                                                color: T.red, fontSize: 12, fontWeight: 600,
-                                                cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.14s',
-                                                display: 'inline-flex', alignItems: 'center', gap: 5,
-                                            }}
-                                                onMouseEnter={e => e.currentTarget.style.background = '#fee2e2'}
-                                                onMouseLeave={e => e.currentTarget.style.background = T.redLight}
-                                            >
-                                                <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                                                Tutup Paksa
-                                            </button>
+                                        <td style={{ padding: '13px 14px', textAlign: 'center' }}>
+                                            <span style={{ fontSize: 14, fontWeight: 800, color: T.navy }}>
+                                                {job.applications_count ?? job.applications?.length ?? 0}
+                                            </span>
+                                        </td>
+                                        <td style={{ padding: '13px 14px', textAlign: 'center' }}>
+                                            <span style={{
+                                                fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20,
+                                                background: job.is_active ? T.greenLight : T.redLight,
+                                                color: job.is_active ? T.green : T.red,
+                                            }}>
+                                                {job.is_active ? 'Aktif' : 'Nonaktif'}
+                                            </span>
+                                        </td>
+                                        <td style={{ padding: '13px 14px', textAlign: 'center' }}>
+                                            <Link href={route('adminkampus.tinjau-lowongan.show', job.id)}>
+                                                <button style={{
+                                                    height: 30, padding: '0 13px', borderRadius: 7,
+                                                    border: `1.5px solid ${T.navyLight}`, background: T.navyLight,
+                                                    color: T.navyMid, fontSize: 12, fontWeight: 600,
+                                                    cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.14s',
+                                                    display: 'inline-flex', alignItems: 'center', gap: 5,
+                                                }}
+                                                    onMouseEnter={e => { e.currentTarget.style.background = T.navyMid; e.currentTarget.style.color = '#fff'; }}
+                                                    onMouseLeave={e => { e.currentTarget.style.background = T.navyLight; e.currentTarget.style.color = T.navyMid; }}
+                                                >
+                                                    <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                                                    Detail Pelamar
+                                                </button>
+                                            </Link>
                                         </td>
                                     </tr>
                                 ))}
                                 {filtered.length === 0 && (
-                                    <tr><td colSpan={4} style={{ padding: '48px 16px', textAlign: 'center', fontSize: 13, color: T.muted }}>
-                                        Tidak ada lowongan aktif ditemukan.
+                                    <tr><td colSpan={6} style={{ padding: '48px 16px', textAlign: 'center', fontSize: 13, color: T.muted }}>
+                                        Tidak ada lowongan ditemukan.
                                     </td></tr>
                                 )}
                             </tbody>
@@ -169,43 +129,6 @@ export default function TinjauLowonganIndex({ jobs }) {
                     </div>
                 </div>
             </div>
-
-            {/* Confirm Modal */}
-            <Modal open={!!confirm} onClose={() => setConfirm(null)} title="Konfirmasi Tutup Paksa"
-                footer={<>
-                    <BtnGhost onClick={() => setConfirm(null)}>Batal</BtnGhost>
-                    <button onClick={handleForceClose} disabled={closing} style={{
-                        height: 36, padding: '0 18px', borderRadius: 8, border: 'none',
-                        background: closing ? T.muted : T.red, color: '#fff',
-                        fontSize: 13, fontWeight: 700, cursor: closing ? 'not-allowed' : 'pointer',
-                        fontFamily: 'inherit', transition: 'all 0.15s',
-                        boxShadow: closing ? 'none' : '0 2px 8px rgba(220,38,38,0.28)',
-                    }}
-                        onMouseEnter={e => { if (!closing) { e.currentTarget.style.background = '#b91c1c'; e.currentTarget.style.transform = 'translateY(-1px)'; } }}
-                        onMouseLeave={e => { e.currentTarget.style.background = closing ? T.muted : T.red; e.currentTarget.style.transform = 'none'; }}
-                    >
-                        {closing ? 'Menutup...' : 'Ya, Tutup Paksa'}
-                    </button>
-                </>}
-            >
-                {confirm && (
-                    <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                        <div style={{ width: 38, height: 38, borderRadius: '50%', background: T.redLight, color: T.red, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            <svg width="17" height="17" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-                            </svg>
-                        </div>
-                        <div>
-                            <p style={{ fontSize: 14, fontWeight: 600, color: T.navy, margin: '0 0 5px' }}>
-                                Tutup paksa lowongan <em style={{ fontStyle: 'normal', color: T.red }}>"{confirm.title}"</em>?
-                            </p>
-                            <p style={{ fontSize: 13, color: T.mutedDark, margin: 0, lineHeight: 1.55 }}>
-                                Lowongan dari <strong>{confirm.company?.name}</strong> akan segera ditutup dan tidak bisa lagi menerima lamaran baru.
-                            </p>
-                        </div>
-                    </div>
-                )}
-            </Modal>
         </AuthenticatedLayout>
     );
 }

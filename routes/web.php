@@ -51,6 +51,7 @@ Route::middleware('auth')->group(function () {
     })->name('notifications.read');
 
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::get('/notifications/poll', [NotificationController::class, 'poll'])->name('notifications.poll');
     Route::post('/notifications/read-all', [NotificationController::class, 'readAll'])->name('notifications.read-all');
 });
 
@@ -113,6 +114,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/tracer-study/{tracer}/responses', [TracerStudyController::class, 'responses'])->name('tracer.responses');
 
         Route::get('/tinjau-lowongan', [ReviewJobController::class, 'index'])->name('tinjau-lowongan');
+        Route::get('/tinjau-lowongan/{job}', [ReviewJobController::class, 'show'])->name('tinjau-lowongan.show');
         Route::patch('/tinjau-lowongan/{job}/force-close', [ReviewJobController::class, 'forceClose'])->name('tinjau-lowongan.force-close');
 
         Route::get('/mitra', [MitraController::class, 'index'])->name('mitra.index');

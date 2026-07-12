@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Conversation;
 use App\Models\JobPosting;
 use App\Models\MasterCategory;
+use App\Models\User;
+use App\Notifications\SystemNotification;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -59,7 +61,21 @@ class JobPostingController extends Controller
         ]);
 
         $validated['company_id'] = $company->id;
-        JobPosting::create($validated);
+        $validated['is_active'] = true;
+        $job = JobPosting::create($validated);
+
+        $eligibleUsers = User::whereHas('alumniProfile', function ($q) {
+            $q->where('employment_status', 'Mencari Kerja');
+        })->get();
+
+        $eligibleUsers->each(function ($user) use ($job, $company) {
+            $user->notify(new SystemNotification(
+                'Lowongan Baru Tersedia',
+                " {$company->name} membuka lowongan \"{$job->title}\". Segera lamar!",
+                route('alumni.loker'),
+                'lowongan'
+            ));
+        });
 
         return back()->with('message', 'Lowongan berhasil dipublikasikan.');
     }

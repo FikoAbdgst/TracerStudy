@@ -33,9 +33,10 @@ class DashboardController extends Controller
         }
 
         return Inertia::render('Alumni/Dashboard', [
-            'hasProfile' => $alumniProfile !== null, // Berguna untuk ngasih peringatan di frontend jika profil kosong
+            'hasProfile' => $alumniProfile !== null,
             'hasFilledTracer' => $hasFilledTracer,
             'applicationStatus' => $applicationStatus,
+            'employmentStatus' => $alumniProfile->employment_status ?? 'Tidak Terdeteksi',
         ]);
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -15,6 +16,16 @@ class NotificationController extends Controller
 
         return Inertia::render('Notifications/Index', [
             'notifications' => $notifications,
+        ]);
+    }
+
+    public function poll(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        return response()->json([
+            'notifications' => $user->unreadNotifications()->take(5)->get()->toArray(),
+            'unread_count' => $user->unreadNotifications()->count(),
         ]);
     }
 

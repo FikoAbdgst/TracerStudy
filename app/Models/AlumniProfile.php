@@ -9,6 +9,10 @@ class AlumniProfile extends Model
 {
     use HasFactory;
 
+    protected $attributes = [
+        'employment_status' => 'Tidak Terdeteksi',
+    ];
+
     protected $fillable = [
         'user_id',
         'nim',

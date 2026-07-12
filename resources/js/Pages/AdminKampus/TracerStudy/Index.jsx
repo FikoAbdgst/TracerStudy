@@ -483,8 +483,8 @@ export default function TracerStudyIndex({ forms }) {
                                 <div style={{ fontSize: 12.5, color: T.mutedDark }}>Input teks (opsional jika tidak bekerja)</div>
                             </div>
                             <div style={{ padding: '10px 14px', borderRadius: 8, background: '#fff', border: `1px solid #fde68a` }}>
-                                <div style={{ fontSize: 11, fontWeight: 700, color: '#92400e', marginBottom: 2 }}>Q3 — Kesesuaian Bidang Ilmu dengan Pekerjaan</div>
-                                <div style={{ fontSize: 12.5, color: T.mutedDark }}>Pilihan: Sesuai / Cukup Sesuai / Kurang Sesuai / Tidak Sesuai (muncul jika status = Bekerja/Wiraswasta)</div>
+                                <div style={{ fontSize: 11, fontWeight: 700, color: '#92400e', marginBottom: 2 }}>Q3 — Jabatan / Posisi</div>
+                                <div style={{ fontSize: 12.5, color: T.mutedDark }}>Input teks (wajib jika status "Bekerja")</div>
                             </div>
                         </div>
                         <div style={{ fontSize: 11, color: '#b45309', marginTop: 10, fontStyle: 'italic' }}>

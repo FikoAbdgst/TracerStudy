@@ -12,7 +12,7 @@ class TracerStudyResponse extends Model
         'answers',
         'status_pekerjaan',
         'nama_perusahaan',
-        'kesesuaian_bidang',
+        'jabatan',
     ];
 
     protected $casts = [

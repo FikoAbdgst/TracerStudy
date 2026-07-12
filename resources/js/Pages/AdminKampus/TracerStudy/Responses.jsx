@@ -59,12 +59,14 @@ function DetailModal({ open, onClose, response, questions }) {
                             </div>
                         </div>
 
-                        <div>
-                            <div style={{ fontSize: 12, fontWeight: 700, color: '#92400e', marginBottom: 4 }}>Kesesuaian Bidang Ilmu dengan Pekerjaan</div>
-                            <div style={{ fontSize: 13.5, color: T.navy, padding: '8px 12px', borderRadius: 6, background: '#fff' }}>
-                                {response.kesesuaian_bidang || <em style={{ color: T.muted }}>Tidak diisi (status bukan Bekerja/Wiraswasta)</em>}
+                        {response.status_pekerjaan === 'Bekerja' && (
+                            <div>
+                                <div style={{ fontSize: 12, fontWeight: 700, color: '#92400e', marginBottom: 4 }}>Jabatan / Posisi</div>
+                                <div style={{ fontSize: 13.5, color: T.navy, padding: '8px 12px', borderRadius: 6, background: '#fff' }}>
+                                    {response.jabatan || <em style={{ color: T.muted }}>Tidak diisi</em>}
+                                </div>
                             </div>
-                        </div>
+                        )}
                     </div>
 
                     {/* ── Bagian B: Jawaban Dinamis ── */}

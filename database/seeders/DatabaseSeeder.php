@@ -309,7 +309,6 @@ class DatabaseSeeder extends Seeder
             'employment_status' => 'Bekerja',
             'position' => 'Full Stack Developer',
             'company_name' => 'PT Inovasi Dinamika',
-            'is_open_to_work' => true,
             'judul_skripsi' => 'Sistem Informasi Tracer Study Berbasis Web Menggunakan Laravel dan Inertia.js',
             'portofolio_proyek' => [
                 ['nama_proyek' => 'SITAMI - Tracer Study Alumni', 'deskripsi_singkat' => 'Platform tracer study dan bursa kerja untuk alumni STMIK Mardira Indonesia. Dibangun dengan Laravel, React, Inertia.js.', 'tautan' => 'https://github.com/fikoo5/sitami'],
@@ -339,7 +338,6 @@ class DatabaseSeeder extends Seeder
             'employment_status' => 'Bekerja',
             'position' => 'System Analyst',
             'company_name' => 'PT Solusi Teknologi Nusantara',
-            'is_open_to_work' => true,
             'judul_skripsi' => 'Pengembangan Sistem ERP Modul Inventory Pada Perusahaan Manufaktur Menggunakan Metode Waterfall',
             'portofolio_proyek' => [
                 ['nama_proyek' => 'ERP Inventory System', 'deskripsi_singkat' => 'Sistem manajemen inventori untuk perusahaan manufaktur menengah. Meliputi barang masuk/keluar, stok opname, dan laporan.', 'tautan' => 'https://github.com/zakyhanif/erp-inventory'],
@@ -370,7 +368,6 @@ class DatabaseSeeder extends Seeder
             'employment_status' => 'Bekerja',
             'position' => 'Staff Akuntansi',
             'company_name' => 'PT Koperasi Mardira Sejahtera',
-            'is_open_to_work' => false,
             'judul_skripsi' => 'Perancangan Sistem Informasi Akuntansi Penerimaan dan Pengeluaran Kas Pada Koperasi Simpan Pinjam',
             'portofolio_proyek' => [
                 ['nama_proyek' => 'Aplikasi Pembukuan Koperasi', 'deskripsi_singkat' => 'Aplikasi pembukuan untuk koperasi simpan pinjam dengan fitur jurnal, buku besar, dan laporan keuangan.', 'tautan' => 'https://docs.google.com/spreadsheets/d/example-koperasi'],
@@ -400,7 +397,6 @@ class DatabaseSeeder extends Seeder
             'employment_status' => 'Bekerja',
             'position' => 'Software Engineer',
             'company_name' => 'PT Digital Kreasi Indonesia',
-            'is_open_to_work' => false,
             'judul_skripsi' => 'Implementasi Algoritma AHP Untuk Sistem Pendukung Keputusan Seleksi Penerimaan Karyawan',
             'portofolio_proyek' => [
                 ['nama_proyek' => 'SPK Penerimaan Karyawan', 'deskripsi_singkat' => 'Sistem pendukung keputusan berbasis web menggunakan metode AHP untuk membantu HRD melakukan seleksi kandidat.', 'tautan' => 'https://github.com/dimaspratama/spk-ahp'],
@@ -429,7 +425,6 @@ class DatabaseSeeder extends Seeder
             'phone_number' => '081398765432',
             'address' => 'Bandung, Jawa Barat',
             'employment_status' => 'Mencari Kerja',
-            'is_open_to_work' => true,
             'judul_skripsi' => 'Perancangan UI/UX Aplikasi Mobile E-Learning Menggunakan Metode Design Thinking',
             'portofolio_proyek' => [
                 ['nama_proyek' => 'Desain Aplikasi E-Learning', 'deskripsi_singkat' => 'Perancangan UI/UX aplikasi mobile pembelajaran interaktif menggunakan Figma, mencakup wireframe, prototype, dan user testing.', 'tautan' => 'https://figma.com/file/example-elearning'],

@@ -49,7 +49,6 @@ class AlumniProfileController extends Controller
             'skills' => 'nullable|array',
             'cv_file' => 'nullable|file|mimes:pdf|max:5120',
             'photo_file' => 'nullable|file|mimes:png,jpg,jpeg|max:2048',
-            'is_open_to_work' => 'boolean',
             'judul_skripsi' => 'nullable|string|max:255',
             'portofolio_proyek' => 'nullable|array',
             'portofolio_proyek.*.nama_proyek' => 'required_with:portofolio_proyek|string|max:255',
@@ -89,11 +88,14 @@ class AlumniProfileController extends Controller
         }
         unset($validated['cv_file']);
 
-        $validated['is_open_to_work'] = $this->deriveOpenToWork($validated['employment_status']);
-
         if (! in_array($validated['employment_status'], ['Bekerja', 'Wiraswasta'])) {
             $validated['company_name'] = null;
             $validated['position'] = null;
+            $validated['job_sector'] = null;
+        } elseif ($validated['employment_status'] === 'Wiraswasta') {
+            $validated['position'] = null;
+            $validated['job_sector'] = null;
+        } else {
             $validated['job_sector'] = null;
         }
 
@@ -141,17 +143,8 @@ class AlumniProfileController extends Controller
             $response->update([
                 'status_pekerjaan' => $statusPekerjaan,
                 'nama_perusahaan' => $alumni->company_name,
+                'jabatan' => $alumni->position,
             ]);
         }
-    }
-
-    /**
-     * Derive the is_open_to_work flag from employment status.
-     *
-     * SSOT rule: alumni is "open to work" only when actively seeking employment.
-     */
-    private function deriveOpenToWork(string $statusPekerjaan): bool
-    {
-        return $statusPekerjaan === 'Mencari Kerja';
     }
 }

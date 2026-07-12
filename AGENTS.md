@@ -49,7 +49,7 @@ Login redirect in `AuthenticatedSessionController` — not middleware. Admin PT 
 - **`cn()`** — `@/lib/utils` exports `clsx` + `tailwind-merge`
 - **Components** — `components.json` aliases point to `@/components/ui` (lowercase `components/`), actual files at `Components/ui/` (capital C); imports use `@/Components/ui/...`
 - **Notifications** — `SystemNotification($title, $body, $url, $type)` via database channel only; polled via `auth.user.notifications`
-- **Messaging** — poll-based (no broadcasting); `Admin PT` blocked from `searchAlumni()` and `startAlumni()` at controller level
+- **Messaging** — poll-based (no broadcasting); `Super Admin` fully blocked from chat (`authorizeAccess()` aborts 403); `Admin PT` blocked from `searchAlumni()` and `startAlumni()`
 - **SPK matching** — `App\Helpers\TextSimilarity::calculate()` (TF-IDF Cosine Similarity); `JobPosting` has `weight_*` columns
 - **Master data** — `MasterCategory` (tabs: Keahlian, Sektor Industri, Program Studi) → `MasterItem` (values)
 - **Maps** — `react-leaflet` + `leaflet`

@@ -23,7 +23,6 @@ class AlumniProfile extends Model
         'skills',
         'cv_path',
         'photo_path',
-        'is_open_to_work',
         'employment_status',
         'position',
         'company_name',
@@ -38,8 +37,7 @@ class AlumniProfile extends Model
     protected $casts = [
         'skills' => 'array',
         'experience' => 'integer',
-        'tanggal_lahir' => 'date',
-        'is_open_to_work' => 'boolean',
+        'tanggal_lahir' => 'date:Y-m-d',
         'privacy_hide_phone' => 'boolean',
         'privacy_hide_address' => 'boolean',
         'privacy_allow_search' => 'boolean',

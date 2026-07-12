@@ -35,6 +35,7 @@ export default function KuesionerIndex({ kuesioner, existingResponse, profile, i
     const { data, setData, post, processing } = useForm({
         status_pekerjaan: existingResponse?.status_pekerjaan || profile?.employment_status || '',
         nama_perusahaan: existingResponse?.nama_perusahaan || profile?.company_name || '',
+        jabatan: existingResponse?.jabatan || profile?.position || '',
         answers: existingResponse?.answers || {},
     });
 
@@ -150,6 +151,23 @@ export default function KuesionerIndex({ kuesioner, existingResponse, profile, i
                                             placeholder={data.status_pekerjaan === 'Bekerja' ? 'Contoh: PT Inovasi Dinamika Solusi' : 'Contoh: Toko Kreatif Mandiri'}
                                             value={data.nama_perusahaan}
                                             onChange={e => setData('nama_perusahaan', e.target.value)}
+                                            onFocus={e => e.target.style.borderColor = T.orange}
+                                            onBlur={e => e.target.style.borderColor = T.border}
+                                        />
+                                    </div>
+                                )}
+
+                                {/* Q3: Jabatan/Posisi (hanya jika Bekerja) */}
+                                {data.status_pekerjaan === 'Bekerja' && (
+                                    <div style={{ marginBottom: 24 }}>
+                                        <label style={{ display: 'block', fontSize: 14, fontWeight: 700, color: T.navy, marginBottom: 8 }}>
+                                            3. Jabatan / Posisi
+                                            <span style={{ fontWeight: 400, fontSize: 12, color: T.muted, marginLeft: 6 }}>(wajib jika bekerja)</span>
+                                        </label>
+                                        <input type="text" style={fieldBase}
+                                            placeholder="Contoh: Software Engineer, Marketing Manager"
+                                            value={data.jabatan}
+                                            onChange={e => setData('jabatan', e.target.value)}
                                             onFocus={e => e.target.style.borderColor = T.orange}
                                             onBlur={e => e.target.style.borderColor = T.border}
                                         />
@@ -291,6 +309,14 @@ export default function KuesionerIndex({ kuesioner, existingResponse, profile, i
                                         {existingResponse?.nama_perusahaan || <em style={{ color: T.muted }}>Tidak diisi</em>}
                                     </div>
                                 </div>
+                                {existingResponse?.status_pekerjaan === 'Bekerja' && (
+                                    <div style={{ marginTop: 10 }}>
+                                        <div style={{ fontSize: 12, fontWeight: 700, color: '#92400e', marginBottom: 4 }}>Jabatan / Posisi</div>
+                                        <div style={{ fontSize: 13.5, color: T.navy, padding: '8px 12px', borderRadius: 6, background: '#fff' }}>
+                                            {existingResponse?.jabatan || <em style={{ color: T.muted }}>Tidak diisi</em>}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             {/* ── Jawaban Dinamis ── */}

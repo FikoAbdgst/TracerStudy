@@ -188,11 +188,11 @@ const ViewMode = ({ profile, data }) => {
                         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                             <div style={{
                                 width: 12, height: 12, borderRadius: '50%',
-                                background: data.is_open_to_work ? T.green : T.muted,
+                                background: data.employment_status === 'Mencari Kerja' ? T.green : T.muted,
                                 flexShrink: 0,
                             }} />
-                            <span style={{ fontSize: 13.5, fontWeight: 600, color: data.is_open_to_work ? T.green : T.mutedDark }}>
-                                {data.is_open_to_work ? 'Terbuka untuk peluang kerja (Open to Work)' : 'Tidak sedang mencari peluang kerja'}
+                            <span style={{ fontSize: 13.5, fontWeight: 600, color: data.employment_status === 'Mencari Kerja' ? T.green : T.mutedDark }}>
+                                {data.employment_status === 'Mencari Kerja' ? 'Terbuka untuk peluang kerja (Open to Work)' : 'Tidak sedang mencari peluang kerja'}
                             </span>
                         </div>
                         <div style={{ fontSize: 12, color: T.mutedDark, marginTop: 2 }}>
@@ -208,8 +208,9 @@ const ViewMode = ({ profile, data }) => {
                                 label={data.employment_status === 'Wiraswasta' ? 'Nama / Jenis Usaha' : 'Nama Perusahaan / Tempat Kerja'}
                                 value={data.company_name}
                             />
-                            <ProfileField label="Jabatan / Posisi" value={data.position} />
-                            <ProfileField label="Sektor Industri" value={data.job_sector} />
+                            {data.employment_status === 'Bekerja' && (
+                                <ProfileField label="Jabatan / Posisi" value={data.position} />
+                            )}
                         </div>
                     </ViewSection>
                 )}
@@ -685,15 +686,7 @@ const EditMode = ({ data, setData, errors, processing, submit, programStudis, ma
                                     }}>
                                         <input type="radio" name="employment_status" value={opt.value}
                                             checked={data.employment_status === opt.value}
-                                            onChange={e => {
-                                                const val = e.target.value;
-                                                setData('employment_status', val);
-                                                if (val !== 'Bekerja' && val !== 'Wiraswasta') {
-                                                    setData('company_name', '');
-                                                    setData('position', '');
-                                                    setData('job_sector', '');
-                                                }
-                                            }}
+                                            onChange={e => setData('employment_status', e.target.value)}
                                             style={{ width: 16, height: 16, accentColor: T.orange, flexShrink: 0 }}
                                         />
                                         <span style={{ fontSize: 13, fontWeight: data.employment_status === opt.value ? 700 : 500, color: data.employment_status === opt.value ? T.orange : T.navy }}>
@@ -719,70 +712,24 @@ const EditMode = ({ data, setData, errors, processing, submit, programStudis, ma
                                         value={data.company_name}
                                         onChange={e => setData('company_name', e.target.value)}
                                         onFocus={onFocus} onBlur={onBlur}
+                                        required
                                     />
                                     <InputError message={errors.company_name} className="mt-1.5" />
                                 </div>
-                                <div>
-                                    <FieldLabel required>Jabatan / Posisi</FieldLabel>
-                                    <input style={fieldBase} placeholder="Contoh: Software Engineer"
-                                        value={data.position}
-                                        onChange={e => setData('position', e.target.value)}
-                                        onFocus={onFocus} onBlur={onBlur}
-                                    />
-                                    <InputError message={errors.position} className="mt-1.5" />
-                                </div>
-                                <div>
-                                    <FieldLabel>Sektor Industri</FieldLabel>
-                                    <input style={fieldBase} placeholder="Contoh: Teknologi Informasi"
-                                        value={data.job_sector}
-                                        onChange={e => setData('job_sector', e.target.value)}
-                                        onFocus={onFocus} onBlur={onBlur}
-                                    />
-                                    <InputError message={errors.job_sector} className="mt-1.5" />
-                                </div>
+                                {data.employment_status === 'Bekerja' && (
+                                    <div>
+                                        <FieldLabel required>Jabatan / Posisi</FieldLabel>
+                                        <input style={fieldBase} placeholder="Contoh: Software Engineer"
+                                            value={data.position}
+                                            onChange={e => setData('position', e.target.value)}
+                                            onFocus={onFocus} onBlur={onBlur}
+                                        />
+                                        <InputError message={errors.position} className="mt-1.5" />
+                                    </div>
+                                )}
                             </div>
                         </Section>
                     )}
-
-                    {/* ── Open to Work Toggle ── */}
-                    <Section title="Ketersediaan" icon="🔍" delay={0.12}>
-                        <div style={{ padding: '12px 0 4px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
-                            <div>
-                                <div style={{ fontSize: 13, fontWeight: 700, color: !data.employment_status ? T.muted : T.navy }}>
-                                    Saya terbuka untuk tawaran pekerjaan
-                                </div>
-                                <div style={{ fontSize: 11.5, color: T.muted, marginTop: 3, lineHeight: 1.5 }}>
-                                    Alumni yang mengaktifkan ini akan muncul di pencarian <strong>Bakat Potensial</strong> perusahaan mitra.
-                                </div>
-                            </div>
-                            <button type="button" onClick={() => setData('is_open_to_work', !data.is_open_to_work)}
-                                disabled={!data.employment_status}
-                                style={{
-                                    position: 'relative', flexShrink: 0, width: 48, height: 26, borderRadius: 13, border: 'none',
-                                    cursor: !data.employment_status ? 'not-allowed' : 'pointer',
-                                    transition: 'all 0.25s',
-                                    background: data.is_open_to_work ? T.green : T.border,
-                                    padding: 0, fontFamily: 'inherit', outline: 'none',
-                                    opacity: !data.employment_status ? 0.4 : 1,
-                                }}>
-                                <div style={{
-                                    position: 'absolute', top: 3, left: data.is_open_to_work ? 24 : 3,
-                                    width: 20, height: 20, borderRadius: '50%', background: '#fff',
-                                    boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
-                                    transition: 'left 0.25s cubic-bezier(0.22,1,0.36,1)',
-                                }} />
-                            </button>
-                        </div>
-                        {!data.employment_status ? (
-                            <div style={{ fontSize: 11, color: T.orange, fontWeight: 600, marginTop: 2, fontStyle: 'italic' }}>
-                                Isi Status Pekerjaan terlebih dahulu untuk mengaktifkan fitur ini
-                            </div>
-                        ) : (
-                            <div style={{ fontSize: 11, color: data.is_open_to_work ? T.green : T.muted, fontWeight: 600, marginTop: 2 }}>
-                                {data.is_open_to_work ? '✓ Aktif — profil Anda akan muncul di hasil pencarian perusahaan' : '— Tidak ditampilkan di pencarian perusahaan'}
-                            </div>
-                        )}
-                    </Section>
 
                     {/* ── Pengaturan Privasi ── */}
                     <Section title="Pengaturan Privasi" icon="🔒" delay={0.125}>
@@ -917,7 +864,6 @@ export default function EditProfile({ profile, programStudis = [], keahlianMaste
         experience: profile?.experience || '',
         skills: profile?.skills || [],
         cv_file: null,
-        is_open_to_work: profile?.is_open_to_work ?? false,
         employment_status: profile?.employment_status || '',
         company_name: profile?.company_name || '',
         position: profile?.position || '',
@@ -1144,7 +1090,31 @@ export default function EditProfile({ profile, programStudis = [], keahlianMaste
                         programStudis={programStudis}
                         masterSkills={masterSkills}
                         setMasterSkills={setMasterSkills}
-                        onCancel={() => setIsEditing(false)}
+                        onCancel={() => {
+                            setData({
+                                nim: profile?.nim || '',
+                                major: profile?.major || '',
+                                graduation_year: profile?.graduation_year || '',
+                                jenjang_pendidikan: profile?.jenjang_pendidikan || '',
+                                tanggal_lahir: profile?.tanggal_lahir || '',
+                                phone_number: profile?.phone_number || '',
+                                address: profile?.address || '',
+                                detail_address: profile?.detail_address || '',
+                                experience: profile?.experience || '',
+                                skills: profile?.skills || [],
+                                cv_file: null,
+                                photo_file: null,
+                                employment_status: profile?.employment_status || '',
+                                company_name: profile?.company_name || '',
+                                position: profile?.position || '',
+                                job_sector: profile?.job_sector || '',
+                                privacy_hide_phone: profile?.privacy_hide_phone ?? false,
+                                privacy_hide_address: profile?.privacy_hide_address ?? false,
+                                judul_skripsi: profile?.judul_skripsi || '',
+                                portofolio_proyek: profile?.portofolio_proyek || [],
+                            });
+                            setIsEditing(false);
+                        }}
                     />
                 ) : (
                     <ViewMode

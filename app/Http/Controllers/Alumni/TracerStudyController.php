@@ -61,16 +61,18 @@ class TracerStudyController extends Controller
         $validated = $request->validate([
             'status_pekerjaan' => 'required|string|in:Bekerja,Mencari Kerja,Wiraswasta',
             'nama_perusahaan' => 'nullable|string|max:255',
+            'jabatan' => 'nullable|string|max:255',
             'answers' => 'nullable|array',
         ]);
 
         DB::transaction(function () use ($validated, $alumniProfile, $kuesioner) {
-            $isBekerja = $validated['status_pekerjaan'] === 'Bekerja';
+            $hasCompany = in_array($validated['status_pekerjaan'], ['Bekerja', 'Wiraswasta']);
+            $isWorking = $validated['status_pekerjaan'] === 'Bekerja';
 
             $alumniProfile->update([
                 'employment_status' => $validated['status_pekerjaan'],
-                'company_name' => $isBekerja ? ($validated['nama_perusahaan'] ?? null) : null,
-                'is_open_to_work' => $this->deriveOpenToWork($validated['status_pekerjaan']),
+                'company_name' => $hasCompany ? ($validated['nama_perusahaan'] ?? null) : null,
+                'position' => $hasCompany ? ($validated['jabatan'] ?? null) : null,
             ]);
 
             TracerStudyResponse::updateOrCreate(
@@ -81,6 +83,7 @@ class TracerStudyController extends Controller
                 [
                     'status_pekerjaan' => $validated['status_pekerjaan'],
                     'nama_perusahaan' => $validated['nama_perusahaan'] ?? null,
+                    'jabatan' => $validated['jabatan'] ?? null,
                     'answers' => $validated['answers'] ?? [],
                 ]
             );
@@ -102,15 +105,5 @@ class TracerStudyController extends Controller
             ->delete();
 
         return back()->with('message', 'Jawaban kuesioner berhasil dihapus.');
-    }
-
-    /**
-     * Derive the is_open_to_work flag from employment status.
-     *
-     * SSOT rule: alumni is "open to work" only when actively seeking employment.
-     */
-    private function deriveOpenToWork(string $statusPekerjaan): bool
-    {
-        return $statusPekerjaan === 'Mencari Kerja';
     }
 }

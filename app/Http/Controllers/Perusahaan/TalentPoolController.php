@@ -44,9 +44,7 @@ class TalentPoolController extends Controller
         }
 
         $query = AlumniProfile::with('user')
-            ->where('is_open_to_work', true)
-            ->whereNotNull('employment_status')
-            ->where('employment_status', '!=', 'Bekerja');
+            ->where('employment_status', 'Mencari Kerja');
 
         if ($search = $request->input('search')) {
             $query->whereHas('user', function ($q) use ($search) {
@@ -71,9 +69,7 @@ class TalentPoolController extends Controller
         $keahlianCat = MasterCategory::with('items')->where('slug', 'keahlian')->first();
         $keahlianMaster = $keahlianCat ? $keahlianCat->items : [];
 
-        $majors = AlumniProfile::where('is_open_to_work', true)
-            ->whereNotNull('employment_status')
-            ->where('employment_status', '!=', 'Bekerja')
+        $majors = AlumniProfile::where('employment_status', 'Mencari Kerja')
             ->whereNotNull('major')
             ->distinct()
             ->pluck('major')
@@ -97,7 +93,7 @@ class TalentPoolController extends Controller
             return redirect()->route('perusahaan.profile.edit')->with('error', 'Silakan lengkapi profil terlebih dahulu.');
         }
 
-        if (! $alumni->is_open_to_work) {
+        if ($alumni->employment_status !== 'Mencari Kerja') {
             return redirect()->route('perusahaan.talent-pool')->with('error', 'Alumni ini tidak sedang membuka diri untuk peluang kerja.');
         }
 

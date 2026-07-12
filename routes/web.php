@@ -103,7 +103,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/dashboard', [AdminKampusDashboard::class, 'index'])->name('dashboard');
 
         Route::get('/alumni', [AlumniController::class, 'index'])->name('alumni.index');
-        Route::get('/alumni/template', [AlumniController::class, 'downloadTemplate'])->name('alumni.template'); // <-- TAMBAHKAN INI
+        Route::get('/alumni/{alumni}', [AlumniController::class, 'show'])->name('alumni.show');
+        Route::get('/alumni/template', [AlumniController::class, 'downloadTemplate'])->name('alumni.template');
+        Route::get('/alumni/export/pdf', [AlumniController::class, 'exportPdf'])->name('alumni.export.pdf');
+        Route::get('/alumni/preview/pdf', [AlumniController::class, 'previewPdf'])->name('alumni.preview.pdf');
         Route::post('/alumni/import', [AlumniController::class, 'import'])->name('alumni.import');
 
         Route::get('/tracer-study', [TracerStudyController::class, 'index'])->name('tracer');
@@ -112,6 +115,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('/tracer-study/{tracer}', [TracerStudyController::class, 'destroy'])->name('tracer.destroy');
         Route::patch('/tracer-study/{tracer}/close', [TracerStudyController::class, 'close'])->name('tracer.close');
         Route::get('/tracer-study/{tracer}/responses', [TracerStudyController::class, 'responses'])->name('tracer.responses');
+        Route::get('/tracer-study/{tracer}/preview/excel', [TracerStudyController::class, 'previewExcel'])->name('tracer.preview.excel');
+        Route::get('/tracer-study/{tracer}/preview/pdf', [TracerStudyController::class, 'previewPdf'])->name('tracer.preview.pdf');
+        Route::get('/tracer-study/{tracer}/export/excel', [TracerStudyController::class, 'exportExcel'])->name('tracer.export.excel');
+        Route::get('/tracer-study/{tracer}/export/pdf', [TracerStudyController::class, 'exportPdf'])->name('tracer.export.pdf');
 
         Route::get('/tinjau-lowongan', [ReviewJobController::class, 'index'])->name('tinjau-lowongan');
         Route::get('/tinjau-lowongan/{job}', [ReviewJobController::class, 'show'])->name('tinjau-lowongan.show');

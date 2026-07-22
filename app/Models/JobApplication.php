@@ -6,7 +6,29 @@ use Illuminate\Database\Eloquent\Model;
 
 class JobApplication extends Model
 {
-    protected $fillable = ['job_posting_id', 'alumni_id', 'cv_path', 'status', 'notes', 'hr_notes', 'interview_details'];
+    protected $fillable = [
+        'job_posting_id',
+        'alumni_id',
+        'cv_path',
+        'status',
+        'notes',
+        'hr_notes',
+        'interview_details',
+        'source_type',
+        'invitation_status',
+    ];
+
+    const SOURCE_MANUAL = 'manual';
+
+    const SOURCE_INVITATION = 'invitation';
+
+    const INVITE_NONE = 'none';
+
+    const INVITE_PENDING = 'pending';
+
+    const INVITE_ACCEPTED = 'accepted';
+
+    const INVITE_REJECTED = 'rejected';
 
     protected function casts(): array
     {

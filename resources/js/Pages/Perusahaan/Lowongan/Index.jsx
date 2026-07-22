@@ -4,6 +4,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import InputError from '@/Components/InputError';
 import axios from 'axios';
 import wilayahData from '@/Data/wilayah.json';
+import useIsMobile from '@/hooks/useIsMobile';
 
 const LocationPicker = React.lazy(() => import('@/Components/LocationPicker'));
 
@@ -308,6 +309,7 @@ const NativeSelect = ({ value, onChange, children, placeholder, disabled = false
 ════════════════════════════════════════════════════════════════════════════ */
 export default function LowonganIndex({ jobs, company, isVerified, verificationStatus, keahlianMaster = [] }) {
     const { flash } = usePage().props;
+    const isMobile = useIsMobile();
     const [modalOpen, setModalOpen] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [selectedJob, setSelectedJob] = useState(null);
@@ -608,9 +610,89 @@ export default function LowonganIndex({ jobs, company, isVerified, verificationS
                     </div>
                 )}
 
-                {/* ── Tabel utama ── */}
-                <div style={{ background: '#fff', borderRadius: 14, border: `1px solid ${T.borderSoft}`, padding: 20, animation: 'cardIn 0.38s cubic-bezier(0.22,1,0.36,1) both' }}>
+                {/* ── Konten utama ── */}
+                {isMobile ? (
+                /* ═══ MOBILE: card-based layout ═══ */
+                <div>
+                    {/* Search + button */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 14 }}>
+                        <div style={{ position: 'relative' }}>
+                            <svg style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#b0bec5', pointerEvents: 'none' }} width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" /></svg>
+                            <input style={{ ...fieldBase, paddingLeft: 36 }} placeholder="Cari posisi atau lokasi..."
+                                value={q} onChange={e => setQ(e.target.value)} onFocus={onFocus} onBlur={onBlur} />
+                        </div>
+                        <button onClick={() => isVerified && openCreate()} disabled={!isVerified}
+                            style={{ height: 42, borderRadius: 9, border: 'none', background: isVerified ? T.orange : T.muted, color: '#fff', fontSize: 13, fontWeight: 700, cursor: isVerified ? 'pointer' : 'not-allowed', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, boxShadow: isVerified ? '0 2px 10px rgba(249,115,22,0.28)' : 'none', width: '100%' }}>
+                            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                            Posting Lowongan
+                        </button>
+                    </div>
 
+                    {/* Badges */}
+                    <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 8, background: T.navyLight, color: T.navyMid }}>{jobs.length} Total</span>
+                        {activeCount > 0 && <span style={{ fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 8, background: T.greenLight, color: T.green }}>{activeCount} Aktif</span>}
+                    </div>
+
+                    {/* Job cards */}
+                    {filtered.length > 0 ? filtered.map((job, i) => (
+                        <div key={job.id} style={{
+                            background: '#fff', borderRadius: 12, border: `1px solid ${T.borderSoft}`,
+                            padding: 14, marginBottom: 10,
+                            animation: `cardIn 0.3s ${i * 0.04}s both`,
+                        }}>
+                            {/* Header: icon + title + switch */}
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 10 }}>
+                                <div style={{ width: 36, height: 36, borderRadius: 8, background: T.navyLight, color: T.navyMid, fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                    {job.title.charAt(0).toUpperCase()}
+                                </div>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ fontSize: 14, fontWeight: 700, color: T.navy, lineHeight: 1.3 }}>{job.title}</div>
+                                    <div className="flex items-center gap-1.5" style={{ fontSize: 11, color: T.muted, marginTop: 2 }}>
+                                        <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" /></svg>
+                                        {job.location || 'Lokasi belum diatur'}
+                                    </div>
+                                </div>
+                                <CustomSwitch checked={job.is_active} onChange={() => toggleActive(job.id)} disabled={!isVerified} />
+                            </div>
+
+                            {/* Info chips */}
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+                                <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 8px', borderRadius: 6, background: T.bg, color: T.mutedDark }}>
+                                    {displaySalary(job.salary_range)}
+                                </span>
+                                <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 6, background: job.is_active ? T.greenLight : T.borderSoft, color: job.is_active ? T.green : T.mutedDark }}>
+                                    {job.is_active ? 'Dibuka' : 'Ditutup'}
+                                </span>
+                                {job.work_model && (
+                                    <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 8px', borderRadius: 6, background: T.navyLight, color: T.navyMid }}>
+                                        {job.work_model}
+                                    </span>
+                                )}
+                            </div>
+
+                            {/* Action buttons */}
+                            <div style={{ display: 'flex', gap: 8 }}>
+                                <button onClick={() => isVerified && openEdit(job)} disabled={!isVerified}
+                                    style={{ flex: 1, height: 34, borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: isVerified ? 'pointer' : 'not-allowed', fontFamily: 'inherit', border: `1.5px solid ${T.border}`, background: T.bg, color: T.navyMid }}>
+                                    Edit
+                                </button>
+                                <button onClick={() => confirmDelete(job.id)}
+                                    style={{ flex: 1, height: 34, borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', border: `1.5px solid #fecaca`, background: T.redLight, color: T.red }}>
+                                    Hapus
+                                </button>
+                            </div>
+                        </div>
+                    )) : (
+                        <div style={{ textAlign: 'center', padding: '40px 16px', color: T.muted }}>
+                            <div style={{ fontSize: 32, marginBottom: 8 }}>📋</div>
+                            <div style={{ fontSize: 13, fontWeight: 600 }}>{q ? 'Tidak ada lowongan yang cocok.' : 'Belum ada lowongan.'}</div>
+                        </div>
+                    )}
+                </div>
+                ) : (
+                /* ═══ WEB: table layout ═══ */
+                <div style={{ background: '#fff', borderRadius: 14, border: `1px solid ${T.borderSoft}`, padding: 20, animation: 'cardIn 0.38s cubic-bezier(0.22,1,0.36,1) both' }}>
                     {/* Toolbar */}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 18 }}>
                         <div style={{ display: 'flex', gap: 8 }}>
@@ -689,6 +771,7 @@ export default function LowonganIndex({ jobs, company, isVerified, verificationS
                         </table>
                     </div>
                 </div>
+                )}
             </div>
 
             {/* ─── Alert Dialog ─── */}

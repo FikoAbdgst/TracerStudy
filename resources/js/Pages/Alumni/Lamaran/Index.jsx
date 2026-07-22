@@ -1,7 +1,8 @@
 import React, { Suspense, useState } from 'react';
-import { Head, router } from '@inertiajs/react';
+import { Head, router, useForm } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Dialog, DialogContent } from '@/Components/ui/dialog';
+import DeleteConfirmationModal from '@/Components/DeleteConfirmationModal';
 
 const LocationPicker = React.lazy(() => import('@/Components/LocationPicker'));
 
@@ -41,6 +42,10 @@ export default function LamaranIndex({ applications }) {
     const [filter, setFilter] = useState('all');
     const [detailApp, setDetailApp] = useState(null);
 
+    const [confirmOpen, setConfirmOpen] = useState(false);
+    const [confirmTarget, setConfirmTarget] = useState(null);
+    const [confirmAction, setConfirmAction] = useState(null);
+
     const filtered = applications.filter(app => {
         const matchQ = app.job_posting?.title?.toLowerCase().includes(q.toLowerCase()) ||
             app.job_posting?.company?.name?.toLowerCase().includes(q.toLowerCase());
@@ -52,6 +57,31 @@ export default function LamaranIndex({ applications }) {
     const counts = Object.fromEntries(
         Object.keys(statusMap).map(k => [k, applications.filter(a => a.status === k).length])
     );
+
+    const openConfirm = (app, action) => {
+        setConfirmTarget(app);
+        setConfirmAction(action);
+        setConfirmOpen(true);
+    };
+
+    const { post, processing } = useForm();
+
+    const handleConfirm = () => {
+        if (!confirmTarget || !confirmAction) return;
+        const url = confirmAction === 'accept'
+            ? route('alumni.lamaran.accept-invitation', confirmTarget.id)
+            : route('alumni.lamaran.reject-invitation', confirmTarget.id);
+        post(url, {
+            preserveScroll: true,
+            only: ['applications'],
+            onSuccess: () => {
+                setConfirmOpen(false);
+                setConfirmTarget(null);
+                setConfirmAction(null);
+            },
+            onFinish: () => {},
+        });
+    };
 
     return (
         <AuthenticatedLayout
@@ -127,7 +157,19 @@ export default function LamaranIndex({ applications }) {
                                         <tr key={app.id} className="tbl-row" style={{ borderBottom: `1px solid ${T.borderSoft}`, animation: `rowIn 0.26s ${i * 0.04}s both` }}>
                                             <td style={{ padding: '13px 14px', fontSize: 12.5, color: T.muted, whiteSpace: 'nowrap' }}>{formatDate(app.created_at)}</td>
                                             <td style={{ padding: '13px 14px' }}>
-                                                <div style={{ fontSize: 13.5, fontWeight: 700, color: T.navy }}>{app.job_posting?.title || 'Lowongan Dihapus'}</div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                                    <span style={{ fontSize: 13.5, fontWeight: 700, color: T.navy }}>{app.job_posting?.title || 'Lowongan Dihapus'}</span>
+                                                    {app.source_type === 'invitation' && (
+                                                        <span style={{
+                                                            fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20,
+                                                            background: T.navyLight, color: T.navyMid, border: '1px solid #bfdbfe',
+                                                            whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 4,
+                                                        }}>
+                                                            <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M21.75 9v.906a2.25 2.25 0 01-1.183 1.981l-6.478 3.488M2.25 9v.906a2.25 2.25 0 001.183 1.981l6.478 3.488m8.839 2.51l-4.66-2.51m0 0l-1.023-.55a2.25 2.25 0 00-2.134 0l-1.022.55m0 0l-4.661 2.51m16.5 1.615a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V8.844a2.25 2.25 0 011.183-1.981l7.5-4.039a2.25 2.25 0 012.134 0l7.5 4.039a2.25 2.25 0 011.183 1.98V19.5z" /></svg>
+                                                            Undangan Perusahaan
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </td>
                                             <td style={{ padding: '13px 14px' }}>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -139,33 +181,54 @@ export default function LamaranIndex({ applications }) {
                                             </td>
                                             <td style={{ padding: '13px 14px', textAlign: 'right' }}>
                                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}>
-                                                    <span style={{ fontSize: 11, fontWeight: 700, padding: '4px 11px', borderRadius: 20, background: st.bg, color: st.color, whiteSpace: 'nowrap' }}>
-                                                        {st.icon} {st.label}
-                                                    </span>
-                                                    {app.interview_details && (
-                                                        <button onClick={() => setDetailApp(app)}
-                                                            style={{ fontSize: 10, fontWeight: 700, padding: '4px 8px', borderRadius: 6, border: `1px solid ${T.purpleBorder}`, background: T.purpleLight, color: T.purple, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', transition: 'all 0.15s' }}
-                                                            onMouseEnter={e => { e.currentTarget.style.background = T.purple; e.currentTarget.style.color = '#fff'; }}
-                                                            onMouseLeave={e => { e.currentTarget.style.background = T.purpleLight; e.currentTarget.style.color = T.purple; }}
-                                                        >
-                                                            Detail
-                                                        </button>
+                                                    {app.source_type === 'invitation' && app.invitation_status === 'pending' ? (
+                                                        <>
+                                                            <button onClick={(e) => { e.stopPropagation(); openConfirm(app, 'accept'); }}
+                                                                style={{ fontSize: 10, fontWeight: 700, padding: '4px 10px', borderRadius: 6, border: `1px solid ${T.greenBorder}`, background: T.greenLight, color: T.green, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', transition: 'all 0.15s' }}
+                                                                onMouseEnter={e => { e.currentTarget.style.background = T.green; e.currentTarget.style.color = '#fff'; }}
+                                                                onMouseLeave={e => { e.currentTarget.style.background = T.greenLight; e.currentTarget.style.color = T.green; }}
+                                                            >
+                                                                ✓ Terima
+                                                            </button>
+                                                            <button onClick={(e) => { e.stopPropagation(); openConfirm(app, 'reject'); }}
+                                                                style={{ fontSize: 10, fontWeight: 700, padding: '4px 10px', borderRadius: 6, border: `1px solid ${T.redLight}`, background: T.redLight, color: T.red, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', transition: 'all 0.15s' }}
+                                                                onMouseEnter={e => { e.currentTarget.style.background = T.red; e.currentTarget.style.color = '#fff'; }}
+                                                                onMouseLeave={e => { e.currentTarget.style.background = T.redLight; e.currentTarget.style.color = T.red; }}
+                                                            >
+                                                                ✕ Tolak
+                                                            </button>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <span style={{ fontSize: 11, fontWeight: 700, padding: '4px 11px', borderRadius: 20, background: st.bg, color: st.color, whiteSpace: 'nowrap' }}>
+                                                                {st.icon} {st.label}
+                                                            </span>
+                                                            {app.interview_details && (
+                                                                <button onClick={() => setDetailApp(app)}
+                                                                    style={{ fontSize: 10, fontWeight: 700, padding: '4px 8px', borderRadius: 6, border: `1px solid ${T.purpleBorder}`, background: T.purpleLight, color: T.purple, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', transition: 'all 0.15s' }}
+                                                                    onMouseEnter={e => { e.currentTarget.style.background = T.purple; e.currentTarget.style.color = '#fff'; }}
+                                                                    onMouseLeave={e => { e.currentTarget.style.background = T.purpleLight; e.currentTarget.style.color = T.purple; }}
+                                                                >
+                                                                    Detail
+                                                                </button>
+                                                            )}
+                                                            {app.job_posting?.company?.user_id && app.can_chat ? (
+                                                                <button onClick={() => router.get(route('messages.index', { conversation: app.conversation_id }))}
+                                                                    style={{ fontSize: 10, fontWeight: 700, padding: '4px 8px', borderRadius: 6, border: `1px solid ${T.orange}33`, background: T.orangeLight, color: T.orange, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', transition: 'all 0.15s' }}
+                                                                    onMouseEnter={e => { e.currentTarget.style.background = T.orange; e.currentTarget.style.color = '#fff'; }}
+                                                                    onMouseLeave={e => { e.currentTarget.style.background = T.orangeLight; e.currentTarget.style.color = T.orange; }}
+                                                                >
+                                                                    💬 Chat
+                                                                </button>
+                                                            ) : app.job_posting?.company?.user_id ? (
+                                                                <span title="Menunggu respon HRD"
+                                                                    style={{ fontSize: 10, fontWeight: 700, padding: '4px 8px', borderRadius: 6, border: `1px solid ${T.border}`, background: T.bg, color: T.muted, cursor: 'not-allowed', fontFamily: 'inherit', whiteSpace: 'nowrap', opacity: 0.6 }}
+                                                                >
+                                                                    💬 Chat
+                                                                </span>
+                                                            ) : null}
+                                                        </>
                                                     )}
-                                                    {app.job_posting?.company?.user_id && app.can_chat ? (
-                                                        <button onClick={() => router.get(route('messages.index', { conversation: app.conversation_id }))}
-                                                            style={{ fontSize: 10, fontWeight: 700, padding: '4px 8px', borderRadius: 6, border: `1px solid ${T.orange}33`, background: T.orangeLight, color: T.orange, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', transition: 'all 0.15s' }}
-                                                            onMouseEnter={e => { e.currentTarget.style.background = T.orange; e.currentTarget.style.color = '#fff'; }}
-                                                            onMouseLeave={e => { e.currentTarget.style.background = T.orangeLight; e.currentTarget.style.color = T.orange; }}
-                                                        >
-                                                            💬 Chat
-                                                        </button>
-                                                    ) : app.job_posting?.company?.user_id ? (
-                                                        <span title="Menunggu respon HRD"
-                                                            style={{ fontSize: 10, fontWeight: 700, padding: '4px 8px', borderRadius: 6, border: `1px solid ${T.border}`, background: T.bg, color: T.muted, cursor: 'not-allowed', fontFamily: 'inherit', whiteSpace: 'nowrap', opacity: 0.6 }}
-                                                        >
-                                                            💬 Chat
-                                                        </span>
-                                                    ) : null}
                                                 </div>
                                             </td>
                                         </tr>
@@ -196,9 +259,13 @@ export default function LamaranIndex({ applications }) {
                             <div>
                                 {/* Header */}
                                 <div style={{ padding: '20px 24px', borderBottom: `1px solid ${T.borderSoft}`, display: 'flex', alignItems: 'center', gap: 12 }}>
-                                    <div style={{ width: 40, height: 40, borderRadius: 10, background: T.purpleLight, color: T.purple, fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>🎙️</div>
+                                    <div style={{ width: 40, height: 40, borderRadius: 10, background: T.purpleLight, color: T.purple, fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                        {detailApp.source_type === 'invitation' ? '📩' : '🎙️'}
+                                    </div>
                                     <div>
-                                        <div style={{ fontSize: 15, fontWeight: 800, color: T.navy }}>Detail Panggilan Wawancara</div>
+                                        <div style={{ fontSize: 15, fontWeight: 800, color: T.navy }}>
+                                            {detailApp.source_type === 'invitation' ? 'Undangan Perusahaan' : 'Detail Panggilan Wawancara'}
+                                        </div>
                                         <div style={{ fontSize: 12, color: T.muted, marginTop: 2 }}>{detailApp.job_posting?.title || 'Lowongan'}</div>
                                     </div>
                                 </div>
@@ -303,6 +370,20 @@ export default function LamaranIndex({ applications }) {
                     })()}
                 </DialogContent>
             </Dialog>
+
+            <DeleteConfirmationModal
+                    isOpen={confirmOpen}
+                    onClose={() => { setConfirmOpen(false); setConfirmTarget(null); setConfirmAction(null); }}
+                    onConfirm={handleConfirm}
+                    loading={processing}
+                    title={confirmAction === 'accept' ? 'Terima Undangan?' : 'Tolak Undangan?'}
+                message={
+                    confirmAction === 'accept'
+                        ? `Anda akan menerima undangan dari "${confirmTarget?.job_posting?.title || 'Lowongan'}". Status lamaran akan berubah menjadi "Diundang - Diterima".`
+                        : `Anda akan menolak undangan dari "${confirmTarget?.job_posting?.title || 'Lowongan'}". Status lamaran akan berubah menjadi "Diundang - Ditolak".`
+                }
+                confirmText={confirmAction === 'accept' ? 'Ya, Terima' : 'Ya, Tolak'}
+            />
 
         </AuthenticatedLayout>
     );

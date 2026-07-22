@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Perusahaan;
 
 use App\Http\Controllers\Controller;
 use App\Models\AlumniProfile;
-use App\Models\Conversation;
+use App\Models\JobApplication;
 use App\Models\JobPosting;
 use App\Notifications\SystemNotification;
 use Illuminate\Http\Request;
@@ -17,60 +17,52 @@ class InviteCandidateController extends Controller
         $company = Auth::user()->company;
 
         if (! $company) {
-            return response()->json(['error' => 'Profil perusahaan tidak ditemukan.'], 404);
+            return back()->with('error', 'Profil perusahaan tidak ditemukan.');
         }
 
         $validated = $request->validate([
-            'alumni_id' => 'required|exists:alumni_profiles,id',
-            'job_posting_id' => 'required|exists:job_postings,id',
+            'alumni_id' => 'required',
+            'job_id' => 'required|exists:job_postings,id',
         ]);
 
-        $job = JobPosting::where('id', $validated['job_posting_id'])
+        $alumni = AlumniProfile::where('user_id', $validated['alumni_id'])->first();
+
+        if (! $alumni) {
+            return back()->with('error', 'Profil alumni tidak ditemukan.');
+        }
+
+        $job = JobPosting::where('id', $validated['job_id'])
             ->where('company_id', $company->id)
             ->firstOrFail();
 
-        $alumni = AlumniProfile::with('user')->findOrFail($validated['alumni_id']);
-        $companyUser = Auth::user();
-        $alumniUser = $alumni->user;
+        $exists = JobApplication::where('job_posting_id', $job->id)
+            ->where('alumni_id', $alumni->id)
+            ->exists();
 
-        $existing = $companyUser->conversations()
-            ->whereHas('participants', function ($q) use ($alumniUser) {
-                $q->where('user_id', $alumniUser->id);
-            })
-            ->first();
-
-        if ($existing) {
-            $conversation = $existing;
-        } else {
-            $conversation = Conversation::create(['type' => 'direct']);
-            $conversation->users()->attach([$companyUser->id, $alumniUser->id]);
+        if ($exists) {
+            return back()->with('error', 'Alumni ini sudah memiliki lamaran untuk lowongan tersebut.');
         }
 
-        $messageText = "Halo {$alumniUser->name},\n\n"
-            ."Kami dari *{$company->name}* mengundang Anda untuk melamar posisi *{$job->title}*.\n\n"
-            ."Silakan balas pesan ini jika Anda tertarik atau ingin mengetahui informasi lebih lanjut.\n\n"
-            .'Detail lowongan: '.route('alumni.loker')."\n\n"
-            ."Terima kasih.\n"
-            ."Tim Rekrutmen {$company->name}";
-
-        $conversation->messages()->create([
-            'sender_id' => $companyUser->id,
-            'message' => $messageText,
+        JobApplication::create([
+            'job_posting_id' => $job->id,
+            'alumni_id' => $alumni->id,
+            'cv_path' => $alumni->cv_path,
+            'status' => 'menunggu',
+            'source_type' => 'invitation',
+            'invitation_status' => 'pending',
         ]);
 
-        $conversation->touch();
+        $alumniUser = $alumni->user;
 
-        $alumniUser->notify(new SystemNotification(
-            'Undangan Melamar dari '.$company->name,
-            "Anda diundang untuk melamar posisi {$job->title}",
-            route('messages.index', ['conversation' => $conversation->id]),
-            'chat'
-        ));
+        if ($alumniUser) {
+            $alumniUser->notify(new SystemNotification(
+                'Undangan Melamar dari '.$company->name,
+                "Anda diundang untuk melamar posisi {$job->title} oleh {$company->name}. Buka halaman lamaran untuk merespons.",
+                route('alumni.lamaran'),
+                'invitation'
+            ));
+        }
 
-        return response()->json([
-            'success' => true,
-            'conversation_id' => $conversation->id,
-            'redirect' => route('messages.index', ['conversation' => $conversation->id]),
-        ]);
+        return back()->with('message', 'Undangan berhasil dikirim kepada '.$alumniUser->name.' untuk posisi '.$job->title.'.');
     }
 }

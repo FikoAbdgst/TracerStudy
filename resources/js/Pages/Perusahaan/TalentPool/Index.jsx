@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import axios from 'axios';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
@@ -113,23 +113,44 @@ const AlumniCard = ({ alumni }) => {
     );
 };
 
-export default function TalentPoolIndex({ alumni, filters, skills, majors, company }) {
+export default function TalentPoolIndex({ alumni, filters, skills, majors, graduationYears, company }) {
     const [search, setSearch] = useState(filters?.search || '');
-    const [skill, setSkill] = useState(filters?.skill || '');
+    const [graduationYear, setGraduationYear] = useState(filters?.graduation_year || '');
     const [major, setMajor] = useState(filters?.major || '');
+    const debounceRef = useRef(null);
 
-    const applyFilters = () => {
-        router.get(route('perusahaan.talent-pool'), { search, skill, major }, { preserveState: true, replace: true });
+    const fetchResults = useCallback((params) => {
+        router.get(route('perusahaan.talent-pool'), params, { preserveState: true, replace: true });
+    }, []);
+
+    const handleSearchChange = (value) => {
+        setSearch(value);
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+        debounceRef.current = setTimeout(() => {
+            fetchResults({ search: value, graduation_year: graduationYear, major });
+        }, 400);
+    };
+
+    const handleGraduationYearChange = (value) => {
+        const next = value === '__all__' ? '' : value;
+        setGraduationYear(next);
+        fetchResults({ search, graduation_year: next, major });
+    };
+
+    const handleMajorChange = (value) => {
+        const next = value === '__all__' ? '' : value;
+        setMajor(next);
+        fetchResults({ search, graduation_year: graduationYear, major: next });
     };
 
     const clearFilters = () => {
         setSearch('');
-        setSkill('');
+        setGraduationYear('');
         setMajor('');
-        router.get(route('perusahaan.talent-pool'), {}, { preserveState: true, replace: true });
+        fetchResults({});
     };
 
-    const hasFilters = search || skill || major;
+    const hasFilters = search || graduationYear || major;
 
     return (
         <AuthenticatedLayout
@@ -186,66 +207,80 @@ export default function TalentPoolIndex({ alumni, filters, skills, majors, compa
                     <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
                         <div style={{ flex: '1 1 220px', minWidth: 160 }}>
                             <label style={{ display: 'block', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: T.mutedDark, marginBottom: 4 }}>Cari Nama</label>
-                            <input value={search} onChange={e => setSearch(e.target.value)} onKeyDown={e => e.key === 'Enter' && applyFilters()}
+                            <input value={search} onChange={e => handleSearchChange(e.target.value)}
                                 placeholder="Ketik nama alumni..."
                                 style={{
-                                    height: 38, padding: '0 12px', border: `1.5px solid ${T.border}`, borderRadius: 9,
+                                    height: 40, padding: '0 14px', border: `1.5px solid ${T.border}`, borderRadius: 10,
                                     background: T.bg, color: T.navy, fontSize: 13, outline: 'none',
                                     width: '100%', boxSizing: 'border-box', fontFamily: 'inherit',
+                                    transition: 'border-color 0.2s, box-shadow 0.2s',
                                 }}
-                                onFocus={e => { e.target.style.borderColor = T.navyMid; e.target.style.background = '#fff'; }}
-                                onBlur={e => { e.target.style.borderColor = T.border; e.target.style.background = T.bg; }}
+                                onFocus={e => { e.target.style.borderColor = T.navyMid; e.target.style.background = '#fff'; e.target.style.boxShadow = '0 0 0 3px rgba(26,53,96,0.08)'; }}
+                                onBlur={e => { e.target.style.borderColor = T.border; e.target.style.background = T.bg; e.target.style.boxShadow = 'none'; }}
                             />
                         </div>
 
-                        <div style={{ minWidth: 150, flex: '0 1 180px' }}>
-                            <label style={{ display: 'block', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: T.mutedDark, marginBottom: 4 }}>Keahlian</label>
-                            <Select value={skill} onValueChange={v => setSkill(v === '__all__' ? '' : v)}>
-                                <SelectTrigger style={{ height: 38, fontSize: 13, borderRadius: 9, borderColor: T.border, background: T.bg, fontFamily: 'inherit' }}>
-                                    <SelectValue placeholder="Semua Keahlian" />
+                        <div style={{ minWidth: 160, flex: '0 1 180px' }}>
+                            <label style={{ display: 'block', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: T.mutedDark, marginBottom: 4 }}>Tahun Lulus</label>
+                            <Select value={graduationYear || '__all__'} onValueChange={handleGraduationYearChange}>
+                                <SelectTrigger style={{ height: 40, fontSize: 13, borderRadius: 10, borderColor: T.border, background: T.bg, fontFamily: 'inherit', transition: 'border-color 0.2s, box-shadow 0.2s' }}>
+                                    <SelectValue placeholder="Semua Tahun" />
                                 </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="__all__">Semua Keahlian</SelectItem>
-                                    {skills.map(s => (
-                                        <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                                <SelectContent
+                                    position="popper"
+                                    side="bottom"
+                                    align="start"
+                                    sideOffset={6}
+                                    avoidCollisions={true}
+                                    collisionPadding={12}
+                                    className="z-[9999]"
+                                    style={{ borderRadius: 10, border: `1px solid ${T.border}`, boxShadow: '0 8px 24px rgba(15,31,61,0.12)', maxHeight: 260, overflowY: 'auto' }}
+                                >
+                                    <SelectItem value="__all__" style={{ fontSize: 13, borderRadius: 6, padding: '8px 12px' }}>Semua Tahun</SelectItem>
+                                    {(graduationYears || []).map(y => (
+                                        <SelectItem key={y} value={String(y)} style={{ fontSize: 13, borderRadius: 6, padding: '8px 12px' }}>{y}</SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
                         </div>
 
-                        <div style={{ minWidth: 150, flex: '0 1 180px' }}>
+                        <div style={{ minWidth: 160, flex: '0 1 180px' }}>
                             <label style={{ display: 'block', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: T.mutedDark, marginBottom: 4 }}>Program Studi</label>
-                            <Select value={major} onValueChange={v => setMajor(v === '__all__' ? '' : v)}>
-                                <SelectTrigger style={{ height: 38, fontSize: 13, borderRadius: 9, borderColor: T.border, background: T.bg, fontFamily: 'inherit' }}>
+                            <Select value={major || '__all__'} onValueChange={handleMajorChange}>
+                                <SelectTrigger style={{ height: 40, fontSize: 13, borderRadius: 10, borderColor: T.border, background: T.bg, fontFamily: 'inherit', transition: 'border-color 0.2s, box-shadow 0.2s' }}>
                                     <SelectValue placeholder="Semua Prodi" />
                                 </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="__all__">Semua Prodi</SelectItem>
-                                    {majors.map(m => (
-                                        <SelectItem key={m} value={m}>{m}</SelectItem>
+                                <SelectContent
+                                    position="popper"
+                                    side="bottom"
+                                    align="start"
+                                    sideOffset={6}
+                                    avoidCollisions={true}
+                                    collisionPadding={12}
+                                    className="z-[9999]"
+                                    style={{ borderRadius: 10, border: `1px solid ${T.border}`, boxShadow: '0 8px 24px rgba(15,31,61,0.12)', maxHeight: 260, overflowY: 'auto' }}
+                                >
+                                    <SelectItem value="__all__" style={{ fontSize: 13, borderRadius: 6, padding: '8px 12px' }}>Semua Prodi</SelectItem>
+                                    {(majors || []).map(m => (
+                                        <SelectItem key={m} value={m} style={{ fontSize: 13, borderRadius: 6, padding: '8px 12px' }}>{m}</SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
                         </div>
 
                         <div style={{ display: 'flex', gap: 8, paddingBottom: 1 }}>
-                            <button onClick={applyFilters}
-                                style={{
-                                    height: 38, padding: '0 18px', borderRadius: 9, border: 'none',
-                                    background: T.orange, color: '#fff', fontSize: 12.5, fontWeight: 700,
-                                    cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
-                                    boxShadow: '0 2px 6px rgba(249,115,22,0.2)',
-                                }}>
-                                Cari
-                            </button>
                             {hasFilters && (
                                 <button onClick={clearFilters}
                                     style={{
-                                        height: 38, padding: '0 14px', borderRadius: 9, border: `1.5px solid ${T.border}`,
+                                        height: 40, padding: '0 14px', borderRadius: 10, border: `1.5px solid ${T.border}`,
                                         background: '#fff', color: T.mutedDark, fontSize: 12.5, fontWeight: 600,
                                         cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
-                                    }}>
-                                Reset
+                                        transition: 'background 0.15s, color 0.15s',
+                                    }}
+                                    onMouseEnter={e => { e.target.style.background = T.bg; e.target.style.color = T.navy; }}
+                                    onMouseLeave={e => { e.target.style.background = '#fff'; e.target.style.color = T.mutedDark; }}
+                                >
+                                    Reset
                                 </button>
                             )}
                         </div>

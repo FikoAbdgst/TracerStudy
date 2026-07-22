@@ -17,6 +17,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\Perusahaan\ApplicantController;
 use App\Http\Controllers\Perusahaan\CompanyProfileController;
 use App\Http\Controllers\Perusahaan\DashboardController as AdminPTDashboard;
+use App\Http\Controllers\Perusahaan\InviteCandidateController;
 use App\Http\Controllers\Perusahaan\JobPostingController;
 use App\Http\Controllers\Perusahaan\TalentPoolController;
 use App\Http\Controllers\PrivateFileController;
@@ -59,9 +60,14 @@ Route::middleware('auth')->group(function () {
 Route::post('/api/master-data/keahlian/quick-add', [MasterDataController::class, 'quickAddKeahlian'])->name('master-data.keahlian.quick-add');
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    // Dashboard Utama (Logic Redirect ada di AuthenticatedSessionController)
+    // Dashboard Utama — redirect ke dashboard sesuai role
     Route::get('/dashboard', function () {
-        return Inertia::render('Dashboard');
+        $user = auth()->user();
+        if ($user->hasRole('Super Admin')) return redirect()->route('superadmin.dashboard');
+        if ($user->hasRole('Admin Kampus')) return redirect()->route('adminkampus.dashboard');
+        if ($user->hasRole('Admin PT')) return redirect()->route('perusahaan.dashboard');
+        if ($user->hasRole('Alumni')) return redirect()->route('alumni.dashboard');
+        return redirect('/');
     })->name('dashboard');
 
     // Profile Settings (Common for all)
@@ -178,6 +184,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/loker/{job}/update-cv', [JobPortalController::class, 'updateCv'])->name('loker.update-cv');
 
         Route::get('/lamaran', [JobPortalController::class, 'applications'])->name('lamaran');
+        Route::post('/lamaran/{lamaran}/accept-invitation', [JobPortalController::class, 'acceptInvitation'])->name('lamaran.accept-invitation');
+        Route::post('/lamaran/{lamaran}/reject-invitation', [JobPortalController::class, 'rejectInvitation'])->name('lamaran.reject-invitation');
     });
 
     // --- FORUM DISKUSI (Alumni + Super Admin + Admin Kampus) ---
@@ -204,7 +212,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/messages/start-admin', [ChatController::class, 'startAdmin'])->name('messages.start-admin');
     Route::post('/messages/start-from-forum', [ChatController::class, 'startFromForum'])->name('messages.start-from-forum');
     Route::post('/messages/start-company', [ChatController::class, 'startCompanyConversation'])->name('messages.start-company');
-    Route::post('/messages/invite-candidate', [ChatController::class, 'startCompanyConversation'])->name('messages.invite-candidate');
+    Route::post('/messages/invite-candidate', [InviteCandidateController::class, '__invoke'])->name('messages.invite-candidate');
     Route::post('/messages/open-company-conversation', [ChatController::class, 'openCompanyConversation'])->name('messages.open-company-conversation');
     Route::post('/messages/block', [ChatController::class, 'blockUser'])->name('messages.block');
     Route::post('/messages/unblock', [ChatController::class, 'unblockUser'])->name('messages.unblock');

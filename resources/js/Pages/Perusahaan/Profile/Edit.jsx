@@ -33,7 +33,7 @@ const FieldLabel = ({ children, required }) => (
 );
 
 const Section = ({ title, icon, children, delay = 0 }) => (
-    <div style={{
+    <div className="cp-card" style={{
         background: '#fff', borderRadius: 14, border: `1px solid ${T.borderSoft}`,
         overflow: 'hidden', boxShadow: '0 1px 4px rgba(26,53,96,0.05)',
         animation: `cardIn 0.38s ${delay}s cubic-bezier(0.22,1,0.36,1) both`,
@@ -45,6 +45,53 @@ const Section = ({ title, icon, children, delay = 0 }) => (
         <div style={{ padding: '20px' }}>{children}</div>
     </div>
 );
+
+/* ─── Completion tracker (shared by sidebar, edit & view) ──────────────────── */
+const REQUIRED_FIELDS = [
+    { key: 'name', label: 'Nama Perusahaan' },
+    { key: 'industry', label: 'Sektor Industri' },
+    { key: 'city', label: 'Domisili Kota' },
+    { key: 'address', label: 'Alamat Lengkap' },
+    { key: 'description', label: 'Deskripsi Perusahaan' },
+];
+
+const ProfileCompletion = ({ source }) => {
+    const done = REQUIRED_FIELDS.filter(f => !!source?.[f.key]);
+    const pct = Math.round((done.length / REQUIRED_FIELDS.length) * 100);
+    return (
+        <div className="cp-card" style={{ background: T.navy, borderRadius: 14, padding: 18, boxShadow: '0 4px 20px rgba(15,31,61,0.18)' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 10 }}>
+                <span style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'rgba(255,255,255,0.55)' }}>Kelengkapan Profil</span>
+                <span style={{ fontSize: 13, fontWeight: 800, color: pct === 100 ? '#4ade80' : T.orange }}>{pct}%</span>
+            </div>
+            <div style={{ height: 6, borderRadius: 99, background: 'rgba(255,255,255,0.12)', overflow: 'hidden', marginBottom: 14 }}>
+                <div style={{ height: '100%', width: `${pct}%`, borderRadius: 99, background: pct === 100 ? '#4ade80' : T.orange, transition: 'width 0.4s ease' }} />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {REQUIRED_FIELDS.map(f => {
+                    const filled = !!source?.[f.key];
+                    return (
+                        <div key={f.key} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: filled ? '#fff' : 'rgba(255,255,255,0.45)', fontWeight: filled ? 600 : 500 }}>
+                            <span style={{
+                                width: 16, height: 16, borderRadius: '50%', flexShrink: 0,
+                                background: filled ? 'rgba(74,222,128,0.15)' : 'rgba(255,255,255,0.1)',
+                                color: filled ? '#4ade80' : 'rgba(255,255,255,0.35)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            }}>
+                                {filled ? (
+                                    <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+                                ) : (
+                                    <svg width="8" height="8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                                )}
+                            </span>
+                            {f.label}
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+};
 
 // ─── EDIT MODE ────────────────────────────────────────────────────────────────
 const EditMode = ({ data, setData, errors, processing, submit, industries, company, onCancel }) => {
@@ -193,201 +240,206 @@ const EditMode = ({ data, setData, errors, processing, submit, industries, compa
     const safeIndustries = Array.isArray(industries) ? industries : [];
 
     return (
-        <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <Section title="Informasi Perusahaan" icon="🏢" delay={0.04}>
+        <form onSubmit={submit} className="cp-grid">
+            {/* ── Sidebar: completion + tips (stacks on top on mobile, sticky rail on desktop) ── */}
+            <aside className="cp-sidebar">
+                <ProfileCompletion source={data} />
+            </aside>
 
-                <div style={{ marginBottom: 14 }}>
-                    <FieldLabel>Logo Perusahaan (Opsional)</FieldLabel>
-                    <input
-                        type="file"
-                        accept="image/png, image/jpeg, image/jpg"
-                        onChange={e => setData('logo_file', e.target.files[0])}
-                        style={{ width: '100%', padding: '10px 14px', borderRadius: 9, border: `2px dashed ${T.border}`, fontSize: 13.5, background: T.bg, boxSizing: 'border-box' }}
-                    />
-                    <InputError message={errors.logo_file} className="mt-1.5" />
-                    {data.logo_file ? (
-                        <div style={{ fontSize: 11, color: T.green, marginTop: 4 }}>File terpilih: {data.logo_file.name}</div>
-                    ) : company?.logo_url ? (
-                        <div style={{ fontSize: 11, color: T.muted, marginTop: 4 }}>Logo saat ini sudah terpasang. Upload file baru untuk menggantinya.</div>
-                    ) : (
-                        <div style={{ fontSize: 11, color: T.muted, marginTop: 4 }}>Format yang didukung: JPG, PNG. Maksimal 2MB.</div>
-                    )}
-                </div>
+            {/* ── Main form column ── */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 }}>
+                <Section title="Informasi Perusahaan" icon="🏢" delay={0.04}>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
-                    <div>
-                        <FieldLabel required>Nama Perusahaan</FieldLabel>
-                        <input style={fieldBase} placeholder="Misal: PT Inovasi Maju..." value={data.name}
-                            onChange={e => setData('name', e.target.value)} onFocus={onFocus} onBlur={onBlur} required />
-                        <InputError message={errors.name} className="mt-1.5" />
+                    <div style={{ marginBottom: 14 }}>
+                        <FieldLabel>Logo Perusahaan (Opsional)</FieldLabel>
+                        <input
+                            type="file"
+                            accept="image/png, image/jpeg, image/jpg"
+                            onChange={e => setData('logo_file', e.target.files[0])}
+                            style={{ width: '100%', padding: '10px 14px', borderRadius: 9, border: `2px dashed ${T.border}`, fontSize: 13.5, background: T.bg, boxSizing: 'border-box' }}
+                        />
+                        <InputError message={errors.logo_file} className="mt-1.5" />
+                        {data.logo_file ? (
+                            <div style={{ fontSize: 11, color: T.green, marginTop: 4 }}>File terpilih: {data.logo_file.name}</div>
+                        ) : company?.logo_url ? (
+                            <div style={{ fontSize: 11, color: T.muted, marginTop: 4 }}>Logo saat ini sudah terpasang. Upload file baru untuk menggantinya.</div>
+                        ) : (
+                            <div style={{ fontSize: 11, color: T.muted, marginTop: 4 }}>Format yang didukung: JPG, PNG. Maksimal 2MB.</div>
+                        )}
                     </div>
-                    <div>
-                        <FieldLabel required>Sektor Industri</FieldLabel>
-                        <Select value={data.industry} onValueChange={v => setData('industry', v)} required>
-                            <SelectTrigger className="focus:ring-0 focus:ring-offset-0" style={{ height: 42, borderRadius: 9, border: `1.5px solid ${T.border}`, background: T.bg, fontSize: 13.5 }}>
-                                <SelectValue placeholder="Pilih Industri..." />
-                            </SelectTrigger>
-                            <SelectContent position="popper" sideOffset={4} className="z-[500] rounded-xl overflow-hidden border border-gray-200 shadow-xl" style={{ background: '#ffffff' }}>
-                                {safeIndustries.length > 0 ? (
-                                    safeIndustries.map(ind => (
-                                        <SelectItem key={ind.id} value={ind.name} className="text-sm cursor-pointer px-3 py-2" style={{ color: '#1e293b' }}>
-                                            {ind.name}
-                                        </SelectItem>
-                                    ))
-                                ) : (
-                                    <SelectItem value="Lainnya" disabled>Data industri tidak tersedia</SelectItem>
-                                )}
-                            </SelectContent>
-                        </Select>
-                        <InputError message={errors.industry} className="mt-1.5" />
-                    </div>
-                </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
-                    <div>
+                    <div className="cp-field-row-2" style={{ marginBottom: 14 }}>
+                        <div>
+                            <FieldLabel required>Nama Perusahaan</FieldLabel>
+                            <input style={fieldBase} placeholder="Misal: PT Inovasi Maju..." value={data.name}
+                                onChange={e => setData('name', e.target.value)} onFocus={onFocus} onBlur={onBlur} required />
+                            <InputError message={errors.name} className="mt-1.5" />
+                        </div>
+                        <div>
+                            <FieldLabel required>Sektor Industri</FieldLabel>
+                            <Select value={data.industry} onValueChange={v => setData('industry', v)} required>
+                                <SelectTrigger className="focus:ring-0 focus:ring-offset-0" style={{ height: 42, borderRadius: 9, border: `1.5px solid ${T.border}`, background: T.bg, fontSize: 13.5 }}>
+                                    <SelectValue placeholder="Pilih Industri..." />
+                                </SelectTrigger>
+                                <SelectContent position="popper" sideOffset={4} className="z-[500] rounded-xl overflow-hidden border border-gray-200 shadow-xl" style={{ background: '#ffffff' }}>
+                                    {safeIndustries.length > 0 ? (
+                                        safeIndustries.map(ind => (
+                                            <SelectItem key={ind.id} value={ind.name} className="text-sm cursor-pointer px-3 py-2" style={{ color: '#1e293b' }}>
+                                                {ind.name}
+                                            </SelectItem>
+                                        ))
+                                    ) : (
+                                        <SelectItem value="Lainnya" disabled>Data industri tidak tersedia</SelectItem>
+                                    )}
+                                </SelectContent>
+                            </Select>
+                            <InputError message={errors.industry} className="mt-1.5" />
+                        </div>
+                    </div>
+
+                    <div style={{ marginBottom: 14 }}>
                         <FieldLabel>Situs Web (Website)</FieldLabel>
                         <input style={fieldBase} placeholder="https://www.perusahaananda.com" value={data.website}
                             onChange={e => setData('website', e.target.value)} onFocus={onFocus} onBlur={onBlur} />
                         <InputError message={errors.website} className="mt-1.5" />
                     </div>
-                    <div />
-                </div>
 
-                <div style={{ padding: '16px', background: T.bg, border: `1px solid ${T.borderSoft}`, borderRadius: 12, marginBottom: 14 }}>
-                    <div style={{ marginBottom: 14 }}>
-                        <FieldLabel required>Domisili Kota & Provinsi</FieldLabel>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                            <div style={{ position: 'relative' }}>
-                                <select
-                                    style={{
-                                        ...fieldBase,
-                                        appearance: 'none', WebkitAppearance: 'none', MozAppearance: 'none',
-                                        paddingRight: 36, cursor: 'pointer',
-                                        color: selectedProvinsi ? T.navy : T.muted
-                                    }}
-                                    value={selectedProvinsi}
-                                    onChange={e => onProvinsiChange(e.target.value)}
-                                    onFocus={onFocus} onBlur={onBlur} required
-                                >
-                                    <option value="" disabled>Pilih Provinsi...</option>
-                                    {listProvinsi.map(prov => (
-                                        <option key={prov} value={prov}>{prov}</option>
-                                    ))}
-                                </select>
-                                <svg style={{ position: 'absolute', right: 11, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: T.mutedDark }} width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
-                            </div>
+                    <div style={{ padding: '16px', background: T.bg, border: `1px solid ${T.borderSoft}`, borderRadius: 12, marginBottom: 14 }}>
+                        <div style={{ marginBottom: 14 }}>
+                            <FieldLabel required>Domisili Kota & Provinsi</FieldLabel>
+                            <div className="cp-field-row-2">
+                                <div style={{ position: 'relative' }}>
+                                    <select
+                                        style={{
+                                            ...fieldBase,
+                                            appearance: 'none', WebkitAppearance: 'none', MozAppearance: 'none',
+                                            paddingRight: 36, cursor: 'pointer',
+                                            color: selectedProvinsi ? T.navy : T.muted
+                                        }}
+                                        value={selectedProvinsi}
+                                        onChange={e => onProvinsiChange(e.target.value)}
+                                        onFocus={onFocus} onBlur={onBlur} required
+                                    >
+                                        <option value="" disabled>Pilih Provinsi...</option>
+                                        {listProvinsi.map(prov => (
+                                            <option key={prov} value={prov}>{prov}</option>
+                                        ))}
+                                    </select>
+                                    <svg style={{ position: 'absolute', right: 11, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: T.mutedDark }} width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+                                </div>
 
-                            <div style={{ position: 'relative' }}>
-                                <select
-                                    style={{
-                                        ...fieldBase,
-                                        appearance: 'none', WebkitAppearance: 'none', MozAppearance: 'none',
-                                        paddingRight: 36,
-                                        cursor: selectedProvinsi ? 'pointer' : 'not-allowed',
-                                        background: selectedProvinsi ? '#fff' : T.borderSoft,
-                                        color: selectedKota ? T.navy : T.muted
-                                    }}
-                                    value={selectedKota}
-                                    onChange={e => onKotaChange(e.target.value)}
-                                    onFocus={onFocus} onBlur={onBlur} disabled={!selectedProvinsi} required
-                                >
-                                    <option value="" disabled>
-                                        {selectedProvinsi ? 'Pilih Kota...' : 'Pilih Provinsi Dulu'}
-                                    </option>
-                                    {listKota.map(kota => (
-                                        <option key={kota} value={kota}>{kota}</option>
-                                    ))}
-                                </select>
-                                <svg style={{ position: 'absolute', right: 11, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: T.mutedDark }} width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+                                <div style={{ position: 'relative' }}>
+                                    <select
+                                        style={{
+                                            ...fieldBase,
+                                            appearance: 'none', WebkitAppearance: 'none', MozAppearance: 'none',
+                                            paddingRight: 36,
+                                            cursor: selectedProvinsi ? 'pointer' : 'not-allowed',
+                                            background: selectedProvinsi ? '#fff' : T.borderSoft,
+                                            color: selectedKota ? T.navy : T.muted
+                                        }}
+                                        value={selectedKota}
+                                        onChange={e => onKotaChange(e.target.value)}
+                                        onFocus={onFocus} onBlur={onBlur} disabled={!selectedProvinsi} required
+                                    >
+                                        <option value="" disabled>
+                                            {selectedProvinsi ? 'Pilih Kota...' : 'Pilih Provinsi Dulu'}
+                                        </option>
+                                        {listKota.map(kota => (
+                                            <option key={kota} value={kota}>{kota}</option>
+                                        ))}
+                                    </select>
+                                    <svg style={{ position: 'absolute', right: 11, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: T.mutedDark }} width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    <div>
-                        <FieldLabel>Alamat Lengkap (Jalan, Gedung, Patokan)</FieldLabel>
-                        <textarea style={{ ...fieldBase, height: 'auto', padding: '12px 14px', resize: 'vertical' }} rows={2}
-                            placeholder="Misal: Gedung Cyber Lt. 2, Jl. Kuningan Barat Raya No. 8..."
-                            value={detailAlamat}
-                            onChange={e => onDetailChange(e.target.value)}
-                            onFocus={onFocus} onBlur={onBlur} />
-                        {isResolvingAddress && (
-                            <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>
-                                ⏳ Mencari alamat dari peta...
+                        <div>
+                            <FieldLabel>Alamat Lengkap (Jalan, Gedung, Patokan)</FieldLabel>
+                            <textarea style={{ ...fieldBase, height: 'auto', padding: '12px 14px', resize: 'vertical' }} rows={2}
+                                placeholder="Misal: Gedung Cyber Lt. 2, Jl. Kuningan Barat Raya No. 8..."
+                                value={detailAlamat}
+                                onChange={e => onDetailChange(e.target.value)}
+                                onFocus={onFocus} onBlur={onBlur} />
+                            {isResolvingAddress && (
+                                <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>
+                                    ⏳ Mencari alamat dari peta...
+                                </div>
+                            )}
+                        </div>
+
+                        <InputError message={errors.address} className="mt-1.5" />
+
+                        {data.address && (
+                            <div style={{ fontSize: 11, fontWeight: 600, color: T.navyMid, marginTop: 10, padding: '8px 12px', background: '#e2e8f0', borderRadius: 6 }}>
+                                <span style={{ color: T.mutedDark }}>Preview Alamat:</span> {data.address}
                             </div>
                         )}
                     </div>
 
-                    <InputError message={errors.address} className="mt-1.5" />
+                    <div style={{ marginBottom: 14 }}>
+                        <FieldLabel>Tandai Lokasi di Peta <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: '#94a3b8' }}>(opsional)</span></FieldLabel>
+                        <Suspense fallback={<div style={{ height: 280, borderRadius: 9, background: '#f0f4f9' }} />}>
+                            <LocationPicker
+                                latitude={data.latitude}
+                                longitude={data.longitude}
+                                onLocationChange={onLocationChange}
+                                onAddressResolve={handleAddressResolve}
+                                onAddressData={handleAddressData}
+                                onResolvingChange={setIsResolvingAddress}
+                                height={280}
+                            />
+                        </Suspense>
+                        <InputError message={errors.latitude} className="mt-1.5" />
+                    </div>
 
-                    {data.address && (
-                        <div style={{ fontSize: 11, fontWeight: 600, color: T.navyMid, marginTop: 10, padding: '8px 12px', background: '#e2e8f0', borderRadius: 6 }}>
-                            <span style={{ color: T.mutedDark }}>Preview Alamat:</span> {data.address}
-                        </div>
-                    )}
-                </div>
+                    <div>
+                        <FieldLabel required>Deskripsi Perusahaan</FieldLabel>
+                        <textarea style={{ ...fieldBase, height: 'auto', padding: '12px 14px', resize: 'vertical' }} rows={5}
+                            placeholder="Ceritakan tentang perusahaan Anda, visi misi, dan lingkungan kerja..."
+                            value={data.description} onChange={e => setData('description', e.target.value)}
+                            onFocus={onFocus} onBlur={onBlur} required />
+                        <InputError message={errors.description} className="mt-1.5" />
+                    </div>
+                </Section>
 
-                <div style={{ marginBottom: 14 }}>
-                    <FieldLabel>Tandai Lokasi di Peta <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: '#94a3b8' }}>(opsional)</span></FieldLabel>
-                    <Suspense fallback={<div style={{ height: 280, borderRadius: 9, background: '#f0f4f9' }} />}>
-                        <LocationPicker
-                            latitude={data.latitude}
-                            longitude={data.longitude}
-                            onLocationChange={onLocationChange}
-                            onAddressResolve={handleAddressResolve}
-                            onAddressData={handleAddressData}
-                            onResolvingChange={setIsResolvingAddress}
-                            height={280}
-                        />
-                    </Suspense>
-                    <InputError message={errors.latitude} className="mt-1.5" />
-                </div>
-
-                <div>
-                    <FieldLabel required>Deskripsi Perusahaan</FieldLabel>
-                    <textarea style={{ ...fieldBase, height: 'auto', padding: '12px 14px', resize: 'vertical' }} rows={5}
-                        placeholder="Ceritakan tentang perusahaan Anda, visi misi, dan lingkungan kerja..."
-                        value={data.description} onChange={e => setData('description', e.target.value)}
-                        onFocus={onFocus} onBlur={onBlur} required />
-                    <InputError message={errors.description} className="mt-1.5" />
-                </div>
-            </Section>
-
-            <div style={{
-                display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
-                padding: '16px 20px', background: '#fff', borderRadius: 14,
-                border: `1px solid ${T.borderSoft}`,
-                animation: `cardIn 0.38s 0.08s cubic-bezier(0.22,1,0.36,1) both`,
-            }}>
-                <p style={{ fontSize: 12, color: T.muted, margin: 0, flex: 1, minWidth: 160 }}>
-                    Profil yang lengkap akan meningkatkan kepercayaan kandidat pelamar.
-                </p>
-                <div style={{ display: 'flex', gap: 10, flexShrink: 0 }}>
-                    <button type="button" onClick={onCancel}
-                        style={{
-                            height: 42, padding: '0 18px', borderRadius: 9, border: `1.5px solid ${T.border}`,
-                            background: '#fff', color: T.mutedDark, fontSize: 13, fontWeight: 700,
-                            cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s',
-                            display: 'flex', alignItems: 'center', gap: 6,
-                        }}
-                        onMouseEnter={e => { e.currentTarget.style.borderColor = T.mutedDark; e.currentTarget.style.background = T.bg; }}
-                        onMouseLeave={e => { e.currentTarget.style.borderColor = T.border; e.currentTarget.style.background = '#fff'; }}
-                    >
-                        ✕ Batal
-                    </button>
-                    <button type="submit" disabled={processing}
-                        style={{
-                            height: 42, padding: '0 22px', borderRadius: 9, border: 'none',
-                            background: processing ? T.muted : T.orange, color: '#fff',
-                            fontSize: 13, fontWeight: 700, cursor: processing ? 'not-allowed' : 'pointer',
-                            fontFamily: 'inherit', transition: 'all 0.15s',
-                            display: 'flex', alignItems: 'center', gap: 7,
-                            boxShadow: processing ? 'none' : '0 2px 8px rgba(249,115,22,0.25)',
-                        }}
-                        onMouseEnter={e => { if (!processing) { e.currentTarget.style.background = '#ea6c0a'; e.currentTarget.style.transform = 'translateY(-1px)'; } }}
-                        onMouseLeave={e => { e.currentTarget.style.background = processing ? T.muted : T.orange; e.currentTarget.style.transform = 'none'; }}
-                    >
-                        {processing ? 'Menyimpan...' : 'Simpan Profil Perusahaan'}
-                    </button>
+                <div className="cp-actions-wrap" style={{
+                    display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
+                    padding: '16px 20px', background: '#fff', borderRadius: 14,
+                    border: `1px solid ${T.borderSoft}`,
+                    animation: `cardIn 0.38s 0.08s cubic-bezier(0.22,1,0.36,1) both`,
+                }}>
+                    <p className="cp-actions-hint" style={{ fontSize: 12, color: T.muted, margin: 0, flex: 1, minWidth: 160 }}>
+                        Profil yang lengkap akan meningkatkan kepercayaan kandidat pelamar.
+                    </p>
+                    <div className="cp-actions">
+                        <button type="button" onClick={onCancel}
+                            style={{
+                                height: 42, padding: '0 18px', borderRadius: 9, border: `1.5px solid ${T.border}`,
+                                background: '#fff', color: T.mutedDark, fontSize: 13, fontWeight: 700,
+                                cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.borderColor = T.mutedDark; e.currentTarget.style.background = T.bg; }}
+                            onMouseLeave={e => { e.currentTarget.style.borderColor = T.border; e.currentTarget.style.background = '#fff'; }}
+                        >
+                            ✕ Batal
+                        </button>
+                        <button type="submit" disabled={processing}
+                            style={{
+                                height: 42, padding: '0 22px', borderRadius: 9, border: 'none',
+                                background: processing ? T.muted : T.orange, color: '#fff',
+                                fontSize: 13, fontWeight: 700, cursor: processing ? 'not-allowed' : 'pointer',
+                                fontFamily: 'inherit', transition: 'all 0.15s',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+                                boxShadow: processing ? 'none' : '0 2px 8px rgba(249,115,22,0.25)',
+                            }}
+                            onMouseEnter={e => { if (!processing) { e.currentTarget.style.background = '#ea6c0a'; e.currentTarget.style.transform = 'translateY(-1px)'; } }}
+                            onMouseLeave={e => { e.currentTarget.style.background = processing ? T.muted : T.orange; e.currentTarget.style.transform = 'none'; }}
+                        >
+                            {processing ? 'Menyimpan...' : 'Simpan Profil Perusahaan'}
+                        </button>
+                    </div>
                 </div>
             </div>
         </form>
@@ -408,28 +460,34 @@ const ProfileField = ({ label, value, full = false }) => (
 
 const ViewMode = ({ profile }) => {
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <Section title="Informasi Perusahaan" icon="🏢" delay={0.04}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0 }}>
-                    <ProfileField label="Nama Perusahaan" value={profile?.name} />
-                    <ProfileField label="Sektor Industri" value={profile?.industry} />
-                    <ProfileField label="Situs Web" value={profile?.website} />
-                    <ProfileField label="Alamat Lengkap" value={profile?.address} />
-                    <ProfileField label="Deskripsi Perusahaan" value={profile?.description} full />
-                </div>
-                {profile?.latitude && profile?.longitude && (
-                    <div style={{ marginTop: 16 }}>
-                        <Suspense fallback={<div style={{ height: 220, borderRadius: 9, background: '#f0f4f9' }} />}>
-                            <MapWidget
-                                latitude={parseFloat(profile.latitude)}
-                                longitude={parseFloat(profile.longitude)}
-                                label={profile.name}
-                                height={220}
-                            />
-                        </Suspense>
+        <div className="cp-grid">
+            <aside className="cp-sidebar">
+                <ProfileCompletion source={profile} />
+            </aside>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 }}>
+                <Section title="Informasi Perusahaan" icon="🏢" delay={0.04}>
+                    <div className="cp-field-row-2" style={{ gap: 0 }}>
+                        <ProfileField label="Nama Perusahaan" value={profile?.name} />
+                        <ProfileField label="Sektor Industri" value={profile?.industry} />
+                        <ProfileField label="Situs Web" value={profile?.website} />
+                        <ProfileField label="Alamat Lengkap" value={profile?.address} />
+                        <ProfileField label="Deskripsi Perusahaan" value={profile?.description} full />
                     </div>
-                )}
-            </Section>
+                    {profile?.latitude && profile?.longitude && (
+                        <div style={{ marginTop: 16 }}>
+                            <Suspense fallback={<div style={{ height: 220, borderRadius: 9, background: '#f0f4f9' }} />}>
+                                <MapWidget
+                                    latitude={parseFloat(profile.latitude)}
+                                    longitude={parseFloat(profile.longitude)}
+                                    label={profile.name}
+                                    height={220}
+                                />
+                            </Suspense>
+                        </div>
+                    )}
+                </Section>
+            </div>
         </div>
     );
 };
@@ -482,9 +540,61 @@ export default function EditCompanyProfile({ company, industries = [] }) {
                 [data-radix-popper-content-wrapper] { z-index: 99999 !important; }
                 @keyframes cardIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
                 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+                /* ── Responsive grid: mobile stacks single column, desktop opens a sticky sidebar rail ── */
+                .pt-root .cp-page { max-width: 1180px; margin: 0 auto; padding: 0 2px; }
+                .pt-root .cp-grid {
+                    display: grid;
+                    grid-template-columns: 1fr;
+                    gap: 16px;
+                    align-items: start;
+                }
+                .pt-root .cp-sidebar {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 14px;
+                    order: -1;
+                }
+                .pt-root .cp-field-row-2 {
+                    display: grid;
+                    grid-template-columns: 1fr;
+                    gap: 14px;
+                }
+                .pt-root .cp-actions-wrap {
+                    position: sticky;
+                    bottom: 12px;
+                    z-index: 20;
+                    box-shadow: 0 8px 24px rgba(15,31,61,0.12);
+                }
+                .pt-root .cp-actions { display: flex; gap: 10px; width: 100%; }
+                .pt-root .cp-actions button { flex: 1; }
+                .pt-root .cp-actions-hint { display: none; }
+
+                /* ── Desktop / tablet-landscape: two-column layout with sticky rail ── */
+                @media (min-width: 900px) {
+                    .pt-root .cp-grid {
+                        grid-template-columns: 288px 1fr;
+                        gap: 24px;
+                    }
+                    .pt-root .cp-sidebar {
+                        order: 0;
+                        position: sticky;
+                        top: 20px;
+                    }
+                    .pt-root .cp-field-row-2 {
+                        grid-template-columns: 1fr 1fr;
+                    }
+                    .pt-root .cp-actions-wrap {
+                        position: static;
+                        box-shadow: none;
+                    }
+                    .pt-root .cp-actions { width: auto; flex-shrink: 0; }
+                    .pt-root .cp-actions button { flex: none; }
+                    .pt-root .cp-actions-hint { display: block; }
+                }
             `}</style>
 
-            <div className="pt-root" style={{ maxWidth: 720, margin: '0 auto', padding: '0 2px' }}>
+            <div className="pt-root cp-page">
 
                 {flash?.message && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', borderRadius: 10, marginBottom: 18, background: T.greenLight, border: '1px solid #bbf7d0', animation: 'fadeIn 0.3s both' }}>
@@ -568,7 +678,7 @@ export default function EditCompanyProfile({ company, industries = [] }) {
                     </div>
                 )}
 
-                {/* ── Konten utama ── */}
+                {/* ── Konten utama: sidebar (kelengkapan + tips) + kolom form/tampilan ── */}
                 {isEditing ? (
                     <EditMode
                         data={data}

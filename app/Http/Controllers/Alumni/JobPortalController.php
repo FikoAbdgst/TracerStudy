@@ -183,4 +183,67 @@ class JobPortalController extends Controller
             'applications' => $applications,
         ]);
     }
+
+    public function acceptInvitation(JobApplication $lamaran)
+    {
+        $alumniProfile = Auth::user()->alumniProfile;
+
+        if (! $alumniProfile || $lamaran->alumni_id !== $alumniProfile->id) {
+            abort(403);
+        }
+
+        if ($lamaran->source_type !== 'invitation' || $lamaran->invitation_status !== 'pending') {
+            return back()->with('error', 'Undangan ini tidak dapat diterima.');
+        }
+
+        $lamaran->update([
+            'invitation_status' => 'accepted',
+            'status' => 'menunggu',
+        ]);
+
+        $job = $lamaran->jobPosting;
+        $company = $job?->company;
+
+        if ($company && $company->user) {
+            $company->user->notify(new SystemNotification(
+                'Undangan Diterima!',
+                Auth::user()->name.' menerima undangan melamar untuk posisi '.$job->title.'.',
+                route('perusahaan.pelamar'),
+                'invitation'
+            ));
+        }
+
+        return back()->with('message', 'Undangan berhasil diterima. Lamaran Anda telah masuk ke daftar pelamar.');
+    }
+
+    public function rejectInvitation(JobApplication $lamaran)
+    {
+        $alumniProfile = Auth::user()->alumniProfile;
+
+        if (! $alumniProfile || $lamaran->alumni_id !== $alumniProfile->id) {
+            abort(403);
+        }
+
+        if ($lamaran->source_type !== 'invitation' || $lamaran->invitation_status !== 'pending') {
+            return back()->with('error', 'Undangan ini tidak dapat ditolak.');
+        }
+
+        $lamaran->update([
+            'invitation_status' => 'rejected',
+        ]);
+
+        $job = $lamaran->jobPosting;
+        $company = $job?->company;
+
+        if ($company && $company->user) {
+            $company->user->notify(new SystemNotification(
+                'Undangan Ditolak',
+                Auth::user()->name.' menolak undangan melamar untuk posisi '.$job->title.'.',
+                route('perusahaan.pelamar'),
+                'invitation'
+            ));
+        }
+
+        return back()->with('message', 'Undangan berhasil ditolak.');
+    }
 }

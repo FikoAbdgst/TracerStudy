@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, usePage } from '@inertiajs/react';
 import NotificationDropdown from '@/Components/NotificationDropdown';
+import ChatDropdown from '@/Components/ChatDropdown';
+import MobileNavDropdown from '@/Components/MobileNavDropdown';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -24,7 +26,6 @@ const menuConfig = {
         { name: 'Manajemen Mitra', href: route('adminkampus.mitra.index') },
         { name: 'Tinjau Lowongan', href: route('adminkampus.tinjau-lowongan') },
         { name: 'Ruang Diskusi', href: route('alumni.forum.index') },
-        { name: 'Pesan', href: route('messages.index') },
     ],
     'Admin PT': [
         { name: 'Dashboard', href: route('perusahaan.dashboard') },
@@ -32,7 +33,6 @@ const menuConfig = {
         { name: 'Kelola Lowongan', href: route('perusahaan.lowongan') },
         { name: 'Daftar Pelamar', href: route('perusahaan.pelamar') },
         { name: 'Bakat Potensial', href: route('perusahaan.talent-pool') },
-        { name: 'Pesan', href: route('messages.index') },
     ],
     'Alumni': [
         { name: 'Dashboard', href: route('alumni.dashboard') },
@@ -41,7 +41,6 @@ const menuConfig = {
         { name: 'Bursa Kerja', href: route('alumni.loker') },
         { name: 'Status Lamaran', href: route('alumni.lamaran') },
         { name: 'Ruang Diskusi', href: route('alumni.forum.index') },
-        { name: 'Pesan', href: route('messages.index') },
     ],
 };
 
@@ -117,16 +116,18 @@ export default function AuthenticatedLayout({ header, children }) {
                 }
 
                 .al-brand-mark {
-                    width: 32px;
-                    height: 32px;
+                    width: 36px;
+                    height: 36px;
                     border-radius: 8px;
-                    background: #1a3560;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: 12px;
-                    font-weight: 800;
-                    color: #fff;
+                    overflow: hidden;
+                    flex-shrink: 0;
+                    background: #fff;
+                }
+
+                .al-brand-mark img {
+                    width: 100%;
+                    height: 100%;
+                    object-fit: contain;
                 }
 
                 .al-brand-text {
@@ -366,7 +367,12 @@ export default function AuthenticatedLayout({ header, children }) {
                     .al-page-header { padding: 14px 16px; }
                     .al-navbar { padding: 0 16px; }
                     .al-user-name { display: none; }
+                    .al-desktop-icons { display: none !important; }
+                    .al-mobile-icons { display: flex !important; }
                 }
+
+                .al-desktop-icons { display: flex; align-items: center; gap: 2px; }
+                .al-mobile-icons { display: none; }
             `}</style>
 
             <div className="al-root">
@@ -383,7 +389,7 @@ export default function AuthenticatedLayout({ header, children }) {
 
                     {/* Brand */}
                     <Link href="#" className="al-brand">
-                        <div className="al-brand-mark">M</div>
+                        <div className="al-brand-mark"><img src="/logo.jpg" alt="SITAMI" /></div>
                         <div className="al-brand-divider" />
                         <span className="al-brand-text">SITAMI</span>
                         <span className="al-brand-role">{userRole}</span>
@@ -404,7 +410,13 @@ export default function AuthenticatedLayout({ header, children }) {
 
                     {/* Right side */}
                     <div className="al-nav-right">
-                        <NotificationDropdown />
+                        <div className="al-desktop-icons">
+                            <NotificationDropdown />
+                            <ChatDropdown />
+                        </div>
+                        <div className="al-mobile-icons">
+                            <MobileNavDropdown />
+                        </div>
 
                         {/* User dropdown */}
                         <DropdownMenu>

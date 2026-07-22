@@ -19,9 +19,7 @@ class ChatController extends Controller
 {
     protected function authorizeAccess()
     {
-        if (Auth::user()->hasRole('Super Admin')) {
-            abort(403, 'Super Admin tidak memiliki akses ke fitur chat.');
-        }
+        // Semua role yang terautentifikasi dapat mengakses chat
     }
 
     protected function user()
@@ -38,11 +36,13 @@ class ChatController extends Controller
         $otherParticipant = $conv->participants->where('user_id', '!=', $user->id)->first();
         $otherUser = $otherParticipant?->user;
 
-        // Cek apakah alumni masih boleh reply (one-last-reply untuk ditolak)
+        // Cek apakah alumni masih boleh reply (one-last-reply untuk ditolak, hanya company)
         $can_reply = true;
-        $jobApp = $conv->jobApplication;
-        if ($jobApp && $jobApp->status === 'ditolak' && $conv->rejected_reply_count >= 1) {
-            $can_reply = false;
+        if ($conv->type === Conversation::TYPE_COMPANY) {
+            $jobApp = $conv->jobApplication;
+            if ($jobApp && $jobApp->status === 'ditolak' && $conv->rejected_reply_count >= 1) {
+                $can_reply = false;
+            }
         }
 
         return [
@@ -172,57 +172,63 @@ class ChatController extends Controller
 
         // Anti-spam: cek jika percakapan ditutup
         if ($conversation->status === Conversation::STATUS_CLOSED) {
-            return back()->with('error', 'Ruang obrolan telah ditutup. Tidak dapat mengirim pesan.');
+            return response()->json(['error' => 'Ruang obrolan telah ditutup. Tidak dapat mengirim pesan.'], 422);
         }
 
         // Anti-spam: cek jika salah satu pihak memblokir
         if ($otherUser && $user->hasBlocked($otherUser->id)) {
-            return back()->with('error', 'Anda telah memblokir pengguna ini.');
+            return response()->json(['error' => 'Anda telah memblokir pengguna ini.'], 422);
         }
 
         if ($otherUser && $user->isBlockedBy($otherUser->id)) {
-            return back()->with('error', 'Anda telah diblokir oleh pengguna ini.');
+            return response()->json(['error' => 'Anda telah diblokir oleh pengguna ini.'], 422);
         }
 
-        // Batasi pesan alumni: max 3 sebelum HR/Admin PT membalas
-        if ($user->hasRole('Alumni') && ! $conversation->hr_replied) {
+        // Batasi pesan alumni ke perusahaan: max 3 sebelum HR/Admin PT membalas
+        if ($user->hasRole('Alumni') && $conversation->type === Conversation::TYPE_COMPANY && ! $conversation->hr_replied) {
             if ($conversation->alumni_msg_count >= 3) {
-                return back()->with('error', 'Anda telah mencapai batas 3 pesan. Tunggu balasan dari HR untuk melanjutkan percakapan.');
+                return response()->json(['error' => 'Anda telah mencapai batas 3 pesan. Tunggu balasan dari HR untuk melanjutkan percakapan.'], 422);
             }
             $conversation->increment('alumni_msg_count');
         }
 
-        // Jika pengirim adalah HR/Admin PT, tandai bahwa HR telah membalas
-        if ($user->hasRole('Admin PT')) {
+        // Jika pengirim adalah HR/Admin PT, tandai bahwa HR telah membalas (hanya untuk percakapan company)
+        if ($user->hasRole('Admin PT') && $conversation->type === Conversation::TYPE_COMPANY) {
             if (! $conversation->hr_replied) {
                 $conversation->update(['hr_replied' => true]);
             }
         }
 
-        // One-last-reply: alumni hanya boleh 1x balas setelah ditolak
-        $conversation->load('jobApplication');
-        $jobApp = $conversation->jobApplication;
-        if ($jobApp && $jobApp->status === 'ditolak') {
-            if ($user->hasRole('Alumni') && $conversation->rejected_reply_count >= 1) {
-                return back()->with('error', 'Percakapan telah ditutup. Tidak dapat mengirim pesan lagi.');
+        // One-last-reply: alumni hanya boleh 1x balas setelah ditolak (hanya untuk percakapan company)
+        if ($conversation->type === Conversation::TYPE_COMPANY) {
+            $conversation->load('jobApplication');
+            $jobApp = $conversation->jobApplication;
+            if ($jobApp && $jobApp->status === 'ditolak') {
+                if ($user->hasRole('Alumni') && $conversation->rejected_reply_count >= 1) {
+                    return response()->json(['error' => 'Percakapan telah ditutup. Tidak dapat mengirim pesan lagi.'], 422);
+                }
             }
         }
 
         $validated = $request->validate([
             'body' => 'nullable|string|max:10000',
-            'attachment' => 'nullable|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:10240',
+            'attachment' => 'nullable|file|mimes:pdf,doc,docx,jpg,jpeg,png,webp,gif|max:10240',
             'draft_cv_path' => 'nullable|string',
         ]);
 
         $draftCvPath = $validated['draft_cv_path'] ?? null;
 
         if (! $validated['body'] && ! $request->hasFile('attachment') && ! $draftCvPath) {
-            return back()->withErrors(['body' => 'Pesan atau lampiran harus diisi.']);
+            return response()->json(['error' => 'Pesan atau lampiran harus diisi.'], 422);
         }
 
         $attachmentUrl = null;
         if ($request->hasFile('attachment')) {
-            $attachmentUrl = $request->file('attachment')->storeAs('chat_attachments', preg_replace('/[^a-zA-Z0-9._-]/', '_', $request->file('attachment')->getClientOriginalName()), 'public');
+            $file = $request->file('attachment');
+            $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+            $safeName = preg_replace('/[^a-zA-Z0-9._-]/', '_', $originalName);
+            $fileName = $safeName.'_'.$file->hashName().'.'.$file->getClientOriginalExtension();
+            $attachmentUrl = $file->storeAs('chat_attachments', $fileName, 'public');
         } elseif ($draftCvPath) {
             $srcPath = $draftCvPath;
             $local = Storage::disk('local');
@@ -243,9 +249,12 @@ class ChatController extends Controller
 
         $conversation->touch();
 
-        // Increment rejected_reply_count jika alumni membalas setelah ditolak
-        if ($jobApp && $jobApp->status === 'ditolak' && $user->hasRole('Alumni')) {
-            $conversation->increment('rejected_reply_count');
+        // Increment rejected_reply_count jika alumni membalas setelah ditolak (hanya company)
+        if ($conversation->type === Conversation::TYPE_COMPANY) {
+            $jobApp = $conversation->jobApplication;
+            if ($jobApp && $jobApp->status === 'ditolak' && $user->hasRole('Alumni')) {
+                $conversation->increment('rejected_reply_count');
+            }
         }
 
         $otherUser = $conversation->otherUser($user->id);
@@ -258,7 +267,10 @@ class ChatController extends Controller
             ));
         }
 
-        return redirect()->back();
+        return response()->json([
+            'success' => true,
+            'message' => $this->messageData($message),
+        ]);
     }
 
     public function markRead(Conversation $conversation)
@@ -325,11 +337,11 @@ class ChatController extends Controller
             ->limit(20)
             ->get()
             ->map(fn ($p) => [
-            'id' => $p->user->id,
-            'name' => $p->user->name,
-            'major' => $p->major,
-            'nim' => $p->nim,
-        ]);
+                'id' => $p->user->id,
+                'name' => $p->user->name,
+                'major' => $p->major,
+                'nim' => $p->nim,
+            ]);
 
         return response()->json(['alumni' => $alumni]);
     }
@@ -472,9 +484,21 @@ class ChatController extends Controller
 
         if ($user->hasRole('Alumni') && $targetUser->hasRole('Alumni')) {
             $type = 'alumni';
+        } elseif ($user->hasRole('Super Admin') && $targetUser->hasRole('Alumni')) {
+            $type = 'alumni';
+        } elseif ($user->hasRole('Alumni') && $targetUser->hasRole('Super Admin')) {
+            $type = 'alumni';
+        } elseif ($user->hasRole('Super Admin') && $targetUser->hasRole('Admin Kampus')) {
+            $type = 'admin';
+        } elseif ($user->hasRole('Admin Kampus') && $targetUser->hasRole('Super Admin')) {
+            $type = 'admin';
         } elseif (($user->hasRole('Alumni') && $targetUser->hasRole('Admin Kampus')) ||
                   ($user->hasRole('Admin Kampus') && $targetUser->hasRole('Alumni'))) {
             $type = 'admin';
+        } elseif ($user->hasRole('Super Admin') && $targetUser->hasRole('Admin PT')) {
+            $type = 'company';
+        } elseif ($user->hasRole('Admin PT') && $targetUser->hasRole('Super Admin')) {
+            $type = 'company';
         } else {
             abort(403, 'Tidak dapat memulai percakapan dengan pengguna ini.');
         }

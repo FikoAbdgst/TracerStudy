@@ -40,7 +40,7 @@ Login redirect in `AuthenticatedSessionController` — not middleware. Admin PT 
 
 ## Shared Inertia props
 
-`auth.user` — `id, name, email, roles: string[], notifications, unread_count` or `null`. Roles from `$user->getRoleNames()`. Flash keys: `message`, `error`, `duplicates`, `draft_body`, `draft_cv_path`, `draft_cv_name`.
+`auth.user` — `id, name, email, roles: string[], notifications, unread_count` or `null`. Roles from `$user->getRoleNames()`. `notifications` is capped at 5 unread items (not all). Flash keys: `message`, `error`, `duplicates`, `draft_body`, `draft_cv_path`, `draft_cv_name`.
 
 ## Conventions
 

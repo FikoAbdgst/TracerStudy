@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { router } from '@inertiajs/react';
 import {
     GraduationCap,
     Calendar,
@@ -7,6 +8,7 @@ import {
     ExternalLink,
     Building2,
     Quote,
+    Send,
 } from 'lucide-react';
 import {
     Dialog,
@@ -16,7 +18,11 @@ import {
 } from '@/Components/ui/dialog';
 import { Badge } from '@/Components/ui/badge';
 
-export default function AlumniDetailModal({ alumni, open, onOpenChange }) {
+export default function AlumniDetailModal({ alumni, open, onOpenChange, jobList, companyName }) {
+    const [inviteOpen, setInviteOpen] = useState(false);
+    const [selectedJobId, setSelectedJobId] = useState('');
+    const [inviting, setInviting] = useState(false);
+
     if (!alumni) return null;
 
     const isOpenToWork = alumni.employment_status === 'Mencari Kerja';
@@ -25,8 +31,25 @@ export default function AlumniDetailModal({ alumni, open, onOpenChange }) {
         : '?';
     const projects = alumni.portofolio_proyek || [];
 
+    const handleInvite = () => {
+        if (!selectedJobId || !alumni?.id) return;
+        setInviting(true);
+        router.post(route('messages.invite-candidate'), {
+            alumni_id: alumni.id,
+            job_id: selectedJobId,
+        }, {
+            preserveScroll: true,
+            onFinish: () => {
+                setInviting(false);
+                setInviteOpen(false);
+                setSelectedJobId('');
+            },
+        });
+    };
+
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
+        <>
+            <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent
                 className="sm:max-w-xl max-h-[85vh] overflow-hidden !bg-white "
                 style={{ backgroundColor: 'white' }}
@@ -93,42 +116,60 @@ export default function AlumniDetailModal({ alumni, open, onOpenChange }) {
                             </div>
                         </div>
                     </div>
-                </div>
-
-                <div className="space-y-5">
-                    {/* ===== STATUS ===== */}
-                    <div className="flex flex-wrap items-center gap-2">
-                        {isOpenToWork ? (
-                            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-                                <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                                Open to Work
-                            </span>
-                        ) : alumni.employment_status === 'Bekerja' ? (
-                            <>
-                                <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
-                                    <span className="h-2 w-2 rounded-full bg-blue-500" />
-                                    Sudah Bekerja
-                                </span>
-                                {alumni.company_name && (
-                                    <span
-                                        className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium"
-                                        style={{
-                                            backgroundColor: '#e8f0fb',
-                                            color: '#1a3560',
-                                        }}
-                                    >
-                                        <Building2 className="h-3 w-3" />
-                                        {alumni.company_name}
-                                    </span>
-                                )}
-                            </>
-                        ) : (
-                            <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600">
-                                <span className="h-2 w-2 rounded-full bg-slate-400" />
-                                {alumni.employment_status || '—'}
-                            </span>
-                        )}
                     </div>
+
+                    <div className="space-y-5">
+                        {/* ===== STATUS ===== */}
+                        <div className="flex flex-wrap items-center gap-2">
+                            {isOpenToWork ? (
+                                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                                    <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                                    Open to Work
+                                </span>
+                            ) : alumni.employment_status === 'Bekerja' ? (
+                                <>
+                                    <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+                                        <span className="h-2 w-2 rounded-full bg-blue-500" />
+                                        Sudah Bekerja
+                                    </span>
+                                    {alumni.company_name && (
+                                        <span
+                                            className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium"
+                                            style={{
+                                                backgroundColor: '#e8f0fb',
+                                                color: '#1a3560',
+                                            }}
+                                        >
+                                            <Building2 className="h-3 w-3" />
+                                            {alumni.company_name}
+                                        </span>
+                                    )}
+                                </>
+                            ) : (
+                                <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600">
+                                    <span className="h-2 w-2 rounded-full bg-slate-400" />
+                                    {alumni.employment_status || '—'}
+                                </span>
+                            )}
+                        </div>
+
+                        {/* ===== INVITE BUTTON ===== */}
+                        {isOpenToWork && jobList && jobList.length > 0 && (
+                            <button
+                                onClick={() => setInviteOpen(true)}
+                                className="w-full flex items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 py-3 text-sm font-bold transition-all"
+                                style={{
+                                    borderColor: '#fed7aa',
+                                    background: '#fff7ed',
+                                    color: '#c2410c',
+                                }}
+                                onMouseEnter={e => { e.currentTarget.style.borderColor = '#f97316'; e.currentTarget.style.background = '#ffedd5'; }}
+                                onMouseLeave={e => { e.currentTarget.style.borderColor = '#fed7aa'; e.currentTarget.style.background = '#fff7ed'; }}
+                            >
+                                <Send className="h-4 w-4" />
+                                Undang untuk Melamar
+                            </button>
+                        )}
 
                     {/* ===== SKILLS ===== */}
                     {alumni.skills.length > 0 && (
@@ -242,7 +283,67 @@ export default function AlumniDetailModal({ alumni, open, onOpenChange }) {
                         </div>
                     )}
                 </div>
-            </DialogContent>
-        </Dialog>
+                </DialogContent>
+            </Dialog>
+
+            {/* ── Invite Modal ── */}
+            {inviteOpen && (
+                <div
+                    className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+                    style={{ background: 'rgba(10,20,40,0.45)', backdropFilter: 'blur(3px)' }}
+                    onClick={() => { setInviteOpen(false); setSelectedJobId(''); }}
+                >
+                    <div
+                        className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden"
+                        onClick={e => e.stopPropagation()}
+                        style={{ animation: 'modalIn 0.2s cubic-bezier(0.22,1,0.36,1) both' }}
+                    >
+                        <div className="px-5 py-4 border-b border-gray-100">
+                            <h3 className="text-base font-bold text-gray-900">Undang untuk Melamar</h3>
+                            <p className="text-xs text-gray-500 mt-1">Pilih lowongan aktif untuk dikirimkan ke {alumni.name}</p>
+                        </div>
+                        <div className="px-5 py-4">
+                            <select
+                                value={selectedJobId}
+                                onChange={e => setSelectedJobId(e.target.value)}
+                                className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-gray-900 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                            >
+                                <option value="">Pilih lowongan aktif...</option>
+                                {jobList?.map(j => (
+                                    <option key={j.id} value={j.id}>{j.title}</option>
+                                ))}
+                            </select>
+                            {(!jobList || jobList.length === 0) && (
+                                <p className="text-xs text-red-500 mt-2">Tidak ada lowongan aktif. Buat lowongan terlebih dahulu.</p>
+                            )}
+                        </div>
+                        <div className="px-5 py-4 border-t border-gray-100 flex justify-end gap-2">
+                            <button
+                                onClick={() => { setInviteOpen(false); setSelectedJobId(''); }}
+                                disabled={inviting}
+                                className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50 transition-colors"
+                            >
+                                Batal
+                            </button>
+                            <button
+                                onClick={handleInvite}
+                                disabled={!selectedJobId || inviting}
+                                className="px-4 py-2 text-sm font-semibold text-white bg-orange-500 rounded-lg hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            >
+                                {inviting ? (
+                                    <span className="flex items-center gap-2">
+                                        <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                                        </svg>
+                                        Mengirim...
+                                    </span>
+                                ) : 'Kirim Undangan'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </>
     );
 }

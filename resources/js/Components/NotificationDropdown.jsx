@@ -39,7 +39,6 @@ export default function NotificationDropdown() {
                 })
                 .catch(() => {});
         }, 10000);
-
         return () => clearInterval(intervalRef.current);
     }, []);
 
@@ -96,7 +95,7 @@ export default function NotificationDropdown() {
                     )}
                 </div>
                 <Link href={route('notifications.index')}
-                    className="block w-full text-center text-xs font-semibold text-blue-600 bg-white hover:bg-blue-100 py-2.5 border-t border-gray-100 transition"
+                    className="block w-full text-center text-xs font-semibold text-blue-600 bg-white hover:bg-blue-50 py-2.5 border-t border-gray-100 transition"
                 >
                     Lihat Semua Notifikasi
                 </Link>

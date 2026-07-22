@@ -13,6 +13,7 @@ const T = {
 };
 
 const roleLabel = (role) => {
+    if (role === 'Super Admin') return { text: 'Super Admin', bg: '#fef2f2', color: '#dc2626' };
     if (role === 'Admin Kampus') return { text: 'Admin', bg: '#f3e8ff', color: '#9333ea' };
     if (role === 'Admin PT') return { text: 'Perusahaan', bg: '#dbeafe', color: '#2563eb' };
     if (role === 'Alumni') return { text: 'Alumni', bg: '#dcfce7', color: '#16a34a' };
@@ -69,6 +70,8 @@ export default function MessagesIndex({ conversations: initialConvs, selectedCon
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState([]);
     const [searching, setSearching] = useState(false);
+    const [mobileShowChat, setMobileShowChat] = useState(false);
+    const [convSearch, setConvSearch] = useState('');
 
     const messagesEndRef = useRef(null);
     const fileInputRef = useRef(null);
@@ -163,11 +166,20 @@ export default function MessagesIndex({ conversations: initialConvs, selectedCon
     }, [body]);
 
     const handleSelectConv = useCallback((convId) => {
-        router.get(route('messages.index', { conversation: convId }), {}, {
-            preserveScroll: true,
-            preserveState: false,
-        });
-    }, []);
+        const conv = conversations.find(c => c.id === convId);
+        if (conv) setSelectedConv(conv);
+        if (window.innerWidth < 1024) setMobileShowChat(true);
+        axios.get(route('messages.poll', convId), { params: { since: null } })
+            .then(res => {
+                setMessages(res.data.messages || []);
+                if (res.data.conversation) {
+                    setSelectedConv(res.data.conversation);
+                    setConversations(prev => prev.map(c =>
+                        c.id === res.data.conversation.id ? res.data.conversation : c
+                    ));
+                }
+            }).catch(() => {});
+    }, [conversations]);
 
     const handleSend = (e) => {
         e.preventDefault();
@@ -182,27 +194,26 @@ export default function MessagesIndex({ conversations: initialConvs, selectedCon
             formData.append('draft_cv_path', draftCvPath);
         }
 
-        axios.post(route('messages.send', selectedConv.id), formData, {
-            headers: { 'Content-Type': 'multipart/form-data' },
-        }).then(() => {
+        axios.post(route('messages.send', selectedConv.id), formData).then((res) => {
             setBody('');
             setAttachment(null);
             setDraftCvName(null);
             setDraftCvPath(null);
             setSending(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
             const since = messages.length > 0 ? messages[messages.length - 1].created_at : null;
             axios.get(route('messages.poll', selectedConv.id), { params: { since } })
-                .then(res => {
-                    if (res.data.messages?.length > 0) {
+                .then(pollRes => {
+                    if (pollRes.data.messages?.length > 0) {
                         setMessages(prev => {
-                            const incomingIds = new Set(res.data.messages.map(m => m.id));
+                            const incomingIds = new Set(pollRes.data.messages.map(m => m.id));
                             const kept = prev.filter(m => !incomingIds.has(m.id));
-                            return [...kept, ...res.data.messages];
+                            return [...kept, ...pollRes.data.messages];
                         });
                     }
-                    if (res.data.conversation) {
+                    if (pollRes.data.conversation) {
                         setConversations(prev => prev.map(c =>
-                            c.id === res.data.conversation.id ? res.data.conversation : c
+                            c.id === pollRes.data.conversation.id ? pollRes.data.conversation : c
                         ));
                     }
                 }).catch(() => {});
@@ -294,38 +305,73 @@ export default function MessagesIndex({ conversations: initialConvs, selectedCon
     const activeConvId = selectedConv?.id;
 
     return (
-        <AuthenticatedLayout header="Pesan">
+        <AuthenticatedLayout>
             <Head title="Pesan" />
 
-            <div className="py-6">
-                <div className="max-w-6xl mx-auto sm:px-6 lg:px-8">
-                    <div className="bg-white rounded-xl shadow-sm border overflow-hidden flex h-[calc(100vh-12rem)]">
+            <style>{`
+                html, body, #app { height: 100%; margin: 0; overflow: hidden; }
+                .al-root { height: 100vh; overflow: hidden; }
+                .al-main { padding: 0 !important; flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+            `}</style>
+
+            <div className="flex-1 flex flex-col min-h-0">
+                    <div className="bg-white flex-1 flex min-h-0 overflow-hidden">
                         {/* Left Column: Inbox */}
-                        <div className="w-80 xl:w-96 border-r border-gray-200 flex flex-col bg-gray-50/50 flex-shrink-0">
-                            {/* Header + New Chat Button */}
-                            <div className="p-4 border-b border-gray-200 bg-white">
-                                <button
-                                    onClick={() => setShowNewChatModal(true)}
-                                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-orange-500 text-white rounded-lg hover:bg-orange-600 text-sm font-semibold transition-colors"
-                                >
-                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                        <div className={`relative w-full lg:w-80 xl:w-96 border-r border-gray-200 flex flex-col bg-gray-50/50 flex-shrink-0 ${mobileShowChat ? 'hidden lg:flex' : 'flex'}`}>
+                            {/* Search Bar */}
+                            <div className="p-3 border-b border-gray-200 bg-white">
+                                <div className="relative">
+                                    <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                                     </svg>
-                                    Mulai Percakapan Baru
-                                </button>
+                                    <input
+                                        type="text"
+                                        value={convSearch}
+                                        onChange={e => setConvSearch(e.target.value)}
+                                        placeholder="Cari percakapan..."
+                                        className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm focus:border-orange-400 focus:ring-orange-400 focus:bg-white transition-colors"
+                                    />
+                                    {convSearch && (
+                                        <button
+                                            onClick={() => setConvSearch('')}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                        >
+                                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                        </button>
+                                    )}
+                                </div>
                             </div>
 
                             {/* Conversation List */}
                             <div className="flex-1 overflow-y-auto">
-                                {conversations.length === 0 ? (
-                                    <div className="flex flex-col items-center justify-center h-full p-6 text-center">
-                                        <svg className="w-12 h-12 text-gray-300 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                                        </svg>
-                                        <p className="text-sm text-gray-400">Belum ada percakapan</p>
-                                    </div>
-                                ) : (
-                                    conversations.map((conv) => {
+                                {(() => {
+                                    const q = convSearch.toLowerCase();
+                                    const filtered = q
+                                        ? conversations.filter(c => {
+                                            const name = c.other_user?.name?.toLowerCase() || '';
+                                            const major = c.other_user?.major?.toLowerCase() || '';
+                                            const company = c.other_user?.company_name?.toLowerCase() || '';
+                                            const lastMsg = c.last_message?.body?.toLowerCase() || '';
+                                            return name.includes(q) || major.includes(q) || company.includes(q) || lastMsg.includes(q);
+                                        })
+                                        : conversations;
+                                    if (filtered.length === 0) {
+                                        return (
+                                            <div className="flex flex-col items-center justify-center h-full p-6 text-center">
+                                                <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-3">
+                                                    <svg className="w-8 h-8 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                                                    </svg>
+                                                </div>
+                                                <p className="text-sm font-medium text-gray-400">
+                                                    {q ? 'Tidak ada percakapan ditemukan' : 'Belum ada percakapan'}
+                                                </p>
+                                            </div>
+                                        );
+                                    }
+                                    return filtered.map((conv) => {
                                         const other = conv.other_user;
                                         const rl = roleLabel(other?.role);
                                         const isActive = conv.id === activeConvId;
@@ -333,40 +379,40 @@ export default function MessagesIndex({ conversations: initialConvs, selectedCon
                                             <button
                                                 key={conv.id}
                                                 onClick={() => handleSelectConv(conv.id)}
-                                                className={`w-full text-left px-4 py-3.5 border-b border-gray-100 transition-colors hover:bg-gray-100/80 ${isActive ? 'bg-orange-50 border-l-2 border-l-orange-500' : ''
-                                                    }`}
+                                                className={`w-full text-left px-4 py-3 border-b border-gray-100 transition-colors hover:bg-gray-100/80 active:bg-gray-200/60 ${isActive ? 'bg-orange-50/80 lg:border-l-2 lg:border-l-orange-500' : ''}`}
                                             >
-                                                <div className="flex items-start gap-3">
+                                                <div className="flex items-center gap-3">
                                                     <div className="relative flex-shrink-0">
-                                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm ${other?.role === 'Admin PT' ? 'bg-blue-600' :
+                                                        <div className={`w-11 h-11 rounded-full flex items-center justify-center text-white font-semibold text-sm ${other?.role === 'Super Admin' ? 'bg-red-600' :
+                                                                other?.role === 'Admin PT' ? 'bg-blue-600' :
                                                                 other?.role === 'Admin Kampus' ? 'bg-purple-600' :
                                                                     'bg-green-600'
                                                             }`}>
                                                             {other?.name?.charAt(0)?.toUpperCase() || '?'}
                                                         </div>
                                                         {conv.unread_count > 0 && (
-                                                            <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-orange-500 text-white text-[10px] font-bold flex items-center justify-center">
+                                                            <span className="absolute -top-0.5 -right-0.5 w-5 h-5 rounded-full bg-orange-500 text-white text-[10px] font-bold flex items-center justify-center border-2 border-white">
                                                                 {conv.unread_count > 9 ? '9+' : conv.unread_count}
                                                             </span>
                                                         )}
                                                     </div>
                                                     <div className="flex-1 min-w-0">
                                                         <div className="flex items-center justify-between gap-2">
-                                                            <span className="text-sm font-semibold text-gray-900 truncate">{other?.name || 'Pengguna'}</span>
-                                                            <span className="text-[10px] text-gray-400 flex-shrink-0">{formatDate(conv.updated_at)}</span>
+                                                            <span className={`text-sm truncate ${conv.unread_count > 0 ? 'font-bold text-gray-900' : 'font-medium text-gray-800'}`}>{other?.name || 'Pengguna'}</span>
+                                                            <span className={`text-[10px] flex-shrink-0 ${conv.unread_count > 0 ? 'text-orange-500 font-semibold' : 'text-gray-400'}`}>{formatDate(conv.updated_at)}</span>
                                                         </div>
                                                         <div className="flex items-center gap-1.5 mt-0.5">
                                                             <span className="text-[10px] font-medium px-1.5 py-0.5 rounded" style={{ background: rl.bg, color: rl.color }}>{rl.text}</span>
-                                                            {other?.major && <span className="text-[11px] text-gray-400 truncate">{other.major}</span>}
+                                                            {other?.major && <span className="text-[11px] text-gray-400 truncate hidden sm:inline">{other.major}</span>}
                                                             {conv.status === 'closed' && (
                                                                 <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">Ditutup</span>
                                                             )}
                                                         </div>
                                                         {conv.last_message && (
-                                                            <p className="text-xs text-gray-500 truncate mt-1">
+                                                            <p className={`text-xs truncate mt-1 ${conv.unread_count > 0 ? 'text-gray-700 font-medium' : 'text-gray-400'}`}>
                                                                 <span className={conv.last_message.sender_id === auth.user.id ? 'text-gray-400' : ''}>
                                                                     {conv.last_message.sender_id === auth.user.id ? 'Anda: ' : ''}
-                                                                    {conv.last_message.body}
+                                                                    {conv.last_message.body || (conv.last_message.attachment_url ? '📷 Lampiran' : '')}
                                                                 </span>
                                                             </p>
                                                         )}
@@ -374,37 +420,58 @@ export default function MessagesIndex({ conversations: initialConvs, selectedCon
                                                 </div>
                                             </button>
                                         );
-                                    })
-                                )}
+                                    });
+                                })()}
                             </div>
+
+                            {/* FAB: New Conversation */}
+                            <button
+                                onClick={() => setShowNewChatModal(true)}
+                                className="absolute bottom-5 right-5 w-13 h-13 bg-orange-500 text-white rounded-full shadow-lg hover:bg-orange-600 hover:shadow-xl flex items-center justify-center transition-all flex-shrink-0 z-10"
+                                style={{ width: '52px', height: '52px', boxShadow: '0 4px 14px rgba(249,115,22,0.4)' }}
+                            >
+                                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                                </svg>
+                            </button>
                         </div>
 
                         {/* Right Column: Chat Room */}
-                        <div className="flex-1 flex flex-col bg-white">
+                        <div className={`flex-1 flex flex-col bg-white min-w-0 min-h-0 ${mobileShowChat ? 'flex' : 'hidden lg:flex'}`}>
                             {selectedConv ? (
                                 <>
                                     {/* Chat Header */}
-                                    <div className="px-5 py-3.5 border-b border-gray-200 bg-white flex items-center justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white font-semibold text-sm ${selectedConv.other_user?.role === 'Admin PT' ? 'bg-blue-600' :
+                                    <div className="px-4 lg:px-5 py-3 border-b border-gray-200 bg-white flex items-center justify-between gap-2">
+                                        <div className="flex items-center gap-2 lg:gap-3 min-w-0">
+                                            <button
+                                                onClick={() => setMobileShowChat(false)}
+                                                className="lg:hidden p-1.5 -ml-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
+                                            >
+                                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                                                </svg>
+                                            </button>
+                                            <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white font-semibold text-sm ${selectedConv.other_user?.role === 'Super Admin' ? 'bg-red-600' :
+                                                    selectedConv.other_user?.role === 'Admin PT' ? 'bg-blue-600' :
                                                     selectedConv.other_user?.role === 'Admin Kampus' ? 'bg-purple-600' :
                                                         'bg-green-600'
                                                 }`}>
                                                 {selectedConv.other_user?.name?.charAt(0)?.toUpperCase() || '?'}
                                             </div>
-                                            <div>
-                                                <p className="text-sm font-semibold text-gray-900">{selectedConv.other_user?.name || 'Pengguna'}</p>
-                                                <p className="text-xs text-gray-500">
-                                                    {selectedConv.type === 'admin' ? 'Admin Kampus' :
+                                                <div className="min-w-0">
+                                                    <p className="text-sm font-semibold text-gray-900 truncate">{selectedConv.other_user?.name || 'Pengguna'}</p>
+                                                    <p className="text-xs text-gray-500 truncate">
+                                                    {selectedConv.other_user?.role === 'Super Admin' ? 'Super Admin' :
+                                                        selectedConv.type === 'admin' ? 'Admin Kampus' :
                                                         selectedConv.type === 'company' ? (selectedConv.other_user?.company_name || 'Perusahaan') :
                                                             selectedConv.other_user?.major || 'Alumni'}
                                                 </p>
                                             </div>
                                         </div>
 
-                                                        <div className="flex items-center gap-2">
+                                                        <div className="flex items-center gap-1.5 lg:gap-2 flex-shrink-0">
                                             {selectedConv.status === 'closed' && (
-                                                <span className="text-xs font-semibold px-2 py-1 rounded-lg bg-gray-100 text-gray-500 border border-gray-200">
+                                                <span className="hidden lg:inline text-xs font-semibold px-2 py-1 rounded-lg bg-gray-100 text-gray-500 border border-gray-200">
                                                     Obrolan Ditutup
                                                 </span>
                                             )}
@@ -505,7 +572,7 @@ export default function MessagesIndex({ conversations: initialConvs, selectedCon
                                     </div>
 
                                     {/* Messages */}
-                                    <div ref={chatContainerRef} className="flex-1 overflow-y-auto px-5 py-4 space-y-3 bg-gray-50/30">
+                                    <div ref={chatContainerRef} className="flex-1 min-h-0 overflow-y-auto px-3 lg:px-5 pt-3 lg:pt-4 pb-3 lg:pb-4 space-y-2 lg:space-y-3 bg-[#e5ddd5]/30">
                                         {messages.length === 0 && (
                                             <div className="flex items-center justify-center h-full">
                                                 <div className="text-center">
@@ -530,10 +597,10 @@ export default function MessagesIndex({ conversations: initialConvs, selectedCon
                                                         </div>
                                                     )}
                                                     <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'} group`}>
-                                                        <div className={`max-w-[70%] ${isOwn ? 'order-1' : 'order-1'}`}>
+                                                        <div className={`max-w-[85%] lg:max-w-[70%] ${isOwn ? 'order-1' : 'order-1'}`}>
                                                             <div className={`flex items-end gap-1 ${isOwn ? 'flex-row' : 'flex-row-reverse'}`}>
                                                                 {!isDeleted && (
-                                                                    <div className="relative opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                    <div className="relative opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
                                                                         <button
                                                                             onClick={() => setShowMsgMenu(showMsgMenu === msg.id ? null : msg.id)}
                                                                             className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
@@ -571,7 +638,7 @@ export default function MessagesIndex({ conversations: initialConvs, selectedCon
                                                                         )}
                                                                     </div>
                                                                 )}
-                                                                <div className={`px-4 py-2.5 rounded-2xl ${isDeleted
+                                                                <div className={`px-3 py-2 lg:px-4 lg:py-2.5 rounded-2xl ${isDeleted
                                                                     ? 'bg-gray-100 text-gray-400 italic border border-gray-200'
                                                                     : isOwn
                                                                         ? 'bg-orange-500 text-white rounded-br-md'
@@ -590,13 +657,22 @@ export default function MessagesIndex({ conversations: initialConvs, selectedCon
                                                                                 return (
                                                                                     <div className={`mt-1.5 ${isImage ? '' : ''}`}>
                                                                                         {isImage ? (
-                                                                                            <a href={url} target="_blank" rel="noopener noreferrer"
-                                                                                                className="block rounded-lg overflow-hidden border border-gray-200/50">
-                                                                                                <img src={url} alt={fileName}
-                                                                                                    className="max-w-full h-auto max-h-48 object-cover rounded-lg hover:opacity-90 transition-opacity"
-                                                                                                    loading="lazy"
-                                                                                                />
-                                                                                            </a>
+                                                                                            <div className="relative group/attachment">
+                                                                                                <a href={url} target="_blank" rel="noopener noreferrer"
+                                                                                                    className="block rounded-lg overflow-hidden border border-gray-200/50">
+                                                                                                    <img src={url} alt={fileName}
+                                                                                                        className="max-w-full h-auto max-h-48 object-cover rounded-lg hover:opacity-90 transition-opacity"
+                                                                                                        loading="lazy"
+                                                                                                    />
+                                                                                                </a>
+                                                                                                <a href={url} download={fileName}
+                                                                                                    className="absolute bottom-1.5 right-1.5 p-1.5 bg-black/50 hover:bg-black/70 text-white rounded-lg transition-colors opacity-100 lg:opacity-0 group-hover/attachment:opacity-100"
+                                                                                                    title="Download">
+                                                                                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                                                                                    </svg>
+                                                                                                </a>
+                                                                                            </div>
                                                                                         ) : (
                                                                                             <a href={url} target="_blank" rel="noopener noreferrer"
                                                                                                 className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${isOwn
@@ -629,18 +705,18 @@ export default function MessagesIndex({ conversations: initialConvs, selectedCon
                                         <div ref={messagesEndRef} />
                                     </div>
 
-                                    {/* Send Form (disabled when closed, blocked, or one-reply quota exhausted) */}
+                                    {/* Send Form (floating at bottom) */}
                                     {(selectedConv.status === 'closed' || selectedConv.is_blocked_by) ? (
-                                        <div className="px-5 py-4 border-t border-gray-200 bg-gray-50 text-center">
-                                            <p className="text-sm text-gray-500">
+                                        <div className="px-4 lg:px-5 py-3 lg:py-4 border-t border-gray-200 bg-white/95 backdrop-blur-sm text-center">
+                                            <p className="text-xs lg:text-sm text-gray-500">
                                                 {selectedConv.status === 'closed'
                                                     ? 'Ruang obrolan telah ditutup. Tidak dapat mengirim pesan.'
                                                     : 'Anda telah diblokir oleh pengguna ini.'}
                                             </p>
                                         </div>
                                     ) : selectedConv.is_blocked ? (
-                                        <div className="px-5 py-4 border-t border-gray-200 bg-gray-50 text-center">
-                                            <p className="text-sm text-gray-500">
+                                        <div className="px-4 lg:px-5 py-3 lg:py-4 border-t border-gray-200 bg-white/95 backdrop-blur-sm text-center">
+                                            <p className="text-xs lg:text-sm text-gray-500">
                                                 Anda telah memblokir pengguna ini.{' '}
                                                 <button onClick={() => {
                                                     axios.post(route('messages.unblock'), { user_id: selectedConv.other_user.id })
@@ -655,32 +731,49 @@ export default function MessagesIndex({ conversations: initialConvs, selectedCon
                                             </p>
                                         </div>
                                     ) : selectedConv.can_reply === false ? (
-                                        <div className="px-5 py-4 border-t border-gray-200 bg-gray-50 text-center">
-                                            <p className="text-sm text-gray-500">
+                                        <div className="px-4 lg:px-5 py-3 lg:py-4 border-t border-gray-200 bg-white/95 backdrop-blur-sm text-center">
+                                            <p className="text-xs lg:text-sm text-gray-500">
                                                 Percakapan telah ditutup. Alumni telah menggunakan batas balasan.
                                             </p>
                                         </div>
                                     ) : (
-                                    <div className="px-5 py-3 border-t border-gray-200 bg-white">
+                                    <div className="px-3 lg:px-5 py-3 lg:py-4 border-t border-gray-200 bg-white/95 backdrop-blur-sm shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
                                         {attachment && (
-                                            <div className="mb-2 flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg">
-                                                <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                                                </svg>
-                                                <span className="text-sm text-gray-600 truncate flex-1">{attachment.name}</span>
-                                                <button onClick={() => { setAttachment(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}
-                                                    className="text-gray-400 hover:text-red-500 transition-colors">
-                                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                                                    </svg>
-                                                </button>
+                                            <div className="mb-2">
+                                                {attachment.type?.startsWith('image/') ? (
+                                                    <div className="relative inline-block">
+                                                        <img src={URL.createObjectURL(attachment)} alt="Preview"
+                                                            className="max-h-24 lg:max-h-32 rounded-xl border border-gray-200 object-cover" />
+                                                        <button type="button" onClick={() => { setAttachment(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}
+                                                            className="absolute top-1.5 right-1.5 w-6 h-6 bg-black/50 hover:bg-red-500 text-white rounded-full flex items-center justify-center transition-colors shadow-sm">
+                                                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                                            </svg>
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg">
+                                                        <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                            <path strokeLinecap="round" strokeLinejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                                                        </svg>
+                                                        <span className="text-sm text-gray-600 truncate flex-1">{attachment.name}</span>
+                                                        <button type="button" onClick={() => { setAttachment(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}
+                                                            className="text-gray-400 hover:text-red-500 transition-colors">
+                                                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                                            </svg>
+                                                        </button>
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
-                                        <form onSubmit={handleSend} className="flex items-end gap-2">
-                                            <div className="flex-1">
+                                        <form onSubmit={handleSend} className="flex items-end gap-1.5 lg:gap-2">
+                                            <div className="flex-1 min-w-0">
                                                 <textarea ref={textareaRef} value={body} onChange={e => setBody(e.target.value)}
                                                     placeholder="Tulis pesan..."
-                                                    className="block w-full rounded-xl border-gray-200 bg-gray-50 px-4 py-2.5 text-sm resize-none overflow-y-auto focus:border-orange-400 focus:ring-orange-400 transition-colors"
+                                                    rows={2}
+                                                    className="block w-full rounded-xl border-gray-200 bg-gray-50 px-4 py-3 text-sm resize-none overflow-y-auto focus:border-orange-400 focus:ring-orange-400 transition-colors"
+                                                    style={{ minHeight: '44px', maxHeight: '150px' }}
                                                     onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(e); } }}
                                                 />
                                                 {draftCvName && (
@@ -696,17 +789,46 @@ export default function MessagesIndex({ conversations: initialConvs, selectedCon
                                                     </div>
                                                 )}
                                             </div>
-                                            <div className="flex items-center gap-1">
-                                                <input ref={fileInputRef} type="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" className="hidden" onChange={e => setAttachment(e.target.files[0])} />
+                                            <div className="flex items-center gap-0.5 lg:gap-1 flex-shrink-0">
+                                                <input ref={fileInputRef} type="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp,.gif,image/*" className="hidden" onChange={e => {
+                                                    const file = e.target.files[0];
+                                                    if (file) {
+                                                        if (file.size > 10 * 1024 * 1024) {
+                                                            alert('Ukuran file maksimal 10MB.');
+                                                            e.target.value = '';
+                                                            return;
+                                                        }
+                                                        setAttachment(file);
+                                                    }
+                                                }} />
+                                                <input type="file" accept="image/*" capture="environment" className="hidden" id="camera-input" onChange={e => {
+                                                    const file = e.target.files[0];
+                                                    if (file) {
+                                                        if (file.size > 10 * 1024 * 1024) {
+                                                            alert('Ukuran file maksimal 10MB.');
+                                                            e.target.value = '';
+                                                            return;
+                                                        }
+                                                        setAttachment(file);
+                                                    }
+                                                }} />
                                                 <button type="button" onClick={() => fileInputRef.current?.click()}
-                                                    className="p-2.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                                                    className="p-2.5 lg:p-3 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                                                     title="Lampirkan file">
                                                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                                         <path strokeLinecap="round" strokeLinejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
                                                     </svg>
                                                 </button>
-                                                <button type="submit" disabled={(!body.trim() && !attachment) || sending}
-                                                    className="p-2.5 bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                                                <button type="button" onClick={() => document.getElementById('camera-input').click()}
+                                                    className="p-2.5 lg:p-3 text-gray-400 hover:text-orange-500 hover:bg-orange-50 rounded-lg transition-colors"
+                                                    title="Ambil foto">
+                                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                    </svg>
+                                                </button>
+                                                <button type="submit" disabled={(!body.trim() && !attachment && !draftCvPath) || sending}
+                                                    className="p-2.5 lg:p-3 bg-orange-500 text-white rounded-full hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                                                     {sending ? (
                                                         <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
                                                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -726,19 +848,20 @@ export default function MessagesIndex({ conversations: initialConvs, selectedCon
                             ) : (
                                 <div className="flex items-center justify-center h-full">
                                     <div className="text-center p-8">
-                                        <svg className="mx-auto w-20 h-20 text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                                        </svg>
+                                        <div className="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center mx-auto">
+                                            <svg className="w-10 h-10 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                                            </svg>
+                                        </div>
                                         <h3 className="mt-4 text-lg font-semibold text-gray-900">Pesan Terpusat</h3>
                                         <p className="mt-2 text-sm text-gray-500 max-w-sm">
-                                            Pilih percakapan dari daftar di samping, atau mulai percakapan baru dengan tombol di atas.
+                                            Pilih percakapan dari daftar, atau mulai percakapan baru dengan tombol di atas.
                                         </p>
                                     </div>
                                 </div>
                             )}
                         </div>
                     </div>
-                </div>
             </div>
 
             {/* Modal: Mulai Percakapan Baru */}
@@ -761,8 +884,8 @@ export default function MessagesIndex({ conversations: initialConvs, selectedCon
                             </div>
                         </div>
                         <div className="p-5 space-y-4">
-                            {/* Hubungi Admin Kampus (hidden for Admin Kampus themselves) */}
-                            {userRole !== 'Admin Kampus' && (
+                            {/* Hubungi Admin Kampus (hidden for Admin Kampus & Super Admin) */}
+                            {userRole !== 'Admin Kampus' && userRole !== 'Super Admin' && (
                             <button onClick={handleStartAdmin}
                                 className="w-full flex items-center gap-3 p-3.5 rounded-xl bg-purple-50 border border-purple-200 hover:bg-purple-100 transition-colors">
                                 <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold">

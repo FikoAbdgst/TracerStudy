@@ -15,16 +15,12 @@ class DashboardController extends Controller
         $user = Auth::user();
         $alumniProfile = $user->alumniProfile;
 
-        // Siapkan nilai default (jika alumni belum mengisi profil sama sekali)
         $hasFilledTracer = false;
         $applicationStatus = [];
 
-        // Jika profil alumni sudah ada, baru kita tarik datanya
         if ($alumniProfile) {
-            // Cek apakah alumni ini sudah pernah mengisi kuesioner apapun
             $hasFilledTracer = TracerStudyResponse::where('alumni_id', $alumniProfile->id)->exists();
 
-            // Tarik 5 data lamaran terbaru beserta info loker dan perusahaannya
             $applicationStatus = JobApplication::with('jobPosting.company')
                 ->where('alumni_id', $alumniProfile->id)
                 ->latest()
@@ -36,7 +32,7 @@ class DashboardController extends Controller
             'hasProfile' => $alumniProfile !== null,
             'hasFilledTracer' => $hasFilledTracer,
             'applicationStatus' => $applicationStatus,
-            'employmentStatus' => $alumniProfile->employment_status ?? 'Tidak Terdeteksi',
+            'employmentStatus' => $alumniProfile?->employment_status ?? 'Tidak Terdeteksi',
         ]);
     }
 }

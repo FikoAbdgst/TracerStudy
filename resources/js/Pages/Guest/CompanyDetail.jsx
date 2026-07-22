@@ -27,15 +27,7 @@ export default function CompanyDetail({ company }) {
             <nav className="sticky top-0 z-50 border-b border-[#e8edf5] bg-white/80 backdrop-blur-lg">
                 <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
                     <Link href="/" className="flex items-center gap-2">
-                        <div
-                            className="flex h-9 w-9 items-center justify-center rounded-lg text-xs font-bold text-white shadow-sm"
-                            style={{
-                                background:
-                                    'linear-gradient(135deg, #1a3560, #0f1f3d)',
-                            }}
-                        >
-                            MI
-                        </div>
+                        <img src="/logo.jpg" alt="SITAMI" className="h-9 w-9 rounded-lg object-contain shadow-sm" />
                         <span
                             className="text-lg font-bold"
                             style={{ color: '#1a3560' }}

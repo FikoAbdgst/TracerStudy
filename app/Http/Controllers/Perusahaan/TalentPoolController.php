@@ -48,16 +48,16 @@ class TalentPoolController extends Controller
 
         if ($search = $request->input('search')) {
             $query->whereHas('user', function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%");
+                $q->where('name', 'ilike', "%{$search}%");
             });
-        }
-
-        if ($skill = $request->input('skill')) {
-            $query->whereJsonContains('skills', $skill);
         }
 
         if ($major = $request->input('major')) {
             $query->where('major', $major);
+        }
+
+        if ($graduationYear = $request->input('graduation_year')) {
+            $query->where('graduation_year', $graduationYear);
         }
 
         $alumni = $query->latest()->paginate(12)->withQueryString();
@@ -76,10 +76,18 @@ class TalentPoolController extends Controller
             ->sort()
             ->values();
 
+        $graduationYears = AlumniProfile::where('employment_status', 'Mencari Kerja')
+            ->whereNotNull('graduation_year')
+            ->distinct()
+            ->pluck('graduation_year')
+            ->sortDesc()
+            ->values();
+
         return Inertia::render('Perusahaan/TalentPool/Index', [
             'alumni' => $alumni,
-            'filters' => $request->only(['search', 'skill', 'major']),
+            'filters' => $request->only(['search', 'major', 'graduation_year']),
             'skills' => $keahlianMaster,
+            'graduationYears' => $graduationYears,
             'majors' => $majors,
             'company' => $company->only(['id', 'name']),
         ]);
@@ -144,7 +152,7 @@ class TalentPoolController extends Controller
 
         if ($search = $request->input('search')) {
             $query->whereHas('user', function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%");
+                $q->where('name', 'ilike', "%{$search}%");
             });
         }
 

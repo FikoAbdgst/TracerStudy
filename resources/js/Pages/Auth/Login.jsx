@@ -54,18 +54,18 @@ export default function Login({ status, canResetPassword }) {
                 }
 
                 .login-logo-mark {
-                    width: 36px;
-                    height: 36px;
+                    width: 44px;
+                    height: 44px;
                     border-radius: 10px;
-                    background: #1a3560;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: 13px;
-                    font-weight: 800;
-                    color: #ffffff;
-                    letter-spacing: 0.02em;
+                    overflow: hidden;
                     flex-shrink: 0;
+                    background: #fff;
+                }
+
+                .login-logo-mark img {
+                    width: 100%;
+                    height: 100%;
+                    object-fit: contain;
                 }
 
                 .login-logo-text {
@@ -246,7 +246,7 @@ export default function Login({ status, canResetPassword }) {
 
                     {/* Logo */}
                     <div className="login-logo">
-                        <div className="login-logo-mark">M</div>
+                        <div className="login-logo-mark"><img src="/logo.jpg" alt="SITAMI" /></div>
                         <div className="login-divider" />
                         <div className="login-logo-text">
                             <span className="login-logo-name">Tracer Study</span>

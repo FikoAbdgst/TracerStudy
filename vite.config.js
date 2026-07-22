@@ -10,6 +10,15 @@ export default defineConfig({
         }),
         react(),
     ],
+    // server: {
+    //     host: '0.0.0.0', // Memastikan Vite mendengarkan semua interface
+    //     cors: true,       // Mengizinkan CORS
+    //     hmr: {
+    //         host: 'rhode-trader-labels-composed.trycloudflare.com', // Subdomain Cloudflare Anda
+    //         protocol: 'wss', // Gunakan wss untuk HTTPS
+    //     },
+    //     allowedHosts: true, // Mengizinkan semua host (termasuk trycloudflare.com)
+    // },
     build: {
         rollupOptions: {
             output: {

@@ -674,8 +674,8 @@ const EditMode = ({ data, setData, errors, processing, submit, programStudis, ma
                                 {[
                                     { value: 'Bekerja', label: 'Bekerja', icon: '💼' },
                                     { value: 'Mencari Kerja', label: 'Mencari Kerja', icon: '🔍' },
-
                                     { value: 'Wiraswasta', label: 'Wiraswasta', icon: '🚀' },
+                                    { value: 'Lanjutkan Pendidikan', label: 'Lanjutkan Pendidikan', icon: '🎓' },
                                 ].map(opt => (
                                     <label key={opt.value} style={{
                                         display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',

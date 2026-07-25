@@ -54,7 +54,7 @@ class AlumniProfileController extends Controller
             'portofolio_proyek.*.nama_proyek' => 'required_with:portofolio_proyek|string|max:255',
             'portofolio_proyek.*.deskripsi_singkat' => 'nullable|string|max:1000',
             'portofolio_proyek.*.tautan' => 'nullable|string|url|max:500',
-            'employment_status' => 'required|string|in:Bekerja,Mencari Kerja,Wiraswasta',
+            'employment_status' => 'required|string|in:Bekerja,Mencari Kerja,Wiraswasta,Lanjutkan Pendidikan',
             'company_name' => 'required_if:employment_status,Bekerja,Wiraswasta|nullable|string|max:255',
             'position' => 'nullable|string|max:255',
             'job_sector' => 'nullable|string|max:255',
@@ -129,7 +129,7 @@ class AlumniProfileController extends Controller
             return;
         }
 
-        $activeForm = TracerStudyForm::where('is_active', true)->first();
+        $activeForm = TracerStudyForm::active()->first();
 
         if (! $activeForm) {
             return;

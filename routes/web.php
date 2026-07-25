@@ -120,6 +120,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('/tracer-study/{tracer}', [TracerStudyController::class, 'update'])->name('tracer.update');
         Route::delete('/tracer-study/{tracer}', [TracerStudyController::class, 'destroy'])->name('tracer.destroy');
         Route::patch('/tracer-study/{tracer}/close', [TracerStudyController::class, 'close'])->name('tracer.close');
+        Route::patch('/tracer-study/{tracer}/activate', [TracerStudyController::class, 'activate'])->name('tracer.activate');
         Route::get('/tracer-study/{tracer}/responses', [TracerStudyController::class, 'responses'])->name('tracer.responses');
         Route::get('/tracer-study/{tracer}/preview/excel', [TracerStudyController::class, 'previewExcel'])->name('tracer.preview.excel');
         Route::get('/tracer-study/{tracer}/preview/pdf', [TracerStudyController::class, 'previewPdf'])->name('tracer.preview.pdf');

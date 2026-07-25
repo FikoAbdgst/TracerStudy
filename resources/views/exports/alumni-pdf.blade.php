@@ -121,6 +121,7 @@
         .badge-bekerja { background: #dbeafe; color: #1e40af; }
         .badge-mencari { background: #ffedd5; color: #c2410c; }
         .badge-wiraswasta { background: #dcfce7; color: #15803d; }
+        .badge-lanjutkan { background: #f5f3ff; color: #7c3aed; }
         .badge-tidak { background: #f1f5f9; color: #475569; }
 
         .summary-line {
@@ -198,6 +199,7 @@
                         'Bekerja' => 'badge-bekerja',
                         'Mencari Kerja' => 'badge-mencari',
                         'Wiraswasta' => 'badge-wiraswasta',
+                        'Lanjutkan Pendidikan' => 'badge-lanjutkan',
                         default => 'badge-tidak',
                     };
                 @endphp

@@ -13,8 +13,8 @@ const T = {
 const STATUS_LABELS = {
     'Bekerja': { icon: '💼', color: T.navyMid },
     'Mencari Kerja': { icon: '🔍', color: T.orange },
-
     'Wiraswasta': { icon: '🚀', color: T.green },
+    'Lanjutkan Pendidikan': { icon: '🎓', color: '#7c3aed' },
 };
 
 function DetailModal({ open, onClose, response, questions }) {
@@ -124,7 +124,7 @@ export default function TracerStudyResponses({ tracer, responses }) {
                         Total Tanggapan: <strong style={{ color: T.navy }}>{responses.length}</strong> Alumni
                     </div>
                     <div style={{ display: 'flex', gap: 8 }}>
-                        {['Bekerja', 'Mencari Kerja', 'Wiraswasta'].map(s => {
+                        {['Bekerja', 'Mencari Kerja', 'Wiraswasta', 'Lanjutkan Pendidikan'].map(s => {
                             const count = responses.filter(r => r.status_pekerjaan === s).length;
                             if (count === 0) return null;
                             return (

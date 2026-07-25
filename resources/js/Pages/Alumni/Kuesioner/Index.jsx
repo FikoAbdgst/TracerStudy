@@ -9,6 +9,7 @@ const T = {
     muted: '#94a3b8', mutedDark: '#64748b',
     green: '#16a34a', greenLight: '#f0fdf4',
     red: '#dc2626', redLight: '#fff1f2',
+    purple: '#7c3aed', purpleLight: '#f5f3ff',
 };
 
 const fieldBase = {
@@ -21,12 +22,14 @@ const STATUS_OPTIONS = [
     { value: 'Bekerja', label: 'Bekerja', icon: '💼', desc: 'Sudah memiliki pekerjaan tetap/kontrak' },
     { value: 'Mencari Kerja', label: 'Mencari Kerja', icon: '🔍', desc: 'Sedang aktif melamar dan mencari peluang kerja' },
     { value: 'Wiraswasta', label: 'Wiraswasta', icon: '🚀', desc: 'Memiliki usaha sendiri / freelance' },
+    { value: 'Lanjutkan Pendidikan', label: 'Lanjutkan Pendidikan', icon: '🎓', desc: 'Melanjutkan studi ke jenjang lebih tinggi' },
 ];
 
 const STATUS_LABELS = {
     'Bekerja': { icon: '💼', color: T.navyMid },
     'Mencari Kerja': { icon: '🔍', color: T.orange },
     'Wiraswasta': { icon: '🚀', color: T.green },
+    'Lanjutkan Pendidikan': { icon: '🎓', color: T.purple },
 };
 
 export default function KuesionerIndex({ kuesioner, existingResponse, profile, industries }) {
@@ -40,6 +43,25 @@ export default function KuesionerIndex({ kuesioner, existingResponse, profile, i
     });
 
     const hasResponded = !!existingResponse;
+
+    const visibleQuestions = (kuesioner?.questions || []).filter(q => {
+        const targets = q.target_statuses;
+        if (!targets || targets.length === 0) return true;
+        return targets.includes(data.status_pekerjaan);
+    });
+
+    const handleStatusChange = (newStatus) => {
+        setData('status_pekerjaan', newStatus);
+        const visibleIds = new Set(
+            (kuesioner?.questions || []).filter(q => {
+                const t = q.target_statuses;
+                return !t || t.length === 0 || t.includes(newStatus);
+            }).map(q => String(q.id))
+        );
+        const cleaned = { ...data.answers };
+        Object.keys(cleaned).forEach(k => { if (!visibleIds.has(String(k))) delete cleaned[k]; });
+        setData('answers', cleaned);
+    };
 
     const handleDynamicChange = (qIndex, value) => {
         setData('answers', { ...data.answers, [qIndex]: value });
@@ -125,7 +147,7 @@ export default function KuesionerIndex({ kuesioner, existingResponse, profile, i
                                             }}>
                                                 <input type="radio" name="status_pekerjaan" value={opt.value}
                                                     checked={data.status_pekerjaan === opt.value}
-                                                    onChange={e => setData('status_pekerjaan', e.target.value)}
+                                                    onChange={e => handleStatusChange(e.target.value)}
                                                     style={{ width: 18, height: 18, accentColor: T.orange, flexShrink: 0 }}
                                                     required
                                                 />
@@ -140,8 +162,8 @@ export default function KuesionerIndex({ kuesioner, existingResponse, profile, i
                                     </div>
                                 </div>
 
-                                {/* Q2: Nama Perusahaan/Instansi (hidden saat Mencari Kerja) */}
-                                {data.status_pekerjaan !== 'Mencari Kerja' && (
+                                {/* Q2: Nama Perusahaan/Instansi (hidden saat Mencari Kerja & Lanjutkan Pendidikan) */}
+                                {data.status_pekerjaan !== 'Mencari Kerja' && data.status_pekerjaan !== 'Lanjutkan Pendidikan' && (
                                     <div style={{ marginBottom: 24 }}>
                                         <label style={{ display: 'block', fontSize: 14, fontWeight: 700, color: T.navy, marginBottom: 8 }}>
                                             2. Nama Perusahaan / Instansi / Usaha
@@ -178,7 +200,7 @@ export default function KuesionerIndex({ kuesioner, existingResponse, profile, i
                             {/* ════════════════════════════════════════ */}
                             {/* BAGIAN B: PERTANYAAN DINAMIS (JSON)     */}
                             {/* ════════════════════════════════════════ */}
-                            {kuesioner.questions && kuesioner.questions.length > 0 && (
+                            {visibleQuestions.length > 0 && (
                                 <div style={{ marginBottom: 20 }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, paddingTop: 20, borderTop: `2px dashed ${T.borderSoft}` }}>
                                         <div style={{ width: 3, height: 16, background: T.navyMid, borderRadius: 2 }} />
@@ -188,7 +210,7 @@ export default function KuesionerIndex({ kuesioner, existingResponse, profile, i
                                         <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 12, background: T.navyLight, color: T.navyMid, marginLeft: 4 }}>KUESIONER</span>
                                     </div>
 
-                                    {kuesioner.questions.map((q, idx) => (
+                                    {visibleQuestions.map((q, idx) => (
                                         <div key={q.id} style={{ marginBottom: 22 }}>
                                             <label style={{ display: 'block', fontSize: 14, fontWeight: 700, color: T.navy, marginBottom: 10 }}>
                                                 <span style={{ color: T.orange }}>{idx + 1}.</span>
@@ -320,21 +342,29 @@ export default function KuesionerIndex({ kuesioner, existingResponse, profile, i
                             </div>
 
                             {/* ── Jawaban Dinamis ── */}
-                            {kuesioner.questions?.length > 0 && (
-                                <div style={{ marginBottom: 20 }}>
-                                    <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: T.navyMid, marginBottom: 12 }}>
-                                        📝 Jawaban Pertanyaan Tambahan
-                                    </div>
-                                    {kuesioner.questions.map((q, idx) => (
-                                        <div key={q.id} style={{ marginBottom: 14, paddingBottom: 14, borderBottom: `1px dashed ${T.borderSoft}` }}>
-                                            <div style={{ fontSize: 13, fontWeight: 700, color: T.navy, marginBottom: 6 }}>{idx + 1}. {q.question}</div>
-                                            <div style={{ fontSize: 13.5, color: T.mutedDark, background: T.bg, padding: '10px 14px', borderRadius: 8 }}>
-                                                {existingResponse?.answers?.[q.id] || <em style={{ color: T.muted }}>Tidak dijawab</em>}
-                                            </div>
+                            {kuesioner.questions?.length > 0 && (() => {
+                                const respStatus = existingResponse?.status_pekerjaan;
+                                const summaryVisible = kuesioner.questions.filter(q => {
+                                    const targets = q.target_statuses;
+                                    if (!targets || targets.length === 0) return true;
+                                    return targets.includes(respStatus);
+                                });
+                                return summaryVisible.length > 0 && (
+                                    <div style={{ marginBottom: 20 }}>
+                                        <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: T.navyMid, marginBottom: 12 }}>
+                                            📝 Jawaban Pertanyaan Tambahan
                                         </div>
-                                    ))}
-                                </div>
-                            )}
+                                        {summaryVisible.map((q, idx) => (
+                                            <div key={q.id} style={{ marginBottom: 14, paddingBottom: 14, borderBottom: `1px dashed ${T.borderSoft}` }}>
+                                                <div style={{ fontSize: 13, fontWeight: 700, color: T.navy, marginBottom: 6 }}>{idx + 1}. {q.question}</div>
+                                                <div style={{ fontSize: 13.5, color: T.mutedDark, background: T.bg, padding: '10px 14px', borderRadius: 8 }}>
+                                                    {existingResponse?.answers?.[q.id] || <em style={{ color: T.muted }}>Tidak dijawab</em>}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                );
+                            })()}
 
                             {/* ── Tombol Aksi ── */}
                             <hr style={{ border: 'none', borderTop: `1px solid ${T.borderSoft}`, margin: '20px 0 18px' }} />

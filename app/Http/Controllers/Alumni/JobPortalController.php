@@ -26,16 +26,22 @@ class JobPortalController extends Controller
 
         $user = Auth::user();
         $alumniProfile = $user->alumniProfile;
-        $appliedJobIds = $alumniProfile
-            ? JobApplication::where('alumni_id', $alumniProfile->id)->pluck('job_posting_id')->toArray()
-            : [];
 
-        // Ambil conversation IDs via job_application_id (dibuat oleh HR saat ubah status)
+        // Build a map of job_posting_id => application metadata for the current alumni
+        $myApplications = [];
         $appliedConversationIds = [];
         if ($alumniProfile) {
             $applications = JobApplication::where('alumni_id', $alumniProfile->id)
-                ->whereIn('job_posting_id', $appliedJobIds)
-                ->get();
+                ->get(['id', 'job_posting_id', 'status', 'source_type', 'invitation_status']);
+
+            foreach ($applications as $app) {
+                $myApplications[$app->job_posting_id] = [
+                    'id' => $app->id,
+                    'status' => $app->status,
+                    'source_type' => $app->source_type,
+                    'invitation_status' => $app->invitation_status,
+                ];
+            }
 
             $convIds = Conversation::whereIn('job_application_id', $applications->pluck('id'))
                 ->whereHas('participants', fn ($q) => $q->where('user_id', $user->id))
@@ -50,7 +56,7 @@ class JobPortalController extends Controller
 
         return Inertia::render('Alumni/Loker/Index', [
             'jobs' => $jobs,
-            'appliedJobIds' => $appliedJobIds,
+            'myApplications' => $myApplications,
             'appliedConversationIds' => $appliedConversationIds,
             'alumniProfile' => $alumniProfile?->only(['id', 'nim', 'major', 'cv_path', 'jenjang_pendidikan']),
         ]);

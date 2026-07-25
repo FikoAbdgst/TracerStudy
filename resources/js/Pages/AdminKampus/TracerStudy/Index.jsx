@@ -11,7 +11,15 @@ const T = {
     green: '#16a34a', greenLight: '#f0fdf4',
     red: '#dc2626', redLight: '#fff1f2',
     gray: '#6b7280', grayLight: '#f3f4f6',
+    purple: '#7c3aed', purpleLight: '#f5f3ff',
 };
+
+const ALL_STATUSES = [
+    { value: 'Bekerja', label: 'Bekerja', icon: '💼' },
+    { value: 'Mencari Kerja', label: 'Mencari Kerja', icon: '🔍' },
+    { value: 'Wiraswasta', label: 'Wiraswasta', icon: '🚀' },
+    { value: 'Lanjutkan Pendidikan', label: 'Lanjutkan Pendidikan', icon: '🎓' },
+];
 
 /* ─── Modal ──────────────────────────────────────────────────────────────── */
 function Modal({ open, onClose, title, children, footer, wide = false, maxWidth }) {
@@ -233,7 +241,7 @@ function PreviewTable({ data }) {
                                 {cols.map(([key], ci) => (
                                     <td key={key} style={{ padding: '9px 12px', fontSize: 12, color: ci === 0 ? T.mutedDark : T.navy, fontWeight: ci === 0 ? 700 : 400, textAlign: ci === 0 ? 'center' : 'left', whiteSpace: key === 'nim' || key === 'tanggal' ? 'nowrap' : 'normal' }}>
                                         {key === 'status' ? (
-                                            <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: row[key] === 'Bekerja' ? T.navyLight : row[key] === 'Mencari Kerja' ? T.orangeLight : row[key] === 'Wiraswasta' ? T.greenLight : T.bg, color: row[key] === 'Bekerja' ? T.navyMid : row[key] === 'Mencari Kerja' ? T.orange : row[key] === 'Wiraswasta' ? T.green : T.mutedDark }}>
+                                            <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: row[key] === 'Bekerja' ? T.navyLight : row[key] === 'Mencari Kerja' ? T.orangeLight : row[key] === 'Wiraswasta' ? T.greenLight : row[key] === 'Lanjutkan Pendidikan' ? T.purpleLight : T.bg, color: row[key] === 'Bekerja' ? T.navyMid : row[key] === 'Mencari Kerja' ? T.orange : row[key] === 'Wiraswasta' ? T.green : row[key] === 'Lanjutkan Pendidikan' ? T.purple : T.mutedDark }}>
                                                 {row[key] || '-'}
                                             </span>
                                         ) : (row[key] || '-')}
@@ -311,6 +319,10 @@ export default function TracerStudyIndex({ forms }) {
     const [idToClose, setIdToClose] = useState(null);
     const [isClosing, setIsClosing] = useState(false);
 
+    const [activateAlertOpen, setActivateAlertOpen] = useState(false);
+    const [idToActivate, setIdToActivate] = useState(null);
+    const [isActivating, setIsActivating] = useState(false);
+
     const [previewOpen, setPreviewOpen] = useState(false);
     const [previewFormId, setPreviewFormId] = useState(null);
     const [previewFormTitle, setPreviewFormTitle] = useState('');
@@ -322,7 +334,8 @@ export default function TracerStudyIndex({ forms }) {
     const openCreate = () => { reset(); setIsEditing(false); setModalOpen(true); };
     const openEdit = form => {
         setSelectedId(form.id);
-        setData({ title: form.title, description: form.description || '', questions: form.questions || [] });
+        const questions = (form.questions || []).map(q => ({ ...q, target_statuses: q.target_statuses || [] }));
+        setData({ title: form.title, description: form.description || '', questions });
         setIsEditing(true); setModalOpen(true);
     };
 
@@ -348,6 +361,16 @@ export default function TracerStudyIndex({ forms }) {
         });
     };
 
+    const confirmActivate = (id) => { setIdToActivate(id); setActivateAlertOpen(true); };
+    const executeActivate = () => {
+        setIsActivating(true);
+        router.patch(route('adminkampus.tracer.activate', idToActivate), {}, {
+            preserveScroll: true,
+            onSuccess: () => { setActivateAlertOpen(false); setIdToActivate(null); },
+            onFinish: () => setIsActivating(false),
+        });
+    };
+
     const confirmDelete = (id) => { setIdToDelete(id); setDeleteAlertOpen(true); };
     const executeDelete = () => {
         setIsDeleting(true);
@@ -358,9 +381,15 @@ export default function TracerStudyIndex({ forms }) {
         });
     };
 
-    const addQuestion = () => setData('questions', [...data.questions, { id: Date.now(), type: 'text', question: '', options: [] }]);
+    const addQuestion = () => setData('questions', [...data.questions, { id: Date.now(), type: 'text', question: '', options: [], target_statuses: [] }]);
     const removeQuestion = id => setData('questions', data.questions.filter(q => q.id !== id));
     const updateQuestion = (id, field, value) => setData('questions', data.questions.map(q => q.id === id ? { ...q, [field]: value } : q));
+    const toggleTargetStatus = (qId, status) => setData('questions', data.questions.map(q => {
+        if (q.id !== qId) return q;
+        const current = q.target_statuses || [];
+        const next = current.includes(status) ? current.filter(s => s !== status) : [...current, status];
+        return { ...q, target_statuses: next };
+    }));
     const addOption = qId => setData('questions', data.questions.map(q => q.id === qId ? { ...q, options: [...q.options, 'Opsi Baru'] } : q));
     const updateOption = (qId, idx, val) => setData('questions', data.questions.map(q => {
         if (q.id !== qId) return q;
@@ -395,9 +424,9 @@ export default function TracerStudyIndex({ forms }) {
                     <div style={{ display: 'flex', alignItems: 'center', justifyItems: 'space-between', marginBottom: 18 }}>
                         <p style={{ fontSize: 13, color: T.muted, margin: 0, flex: 1 }}>
                             Total <span style={{ fontWeight: 700, color: T.navy }}>{forms.length}</span> kuesioner
-                            {forms.filter(f => f.is_active).length > 0 && (
+                            {forms.filter(f => f.status === 'active').length > 0 && (
                                 <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: T.greenLight, color: T.green }}>
-                                    {forms.filter(f => f.is_active).length} Aktif
+                                    {forms.filter(f => f.status === 'active').length} Aktif
                                 </span>
                             )}
                         </p>
@@ -440,17 +469,17 @@ export default function TracerStudyIndex({ forms }) {
                                         <td style={{ padding: '14px' }}>
                                             <span style={{
                                                 fontSize: 11, fontWeight: 700, padding: '4px 12px', borderRadius: 20,
-                                                background: form.is_active ? T.greenLight : T.grayLight,
-                                                color: form.is_active ? T.green : T.gray,
+                                                background: form.status === 'active' ? T.greenLight : form.status === 'draft' ? T.grayLight : T.redLight,
+                                                color: form.status === 'active' ? T.green : form.status === 'draft' ? T.gray : T.red,
                                                 display: 'inline-flex', alignItems: 'center', gap: 5,
                                             }}>
-                                                <span style={{ width: 7, height: 7, borderRadius: '50%', background: form.is_active ? T.green : T.gray, flexShrink: 0 }} />
-                                                {form.is_active ? 'Aktif' : 'Ditutup (Arsip)'}
+                                                <span style={{ width: 7, height: 7, borderRadius: '50%', background: form.status === 'active' ? T.green : form.status === 'draft' ? T.gray : T.red, flexShrink: 0 }} />
+                                                {form.status === 'active' ? 'Aktif' : form.status === 'draft' ? 'Draft' : 'Ditutup'}
                                             </span>
                                         </td>
                                         <td style={{ padding: '14px', textAlign: 'right' }}>
                                             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 6, flexWrap: 'wrap' }}>
-                                                {/* Preview Button — opens modal */}
+                                                {/* Preview Button — always visible */}
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); openPreview(form); }}
                                                     style={{ ...ACTION_BTN, background: T.navyLight, color: T.navyMid, border: 'none' }}
@@ -459,28 +488,48 @@ export default function TracerStudyIndex({ forms }) {
                                                     Preview &amp; Unduh
                                                 </button>
 
-                                                {form.is_active ? (
-                                                    <button onClick={() => confirmClose(form.id)} style={{ ...ACTION_BTN, border: `1.5px solid ${T.orange}`, background: T.orangeLight, color: T.orange }}>
-                                                        <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>
-                                                        Tutup
-                                                    </button>
-                                                ) : (
-                                                    <span style={{ ...ACTION_BTN, border: `1.5px solid ${T.borderSoft}`, background: T.grayLight, color: T.gray, cursor: 'not-allowed', userSelect: 'none' }}>
-                                                        <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
-                                                        Ditutup
-                                                    </span>
+                                                {/* Status-specific actions */}
+                                                {form.status === 'draft' && (
+                                                    <>
+                                                        <button onClick={() => confirmActivate(form.id)} style={{ ...ACTION_BTN, border: `1.5px solid ${T.green}`, background: T.greenLight, color: T.green }}>
+                                                            <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                                                            Aktifkan
+                                                        </button>
+                                                        <button onClick={() => openEdit(form)} style={{ ...ACTION_BTN, border: `1.5px solid ${T.border}`, background: T.bg, color: T.navyMid }}>
+                                                            Edit
+                                                        </button>
+                                                        <button onClick={() => confirmDelete(form.id)} style={{ ...ACTION_BTN, border: `1.5px solid #fecaca`, background: '#fff5f5', color: T.red }}>
+                                                            Hapus
+                                                        </button>
+                                                    </>
                                                 )}
-                                                <Link href={route('adminkampus.tracer.responses', form.id)}>
-                                                    <button style={{ ...ACTION_BTN, border: `1.5px solid ${T.border}`, background: T.bg, color: T.navyMid }}>
-                                                        Jawaban
-                                                    </button>
-                                                </Link>
-                                                <button onClick={() => openEdit(form)} style={{ ...ACTION_BTN, border: `1.5px solid ${T.border}`, background: T.bg, color: T.navyMid }}>
-                                                    Edit
-                                                </button>
-                                                <button onClick={() => confirmDelete(form.id)} style={{ ...ACTION_BTN, border: `1.5px solid #fecaca`, background: '#fff5f5', color: T.red }}>
-                                                    Hapus
-                                                </button>
+
+                                                {form.status === 'active' && (
+                                                    <>
+                                                        <button onClick={() => confirmClose(form.id)} style={{ ...ACTION_BTN, border: `1.5px solid ${T.orange}`, background: T.orangeLight, color: T.orange }}>
+                                                            <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>
+                                                            Tutup
+                                                        </button>
+                                                        <Link href={route('adminkampus.tracer.responses', form.id)}>
+                                                            <button style={{ ...ACTION_BTN, border: `1.5px solid ${T.border}`, background: T.bg, color: T.navyMid }}>
+                                                                Jawaban
+                                                            </button>
+                                                        </Link>
+                                                        <button onClick={() => openEdit(form)} style={{ ...ACTION_BTN, border: `1.5px solid ${T.border}`, background: T.bg, color: T.navyMid }}>
+                                                            Edit
+                                                        </button>
+                                                    </>
+                                                )}
+
+                                                {form.status === 'closed' && (
+                                                    <>
+                                                        <Link href={route('adminkampus.tracer.responses', form.id)}>
+                                                            <button style={{ ...ACTION_BTN, border: `1.5px solid ${T.border}`, background: T.bg, color: T.navyMid }}>
+                                                                Jawaban
+                                                            </button>
+                                                        </Link>
+                                                    </>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>
@@ -494,8 +543,11 @@ export default function TracerStudyIndex({ forms }) {
                 </div>
             </div>
 
+            {/* Activate Confirmation */}
+            <AlertDialog open={activateAlertOpen} onClose={() => !isActivating && setActivateAlertOpen(false)} onConfirm={executeActivate} processing={isActivating} title="Aktifkan Kuesioner?" message="Kuesioner akan dipublikasikan dan bisa diisi oleh alumni. Jika ada kuesioner lain yang sedang aktif, kuesioner tersebut akan ditutup otomatis. Hanya 1 kuesioner yang bisa aktif dalam satu waktu." confirmLabel="Ya, Aktifkan" confirmIcon={<svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2"><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>} />
+
             {/* Close Confirmation */}
-            <AlertDialog open={closeAlertOpen} onClose={() => !isClosing && setCloseAlertOpen(false)} onConfirm={executeClose} processing={isClosing} title="Tutup Kuesioner?" message="Kuesioner yang ditutup tidak akan bisa dibuka kembali oleh admin. Kuesioner ini akan berstatus arsip secara permanen. Pastikan semua data jawaban sudah terkumpul sebelum menutup." confirmLabel="Ya, Tutup Permanen" />
+            <AlertDialog open={closeAlertOpen} onClose={() => !isClosing && setCloseAlertOpen(false)} onConfirm={executeClose} processing={isClosing} title="Tutup Kuesioner?" message="Apakah Anda yakin ingin menutup sesi Tracer Study ini? Sesi yang sudah ditutup tidak akan dapat diaktifkan kembali. Semua data jawaban tetap tersimpan di sistem." confirmLabel="Ya, Tutup Permanen" />
 
             {/* Delete Confirmation */}
             <AlertDialog open={deleteAlertOpen} onClose={() => !isDeleting && setDeleteAlertOpen(false)} onConfirm={executeDelete} processing={isDeleting} title="Hapus Kuesioner?" message="Tindakan ini tidak dapat dibatalkan. Semua daftar pertanyaan dan jawaban dari alumni terkait kuesioner ini akan dihapus secara permanen dari sistem." confirmLabel="Ya, Hapus" />
@@ -543,10 +595,10 @@ export default function TracerStudyIndex({ forms }) {
                             <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 12, background: '#fed7aa', color: '#92400e' }}>LOCKED</span>
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                            <div style={{ padding: '10px 14px', borderRadius: 8, background: '#fff', border: `1px solid #fde68a` }}>
-                                <div style={{ fontSize: 11, fontWeight: 700, color: '#92400e', marginBottom: 2 }}>Q1 — Status Pekerjaan Saat Ini <span style={{ color: '#ef4444' }}>*</span></div>
-                                <div style={{ fontSize: 12.5, color: T.mutedDark }}>Pilihan: Bekerja / Mencari Kerja / Wiraswasta</div>
-                            </div>
+                                <div style={{ padding: '10px 14px', borderRadius: 8, background: '#fff', border: `1px solid #fde68a` }}>
+                                    <div style={{ fontSize: 11, fontWeight: 700, color: '#92400e', marginBottom: 2 }}>Q1 — Status Pekerjaan Saat Ini <span style={{ color: '#ef4444' }}>*</span></div>
+                                    <div style={{ fontSize: 12.5, color: T.mutedDark }}>Pilihan: Bekerja / Mencari Kerja / Wiraswasta / Lanjutkan Pendidikan</div>
+                                </div>
                             <div style={{ padding: '10px 14px', borderRadius: 8, background: '#fff', border: `1px solid #fde68a` }}>
                                 <div style={{ fontSize: 11, fontWeight: 700, color: '#92400e', marginBottom: 2 }}>Q2 — Nama Perusahaan / Instansi / Usaha</div>
                                 <div style={{ fontSize: 12.5, color: T.mutedDark }}>Input teks (opsional jika tidak bekerja)</div>
@@ -607,6 +659,29 @@ export default function TracerStudyIndex({ forms }) {
                                         <button type="button" onClick={() => addOption(q.id)} style={{ fontSize: 12, fontWeight: 600, color: T.orange, background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0', fontFamily: 'inherit' }}>+ Tambah Opsi</button>
                                     </div>
                                 )}
+                                <div style={{ marginTop: q.type === 'radio' ? 12 : 8, padding: '10px 12px', borderRadius: 8, background: T.bg, border: `1px solid ${T.borderSoft}` }}>
+                                    <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: T.muted, marginBottom: 6 }}>Tampilkan untuk Status</div>
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                                        {ALL_STATUSES.map(s => {
+                                            const active = (q.target_statuses || []).includes(s.value);
+                                            return (
+                                                <button key={s.value} type="button" onClick={() => toggleTargetStatus(q.id, s.value)} style={{
+                                                    height: 28, padding: '0 10px', borderRadius: 14, fontSize: 11, fontWeight: 600,
+                                                    border: `1.5px solid ${active ? T.orange : T.border}`,
+                                                    background: active ? T.orangeLight : '#fff',
+                                                    color: active ? T.orange : T.mutedDark,
+                                                    cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s',
+                                                    display: 'inline-flex', alignItems: 'center', gap: 4,
+                                                }}>
+                                                    {s.icon} {s.label}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                    {(!q.target_statuses || q.target_statuses.length === 0) && (
+                                        <div style={{ fontSize: 10, color: T.muted, marginTop: 4, fontStyle: 'italic' }}>Semua status (default)</div>
+                                    )}
+                                </div>
                             </div>
                         ))}
 

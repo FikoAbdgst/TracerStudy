@@ -50,8 +50,10 @@ const getStatusBadge = (status) => {
     switch (status) {
         case 'Mencari Kerja':
             return { color: T.green, bg: T.greenLight, label: 'Mencari Kerja' };
-        case 'Wirausaha':
-            return { color: T.purple, bg: T.purpleLight, label: 'Wirausaha' };
+        case 'Wiraswasta':
+            return { color: T.purple, bg: T.purpleLight, label: 'Wiraswasta' };
+        case 'Lanjutkan Pendidikan':
+            return { color: T.purple, bg: T.purpleLight, label: 'Lanjutkan Pendidikan' };
         default:
             return { color: T.green, bg: T.greenLight, label: status || 'Open to Work' };
     }

@@ -15,6 +15,7 @@ const EMPLOYMENT_STATUS = {
     'Bekerja': { color: T.navyMid, bg: T.navyLight },
     'Mencari Kerja': { color: T.orange, bg: T.orangeLight },
     'Wiraswasta': { color: T.green, bg: T.greenLight },
+    'Lanjutkan Pendidikan': { color: '#7c3aed', bg: '#f5f3ff' },
     'Tidak Terdeteksi': { color: T.muted, bg: T.bg },
 };
 

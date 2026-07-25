@@ -26,6 +26,10 @@ class ApplicantController extends Controller
             ->whereHas('jobPosting', function ($query) use ($company) {
                 $query->where('company_id', $company->id);
             })
+            ->where(function ($query) {
+                $query->where('source_type', '!=', 'invitation')
+                    ->orWhere('invitation_status', '!=', 'pending');
+            })
             ->get();
 
         $applicationsWithScore = $applications->map(function ($app) {

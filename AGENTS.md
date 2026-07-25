@@ -49,12 +49,12 @@ Login redirect in `AuthenticatedSessionController` — not middleware. Admin PT 
 - **`cn()`** — `@/lib/utils` exports `clsx` + `tailwind-merge`
 - **Components** — `components.json` aliases point to `@/components/ui` (lowercase `components/`), actual files at `Components/ui/` (capital C); imports use `@/Components/ui/...`
 - **Notifications** — `SystemNotification($title, $body, $url, $type)` via database channel only; polled via `auth.user.notifications`
-- **Messaging** — poll-based (no broadcasting); `Super Admin` fully blocked from chat (`authorizeAccess()` aborts 403); `Admin PT` gets empty results from `searchAlumni()` (returns `[]`, not 403) and is blocked from `startAlumni()` (aborts 403)
+- **Messaging** — `ChatController` — poll-based (no broadcasting); `Admin PT` gets empty results from `searchAlumni()` (returns `[]`, not 403) and is blocked from `startAlumni()` (aborts 403); all other authenticated roles have full access
 - **SPK matching** — `App\Helpers\TextSimilarity::calculate()` (TF-IDF Cosine Similarity); `JobPosting` has `weight_*` columns
 - **Master data** — `MasterCategory` (tabs: Keahlian, Sektor Industri, Program Studi) → `MasterItem` (values)
 - **Maps** — `react-leaflet` + `leaflet`
 - **npm scripts disabled** — `.npmrc` has `ignore-scripts=true`; `npm install --ignore-scripts` is still used in setup (redundant but harmless)
-- **Private files** — `PrivateFileController` at `GET /storage/private/{path}` (auth, route `where('path', '.*')`); role-based ACL inside controller (Super Admin: all; Admin Kampus: `mou_documents/` only; Admin PT: own MoUs + own applicants' CVs; Alumni: own CV only)
+- **Private files** — `PrivateFileController` at `GET /storage/private/{path}` (auth, route `where('path', '.*')`); role-based ACL inside controller (Super Admin: all; Admin Kampus: `mou_documents/` only; Admin PT: own MoUs + own applicants' CVs; Alumni: own CV at `alumni_cvs/` + CVs from their job applications at `cv_documents/`)
 - **Policies** — `ForumTopicPolicy`, `ForumReplyPolicy`, `MessagePolicy` bound via `Gate::policy()` in `AppServiceProvider`
 - **Seeder** — uses `new User()` explicitly (no factories; `UserFactory` exists for tests only); clears Spatie cache at start
 - **Tests** — Breeze-generated only (Auth + Profile); no custom feature tests yet

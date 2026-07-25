@@ -22,6 +22,10 @@ class TracerStudyController extends Controller
         ]);
     }
 
+    /**
+     * Create a new Tracer Study form.
+     * Status defaults to 'draft' — admin must explicitly activate it.
+     */
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -30,11 +34,9 @@ class TracerStudyController extends Controller
             'questions' => 'nullable|array',
         ]);
 
-        TracerStudyForm::where('is_active', true)->update(['is_active' => false]);
+        TracerStudyForm::create([...$validated, 'status' => 'draft']);
 
-        TracerStudyForm::create([...$validated, 'is_active' => true]);
-
-        return back()->with('message', 'Form kuesioner berhasil dibuat dan diaktifkan.');
+        return back()->with('message', 'Form kuesioner berhasil dibuat dalam status draft.');
     }
 
     public function update(Request $request, TracerStudyForm $tracer)
@@ -57,13 +59,47 @@ class TracerStudyController extends Controller
         return back()->with('message', 'Form dihapus.');
     }
 
-    public function close(TracerStudyForm $tracer)
+    /**
+     * Activate a draft Tracer Study form.
+     *
+     * RULE 1 (Single Active): Only 1 form may be active at any time.
+     * RULE 2 (No Reactivation): A closed form CANNOT be activated.
+     */
+    public function activate(TracerStudyForm $tracer)
     {
-        if (! $tracer->is_active) {
-            return back()->with('error', 'Kuesioner yang sudah ditutup tidak dapat dibuka kembali.');
+        // Rule 2: closed forms are permanently locked
+        if ($tracer->isClosed()) {
+            return back()->with('error', 'Kuesioner yang sudah ditutup tidak dapat diaktifkan kembali.');
         }
 
-        $tracer->update(['is_active' => false]);
+        // Only draft forms can be activated
+        if (! $tracer->isDraft()) {
+            return back()->with('error', 'Hanya kuesioner berstatus draft yang dapat diaktifkan.');
+        }
+
+        // Rule 1: ensure no other form is currently active
+        $existingActive = TracerStudyForm::active()->where('id', '!=', $tracer->id)->first();
+
+        if ($existingActive) {
+            return back()->with('error', 'Gagal mengaktifkan: Masih ada Tracer Study lain yang sedang aktif ('.$existingActive->title.'). Harap tutup sesi aktif terlebih dahulu.');
+        }
+
+        $tracer->update(['status' => 'active']);
+
+        return back()->with('message', 'Kuesioner berhasil diaktifkan.');
+    }
+
+    /**
+     * Close (permanently deactivate) a Tracer Study form.
+     * One-way transition: once closed, a form can never be reactivated.
+     */
+    public function close(TracerStudyForm $tracer)
+    {
+        if ($tracer->isClosed()) {
+            return back()->with('error', 'Kuesioner ini sudah dalam status ditutup.');
+        }
+
+        $tracer->update(['status' => 'closed']);
 
         return back()->with('message', 'Kuesioner berhasil ditutup secara permanen.');
     }

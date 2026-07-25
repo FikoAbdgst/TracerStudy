@@ -239,6 +239,11 @@
             color: #15803d;
         }
 
+        .badge-lanjutkan {
+            background: #f5f3ff;
+            color: #7c3aed;
+        }
+
         .badge-lainnya {
             background: #f1f5f9;
             color: #475569;
@@ -296,35 +301,42 @@
         $bekerja = $responses->where('status_pekerjaan', 'Bekerja')->count();
         $mencari = $responses->where('status_pekerjaan', 'Mencari Kerja')->count();
         $wira = $responses->where('status_pekerjaan', 'Wiraswasta')->count();
-        $lainnya = $total - $bekerja - $mencari - $wira;
+        $lanjut = $responses->where('status_pekerjaan', 'Lanjutkan Pendidikan')->count();
+        $lainnya = $total - $bekerja - $mencari - $wira - $lanjut;
         $pctBekerja = $total > 0 ? round(($bekerja / $total) * 100, 1) : 0;
         $pctMencari = $total > 0 ? round(($mencari / $total) * 100, 1) : 0;
         $pctWira = $total > 0 ? round(($wira / $total) * 100, 1) : 0;
+        $pctLanjut = $total > 0 ? round(($lanjut / $total) * 100, 1) : 0;
     @endphp
 
 
 
     <table class="summary-table">
         <tr>
-            <td style="width: 25%;">
+            <td style="width: 20%;">
                 <div class="summary-label">Total Responden</div>
                 <div class="summary-value">{{ $total }}</div>
                 <div class="summary-sub">Alumni yang telah mengisi</div>
             </td>
-            <td style="width: 25%;">
+            <td style="width: 20%;">
                 <div class="summary-label">Bekerja</div>
                 <div class="summary-value">{{ $bekerja }}</div>
                 <div class="summary-sub">{{ $pctBekerja }}% dari total responden</div>
             </td>
-            <td style="width: 25%;">
+            <td style="width: 20%;">
                 <div class="summary-label">Mencari Kerja</div>
                 <div class="summary-value">{{ $mencari }}</div>
                 <div class="summary-sub">{{ $pctMencari }}% dari total responden</div>
             </td>
-            <td style="width: 25%;">
+            <td style="width: 20%;">
                 <div class="summary-label">Wiraswasta</div>
                 <div class="summary-value">{{ $wira }}</div>
                 <div class="summary-sub">{{ $pctWira }}% dari total responden</div>
+            </td>
+            <td style="width: 20%;">
+                <div class="summary-label">Lanjut Pendidikan</div>
+                <div class="summary-value">{{ $lanjut }}</div>
+                <div class="summary-sub">{{ $pctLanjut }}% dari total responden</div>
             </td>
         </tr>
     </table>
@@ -338,6 +350,7 @@
                 'Bekerja' => 'badge-bekerja',
                 'Mencari Kerja' => 'badge-mencari',
                 'Wiraswasta' => 'badge-wiraswasta',
+                'Lanjutkan Pendidikan' => 'badge-lanjutkan',
                 default => 'badge-lainnya',
             };
         @endphp

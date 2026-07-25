@@ -89,12 +89,15 @@ const fieldBase = { height: 42, padding: '0 13px', border: `1.5px solid ${T.bord
 const onFocus = e => { e.target.style.borderColor = T.navyMid; e.target.style.background = '#fff'; e.target.style.boxShadow = '0 0 0 3px rgba(26,53,96,0.09)'; };
 const onBlur = e => { e.target.style.borderColor = T.border; e.target.style.background = T.bg; e.target.style.boxShadow = 'none'; };
 
-export default function LokerIndex({ jobs, appliedJobIds, appliedConversationIds, alumniProfile }) {
+export default function LokerIndex({ jobs, myApplications, appliedConversationIds, alumniProfile }) {
     const { flash, auth } = usePage().props;
     const [searchQuery, setSearchQuery] = useState('');
     const [modalOpen, setModalOpen] = useState(false);
     const [selectedJob, setSelectedJob] = useState(null);
     const [isUpdatingCV, setIsUpdatingCV] = useState(false);
+    const [inviteJob, setInviteJob] = useState(null);
+    const [inviteAction, setInviteAction] = useState(null);
+    const [inviteConfirmOpen, setInviteConfirmOpen] = useState(false);
 
     const { data, setData, post, processing, errors, reset, clearErrors } = useForm({
         cv_option: 'profile',
@@ -118,6 +121,24 @@ export default function LokerIndex({ jobs, appliedJobIds, appliedConversationIds
             cv_file: null,
         });
         setModalOpen(true);
+    };
+
+    const openInviteResponse = (job) => {
+        setInviteJob(job);
+        setInviteAction(null);
+        setInviteConfirmOpen(true);
+    };
+
+    const handleInviteResponse = () => {
+        const app = myApplications?.[inviteJob.id];
+        if (!app) return;
+        const url = inviteAction === 'accept'
+            ? route('alumni.lamaran.accept-invitation', app.id)
+            : route('alumni.lamaran.reject-invitation', app.id);
+        post(url, {
+            preserveScroll: true,
+            onFinish: () => { setInviteConfirmOpen(false); setInviteJob(null); setInviteAction(null); },
+        });
     };
 
     const handleApply = (e) => {
@@ -173,9 +194,9 @@ export default function LokerIndex({ jobs, appliedJobIds, appliedConversationIds
                         <div style={{ padding: '4px 10px', borderRadius: 8, background: T.navyLight, border: `1px solid ${T.navyMid}22` }}>
                             <span style={{ fontSize: 11, fontWeight: 700, color: T.navyMid }}>{filtered.length} Lowongan Tersedia</span>
                         </div>
-                        {appliedJobIds.length > 0 && (
+                        {Object.keys(myApplications).length > 0 && (
                             <div style={{ padding: '4px 10px', borderRadius: 8, background: T.greenLight, border: `1px solid ${T.green}22` }}>
-                                <span style={{ fontSize: 11, fontWeight: 700, color: T.green }}>{appliedJobIds.length} Telah Dilamar</span>
+                                <span style={{ fontSize: 11, fontWeight: 700, color: T.green }}>{Object.keys(myApplications).length} Terkait</span>
                             </div>
                         )}
                     </div>
@@ -191,13 +212,25 @@ export default function LokerIndex({ jobs, appliedJobIds, appliedConversationIds
                 {/* Cards Grid */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
                     {filtered.map((job, i) => {
-                        const isApplied = appliedJobIds.includes(job.id);
+                        const app = myApplications?.[job.id] || null;
                         const wm = job.work_model;
                         const wmInfo = workModelMap[wm] || null;
+
+                        /* ── State derivation ── */
+                        const isInvitation = app?.source_type === 'invitation';
+                        const invitePending = isInvitation && app?.invitation_status === 'pending';
+                        const inviteAccepted = isInvitation && app?.invitation_status === 'accepted';
+                        const inviteRejected = isInvitation && app?.invitation_status === 'rejected';
+                        const isManual = app && !isInvitation;
+                        const hasConv = !!appliedConversationIds?.[job.id];
+
+                        /* ── Card border color ── */
+                        const cardBorder = invitePending ? '#c4b5fd' : inviteAccepted ? T.greenLight : isManual ? T.greenLight : T.borderSoft;
+
                         return (
                             <div key={job.id} className="job-card" style={{
                                 background: '#fff', borderRadius: 14,
-                                border: `1px solid ${isApplied ? T.greenLight : T.borderSoft}`,
+                                border: `1px solid ${cardBorder}`,
                                 padding: '20px', display: 'flex', flexDirection: 'column',
                                 animation: `cardIn 0.38s ${i * 0.05}s cubic-bezier(0.22,1,0.36,1) both`,
                                 boxShadow: '0 2px 8px rgba(15,31,61,0.05)',
@@ -221,8 +254,18 @@ export default function LokerIndex({ jobs, appliedJobIds, appliedConversationIds
                                             </div>
                                         </div>
                                     </div>
-                                    {isApplied && (
-                                        <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 20, background: T.greenLight, color: T.green, flexShrink: 0, whiteSpace: 'nowrap' }}>✓ Dilamar</span>
+                                    {/* Status pill */}
+                                    {invitePending && (
+                                        <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 20, background: '#ede9fe', color: '#7c3aed', flexShrink: 0, whiteSpace: 'nowrap' }}>Undangan</span>
+                                    )}
+                                    {inviteAccepted && (
+                                        <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 20, background: T.greenLight, color: T.green, flexShrink: 0, whiteSpace: 'nowrap' }}>Diterima</span>
+                                    )}
+                                    {inviteRejected && (
+                                        <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 20, background: T.redLight, color: T.red, flexShrink: 0, whiteSpace: 'nowrap' }}>Ditolak</span>
+                                    )}
+                                    {isManual && (
+                                        <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 20, background: T.greenLight, color: T.green, flexShrink: 0, whiteSpace: 'nowrap' }}>Dilamar</span>
                                     )}
                                 </div>
 
@@ -252,8 +295,25 @@ export default function LokerIndex({ jobs, appliedJobIds, appliedConversationIds
                                     )}
                                 </div>
 
-                                {/* Footer Buttons */}
-                                {isApplied && appliedConversationIds?.[job.id] ? (
+                                {/* Footer Buttons — 5 states */}
+                                {invitePending ? (
+                                    /* STATE 3: Invitation pending — show response button */
+                                    <button
+                                        onClick={() => openInviteResponse(job)}
+                                        style={{
+                                            height: 38, borderRadius: 9, border: 'none', width: '100%',
+                                            fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                                            fontFamily: 'inherit', transition: 'all 0.15s',
+                                            background: '#7c3aed', color: '#fff',
+                                            boxShadow: '0 2px 8px rgba(124,58,237,0.25)',
+                                        }}
+                                        onMouseEnter={e => { e.currentTarget.style.background = '#6d28d9'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                                        onMouseLeave={e => { e.currentTarget.style.background = '#7c3aed'; e.currentTarget.style.transform = 'none'; }}
+                                    >
+                                        Respon Undangan
+                                    </button>
+                                ) : inviteAccepted && hasConv ? (
+                                    /* STATE 4a: Accepted + has conversation */
                                     <button
                                         onClick={() => router.get(route('messages.index', { conversation: appliedConversationIds[job.id] }))}
                                         style={{
@@ -268,24 +328,67 @@ export default function LokerIndex({ jobs, appliedJobIds, appliedConversationIds
                                     >
                                         Lanjutkan Obrolan
                                     </button>
-                                ) : isApplied ? (
+                                ) : inviteAccepted ? (
+                                    /* STATE 4b: Accepted, waiting for HR */
                                     <div style={{
                                         height: 38, borderRadius: 9, width: '100%',
                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                                         fontSize: 13, fontWeight: 700,
                                         background: T.greenLight, color: T.green, cursor: 'default',
                                     }}>
-                                        ✓ Lamaran Terkirim
+                                        Undangan Diterima
                                     </div>
-                                ) : (
+                                ) : inviteRejected ? (
+                                    /* STATE 5: Rejected — allow re-apply */
                                     <button
                                         onClick={() => openApply(job, false)}
                                         style={{
                                             height: 38, borderRadius: 9, border: 'none', width: '100%',
                                             fontSize: 13, fontWeight: 700, cursor: 'pointer',
                                             fontFamily: 'inherit', transition: 'all 0.15s',
-                                            background: T.orange,
-                                            color: '#fff',
+                                            background: T.orange, color: '#fff',
+                                            boxShadow: '0 2px 8px rgba(249,115,22,0.25)',
+                                        }}
+                                        onMouseEnter={e => { e.currentTarget.style.background = '#ea6c0a'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                                        onMouseLeave={e => { e.currentTarget.style.background = T.orange; e.currentTarget.style.transform = 'none'; }}
+                                    >
+                                        Lamar Pekerjaan
+                                    </button>
+                                ) : isManual && hasConv ? (
+                                    /* STATE 2a: Manual application + has conversation */
+                                    <button
+                                        onClick={() => router.get(route('messages.index', { conversation: appliedConversationIds[job.id] }))}
+                                        style={{
+                                            height: 38, borderRadius: 9, border: 'none', width: '100%',
+                                            fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                                            fontFamily: 'inherit', transition: 'all 0.15s',
+                                            background: T.orange, color: '#fff',
+                                            boxShadow: '0 2px 8px rgba(249,115,22,0.25)',
+                                        }}
+                                        onMouseEnter={e => { e.currentTarget.style.background = '#ea6c0a'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                                        onMouseLeave={e => { e.currentTarget.style.background = T.orange; e.currentTarget.style.transform = 'none'; }}
+                                    >
+                                        Lanjutkan Obrolan
+                                    </button>
+                                ) : isManual ? (
+                                    /* STATE 2b: Manual application, no conversation yet */
+                                    <div style={{
+                                        height: 38, borderRadius: 9, width: '100%',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        fontSize: 13, fontWeight: 700,
+                                        background: T.greenLight, color: T.green, cursor: 'default',
+                                    }}>
+                                        Lamaran Terkirim
+                                    </div>
+                                ) : (
+                                    /* STATE 1: No relation — show apply button */
+                                    <button
+                                        onClick={() => openApply(job, false)}
+                                        style={{
+                                            height: 38, borderRadius: 9, border: 'none', width: '100%',
+                                            fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                                            fontFamily: 'inherit', transition: 'all 0.15s',
+                                            background: T.orange, color: '#fff',
                                             boxShadow: '0 2px 8px rgba(249,115,22,0.25)',
                                         }}
                                         onMouseEnter={e => { e.currentTarget.style.background = '#ea6c0a'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
@@ -443,6 +546,107 @@ export default function LokerIndex({ jobs, appliedJobIds, appliedConversationIds
                     </div>
 
                 </form>
+            </Modal>
+
+            {/* Modal Konfirmasi Respon Undangan */}
+            <Modal open={inviteConfirmOpen} onClose={() => !processing && setInviteConfirmOpen(false)}
+                title="Respon Undangan Kerja"
+                subtitle={inviteJob?.company?.name}
+                footer={<>
+                    <BtnGhost onClick={() => setInviteConfirmOpen(false)}>Batal</BtnGhost>
+                    {inviteAction === 'accept' ? (
+                        <button type="button" onClick={handleInviteResponse} disabled={processing}
+                            style={{
+                                height: 36, padding: '0 18px', borderRadius: 8, border: 'none',
+                                background: processing ? T.muted : T.green, color: '#fff',
+                                fontSize: 13, fontWeight: 700,
+                                cursor: processing ? 'not-allowed' : 'pointer',
+                                fontFamily: 'inherit', transition: 'all 0.15s',
+                            }}>
+                            {processing ? 'Memproses...' : 'Ya, Terima'}
+                        </button>
+                    ) : inviteAction === 'reject' ? (
+                        <button type="button" onClick={handleInviteResponse} disabled={processing}
+                            style={{
+                                height: 36, padding: '0 18px', borderRadius: 8, border: 'none',
+                                background: processing ? T.muted : T.red, color: '#fff',
+                                fontSize: 13, fontWeight: 700,
+                                cursor: processing ? 'not-allowed' : 'pointer',
+                                fontFamily: 'inherit', transition: 'all 0.15s',
+                            }}>
+                            {processing ? 'Memproses...' : 'Ya, Tolak'}
+                        </button>
+                    ) : null}
+                </>}
+            >
+                {/* Job info */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', borderRadius: 10, background: T.bg, border: `1px solid ${T.borderSoft}`, marginBottom: 16 }}>
+                    <div style={{ width: 38, height: 38, borderRadius: 9, background: T.navyLight, color: T.navyMid, fontSize: 15, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        {inviteJob?.company?.name?.charAt(0)?.toUpperCase() ?? '?'}
+                    </div>
+                    <div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: T.navy }}>{inviteJob?.title}</div>
+                        <div style={{ fontSize: 11.5, color: T.muted }}>{inviteJob?.company?.name}</div>
+                    </div>
+                </div>
+
+                {/* Invitation notice */}
+                <div style={{ padding: '14px 16px', borderRadius: 10, background: '#ede9fe', border: '1px solid #c4b5fd', marginBottom: 16, display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                    <span style={{ fontSize: 18, flexShrink: 0, marginTop: 1 }}>📩</span>
+                    <div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: '#5b21b6', marginBottom: 4 }}>Anda diundang untuk melamar posisi ini</div>
+                        <div style={{ fontSize: 12.5, color: '#6d28d9', lineHeight: 1.6 }}>
+                            Perusahaan ini mengundang Anda secara khusus untuk melamar posisi ini. Pilih <strong>Terima</strong> untuk mengirim lamaran, atau <strong>Tolak</strong> jika tidak berminat.
+                        </div>
+                    </div>
+                </div>
+
+                {/* Action selection */}
+                {!inviteAction && (
+                    <div style={{ display: 'flex', gap: 10 }}>
+                        <button type="button" onClick={() => setInviteAction('accept')}
+                            style={{
+                                flex: 1, height: 44, borderRadius: 10, border: `2px solid ${T.green}`,
+                                background: T.greenLight, color: T.green, fontSize: 13, fontWeight: 700,
+                                cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.background = T.green; e.currentTarget.style.color = '#fff'; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = T.greenLight; e.currentTarget.style.color = T.green; }}
+                        >
+                            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                            Terima Undangan
+                        </button>
+                        <button type="button" onClick={() => setInviteAction('reject')}
+                            style={{
+                                flex: 1, height: 44, borderRadius: 10, border: `2px solid ${T.red}`,
+                                background: T.redLight, color: T.red, fontSize: 13, fontWeight: 700,
+                                cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.background = T.red; e.currentTarget.style.color = '#fff'; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = T.redLight; e.currentTarget.style.color = T.red; }}
+                        >
+                            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                            Tolak
+                        </button>
+                    </div>
+                )}
+
+                {inviteAction && (
+                    <div style={{
+                        padding: '14px 16px', borderRadius: 10,
+                        background: inviteAction === 'accept' ? T.greenLight : T.redLight,
+                        border: `1px solid ${inviteAction === 'accept' ? '#bbf7d0' : '#fecaca'}`,
+                        fontSize: 13, fontWeight: 600,
+                        color: inviteAction === 'accept' ? T.green : T.red,
+                        textAlign: 'center',
+                    }}>
+                        {inviteAction === 'accept'
+                            ? 'Anda akan menerima undangan ini. Lamaran akan dikirim ke perusahaan.'
+                            : 'Anda akan menolak undangan ini. Perusahaan akan diberitahu.'}
+                    </div>
+                )}
             </Modal>
         </AuthenticatedLayout>
     );

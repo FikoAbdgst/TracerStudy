@@ -394,9 +394,7 @@ class DatabaseSeeder extends Seeder
             'skills' => ['PHP', 'Laravel', 'System Analysis', 'ERP Development', 'React.js'],
             'phone_number' => '085678901234',
             'address' => 'Jakarta Selatan',
-            'employment_status' => 'Bekerja',
-            'position' => 'Software Engineer',
-            'company_name' => 'PT Digital Kreasi Indonesia',
+            'employment_status' => 'Lanjutkan Pendidikan',
             'judul_skripsi' => 'Implementasi Algoritma AHP Untuk Sistem Pendukung Keputusan Seleksi Penerimaan Karyawan',
             'portofolio_proyek' => [
                 ['nama_proyek' => 'SPK Penerimaan Karyawan', 'deskripsi_singkat' => 'Sistem pendukung keputusan berbasis web menggunakan metode AHP untuk membantu HRD melakukan seleksi kandidat.', 'tautan' => 'https://github.com/dimaspratama/spk-ahp'],

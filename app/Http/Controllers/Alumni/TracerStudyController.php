@@ -21,7 +21,7 @@ class TracerStudyController extends Controller
             return redirect()->route('alumni.profile.edit')->with('error', 'Silakan lengkapi profil terlebih dahulu.');
         }
 
-        $activeForm = TracerStudyForm::where('is_active', true)->latest()->first();
+        $activeForm = TracerStudyForm::active()->latest()->first();
 
         $existingResponse = null;
         if ($activeForm) {
@@ -54,12 +54,12 @@ class TracerStudyController extends Controller
             return back()->with('error', 'Profil alumni tidak ditemukan.');
         }
 
-        if (! $kuesioner->is_active) {
+        if (! $kuesioner->isActive()) {
             return back()->with('error', 'Kuesioner ini sudah tidak aktif.');
         }
 
         $validated = $request->validate([
-            'status_pekerjaan' => 'required|string|in:Bekerja,Mencari Kerja,Wiraswasta',
+            'status_pekerjaan' => 'required|string|in:Bekerja,Mencari Kerja,Wiraswasta,Lanjutkan Pendidikan',
             'nama_perusahaan' => 'nullable|string|max:255',
             'jabatan' => 'nullable|string|max:255',
             'answers' => 'nullable|array',
@@ -72,8 +72,19 @@ class TracerStudyController extends Controller
             $alumniProfile->update([
                 'employment_status' => $validated['status_pekerjaan'],
                 'company_name' => $hasCompany ? ($validated['nama_perusahaan'] ?? null) : null,
-                'position' => $hasCompany ? ($validated['jabatan'] ?? null) : null,
+                'position' => $isWorking ? ($validated['jabatan'] ?? null) : null,
             ]);
+
+            $questions = $kuesioner->questions ?? [];
+            $visibleIds = collect($questions)
+                ->filter(fn ($q) => empty($q['target_statuses']) || in_array($validated['status_pekerjaan'], $q['target_statuses']))
+                ->pluck('id')
+                ->map(fn ($id) => (string) $id)
+                ->toArray();
+
+            $filteredAnswers = collect($validated['answers'] ?? [])
+                ->filter(fn ($val, $key) => in_array((string) $key, $visibleIds))
+                ->toArray();
 
             TracerStudyResponse::updateOrCreate(
                 [
@@ -84,7 +95,7 @@ class TracerStudyController extends Controller
                     'status_pekerjaan' => $validated['status_pekerjaan'],
                     'nama_perusahaan' => $validated['nama_perusahaan'] ?? null,
                     'jabatan' => $validated['jabatan'] ?? null,
-                    'answers' => $validated['answers'] ?? [],
+                    'answers' => $filteredAnswers,
                 ]
             );
         });

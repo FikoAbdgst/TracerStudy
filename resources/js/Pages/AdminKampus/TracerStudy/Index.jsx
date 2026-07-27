@@ -310,7 +310,6 @@ export default function TracerStudyIndex({ forms }) {
     const [modalOpen, setModalOpen] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [selectedId, setSelectedId] = useState(null);
-    const [selectedStatus, setSelectedStatus] = useState('draft');
 
     const [deleteAlertOpen, setDeleteAlertOpen] = useState(false);
     const [idToDelete, setIdToDelete] = useState(null);
@@ -332,10 +331,9 @@ export default function TracerStudyIndex({ forms }) {
         title: '', description: '', questions: [],
     });
 
-    const openCreate = () => { reset(); setIsEditing(false); setSelectedStatus('draft'); setModalOpen(true); };
+    const openCreate = () => { reset(); setIsEditing(false); setModalOpen(true); };
     const openEdit = form => {
         setSelectedId(form.id);
-        setSelectedStatus(form.status || 'draft');
         const questions = (form.questions || []).map(q => ({ ...q, target_statuses: q.target_statuses || [] }));
         setData({ title: form.title, description: form.description || '', questions });
         setIsEditing(true); setModalOpen(true);
@@ -349,15 +347,8 @@ export default function TracerStudyIndex({ forms }) {
 
     const handleSubmit = e => {
         e.preventDefault();
-        const payload = { title: data.title, description: data.description };
-        if (selectedStatus === 'draft') {
-            payload.questions = data.questions;
-        }
-        if (isEditing) {
-            put(route('adminkampus.tracer.update', selectedId), { data: payload, onSuccess: () => setModalOpen(false) });
-        } else {
-            post(route('adminkampus.tracer.store'), { data: { ...payload, questions: data.questions }, onSuccess: () => setModalOpen(false) });
-        }
+        if (isEditing) put(route('adminkampus.tracer.update', selectedId), { onSuccess: () => setModalOpen(false) });
+        else post(route('adminkampus.tracer.store'), { onSuccess: () => setModalOpen(false) });
     };
 
     const confirmClose = (id) => { setIdToClose(id); setCloseAlertOpen(true); };
@@ -566,9 +557,9 @@ export default function TracerStudyIndex({ forms }) {
 
             {/* Form Builder Modal */}
             <Modal open={modalOpen} onClose={() => setModalOpen(false)}
-                title={isEditing ? (selectedStatus === 'draft' ? 'Edit Kuesioner' : 'Lihat Kuesioner') : 'Rancang Kuesioner Baru'}
+                title={isEditing ? 'Edit Kuesioner' : 'Rancang Kuesioner Baru'}
                 wide
-                footer={selectedStatus === 'draft' ? <>
+                footer={<>
                     <BtnGhost onClick={() => setModalOpen(false)}>Batal</BtnGhost>
                     <button type="submit" form="tracer-form" disabled={processing} style={{
                         height: 36, padding: '0 18px', borderRadius: 8, border: 'none',
@@ -579,23 +570,9 @@ export default function TracerStudyIndex({ forms }) {
                     }}>
                         {processing ? 'Menyimpan...' : 'Simpan Kuesioner'}
                     </button>
-                </> : (
-                    <BtnGhost onClick={() => setModalOpen(false)}>Tutup</BtnGhost>
-                )}
+                </>}
             >
                 <form id="tracer-form" onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                    {/* Locked notice for active/closed forms */}
-                    {isEditing && selectedStatus !== 'draft' && (
-                        <div style={{ padding: '12px 16px', borderRadius: 10, background: selectedStatus === 'active' ? T.navyLight : T.grayLight, border: `1.5px solid ${selectedStatus === 'active' ? '#93c5fd' : T.border}`, display: 'flex', alignItems: 'center', gap: 10 }}>
-                            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke={selectedStatus === 'active' ? T.navyMid : T.gray} strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
-                            <span style={{ fontSize: 12.5, fontWeight: 600, color: selectedStatus === 'active' ? T.navyMid : T.gray }}>
-                                {selectedStatus === 'active'
-                                    ? 'Pertanyaan terkunci saat kuesioner aktif. Hanya judul dan deskripsi yang dapat diubah.'
-                                    : 'Pertanyaan terkunci permanen karena kuesioner sudah ditutup.'}
-                            </span>
-                        </div>
-                    )}
-
                     <div style={{ padding: '14px 16px', borderRadius: 10, background: T.bg, border: `1px solid ${T.borderSoft}`, display: 'flex', flexDirection: 'column', gap: 12 }}>
                         <div>
                             <FieldLabel>Judul Kuesioner</FieldLabel>
@@ -641,40 +618,28 @@ export default function TracerStudyIndex({ forms }) {
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                 <div style={{ width: 3, height: 16, background: T.orange, borderRadius: 2 }} />
                                 <span style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em', color: T.navy }}>Pertanyaan ({data.questions.length})</span>
-                                {isEditing && selectedStatus !== 'draft' && (
-                                    <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 12, background: T.grayLight, color: T.gray, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                                        <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
-                                        Terkunci
-                                    </span>
-                                )}
                             </div>
-                            {selectedStatus === 'draft' && (
-                                <button type="button" onClick={addQuestion} style={{ height: 30, padding: '0 12px', borderRadius: 7, border: `1.5px solid ${T.orange}`, background: T.orangeLight, color: T.orange, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 5 }}>
-                                    <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
-                                    Tambah Pertanyaan
-                                </button>
-                            )}
+                            <button type="button" onClick={addQuestion} style={{ height: 30, padding: '0 12px', borderRadius: 7, border: `1.5px solid ${T.orange}`, background: T.orangeLight, color: T.orange, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 5 }}>
+                                <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                                Tambah Pertanyaan
+                            </button>
                         </div>
 
-                        {data.questions.map((q, idx) => {
-                            const qLocked = isEditing && selectedStatus !== 'draft';
-                            return (
-                            <div key={q.id} className="q-card" style={qLocked ? { opacity: 0.85 } : {}}>
+                        {data.questions.map((q, idx) => (
+                            <div key={q.id} className="q-card">
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
                                     <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: T.navyLight, color: T.navyMid }}>Pertanyaan {idx + 1}</span>
-                                    {!qLocked && (
-                                        <button type="button" onClick={() => removeQuestion(q.id)} style={{ height: 26, padding: '0 10px', borderRadius: 6, border: `1.5px solid #fecaca`, background: T.redLight, color: T.red, fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Hapus</button>
-                                    )}
+                                    <button type="button" onClick={() => removeQuestion(q.id)} style={{ height: 26, padding: '0 10px', borderRadius: 6, border: `1.5px solid #fecaca`, background: T.redLight, color: T.red, fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Hapus</button>
                                 </div>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 10, marginBottom: q.type === 'radio' ? 10 : 0 }}>
                                     <div>
                                         <FieldLabel>Teks Pertanyaan</FieldLabel>
-                                        <input style={fieldBase} value={q.question} onChange={e => updateQuestion(q.id, 'question', e.target.value)} placeholder="Tulis pertanyaan..." onFocus={onFocus} onBlur={onBlur} required disabled={qLocked} />
+                                        <input style={fieldBase} value={q.question} onChange={e => updateQuestion(q.id, 'question', e.target.value)} placeholder="Tulis pertanyaan..." onFocus={onFocus} onBlur={onBlur} required />
                                     </div>
                                     <div style={{ minWidth: 160 }}>
                                         <FieldLabel>Tipe Jawaban</FieldLabel>
-                                        <Select value={q.type} onValueChange={v => updateQuestion(q.id, 'type', v)} disabled={qLocked}>
-                                            <SelectTrigger className="focus:ring-0 focus:ring-offset-0" style={{ height: 42, borderRadius: 9, border: `1.5px solid ${T.border}`, background: T.bg, fontSize: 13, opacity: qLocked ? 0.6 : 1 }}>
+                                        <Select value={q.type} onValueChange={v => updateQuestion(q.id, 'type', v)}>
+                                            <SelectTrigger className="focus:ring-0 focus:ring-offset-0" style={{ height: 42, borderRadius: 9, border: `1.5px solid ${T.border}`, background: T.bg, fontSize: 13 }}>
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent position="popper" sideOffset={4} className="z-[500] rounded-xl overflow-hidden border border-gray-200 shadow-xl" style={{ background: "#ffffff", minWidth: "var(--radix-select-trigger-width)" }}>
@@ -685,7 +650,7 @@ export default function TracerStudyIndex({ forms }) {
                                         </Select>
                                     </div>
                                 </div>
-                                {q.type === 'radio' && !qLocked && (
+                                {q.type === 'radio' && (
                                     <div style={{ paddingLeft: 12, borderLeft: `3px solid ${T.orange}` }}>
                                         <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: T.muted, marginBottom: 6 }}>Pilihan Jawaban</div>
                                         {q.options.map((opt, oi) => (
@@ -694,28 +659,19 @@ export default function TracerStudyIndex({ forms }) {
                                         <button type="button" onClick={() => addOption(q.id)} style={{ fontSize: 12, fontWeight: 600, color: T.orange, background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0', fontFamily: 'inherit' }}>+ Tambah Opsi</button>
                                     </div>
                                 )}
-                                {q.type === 'radio' && qLocked && (
-                                    <div style={{ paddingLeft: 12, borderLeft: `3px solid ${T.border}` }}>
-                                        <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: T.muted, marginBottom: 6 }}>Pilihan Jawaban</div>
-                                        {q.options.map((opt, oi) => (
-                                            <div key={oi} style={{ height: 36, marginBottom: 5, width: '65%', padding: '0 13px', borderRadius: 9, border: `1.5px solid ${T.borderSoft}`, background: T.bg, fontSize: 13, display: 'flex', alignItems: 'center', color: T.navy }}>{opt}</div>
-                                        ))}
-                                    </div>
-                                )}
                                 <div style={{ marginTop: q.type === 'radio' ? 12 : 8, padding: '10px 12px', borderRadius: 8, background: T.bg, border: `1px solid ${T.borderSoft}` }}>
                                     <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: T.muted, marginBottom: 6 }}>Tampilkan untuk Status</div>
                                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                                         {ALL_STATUSES.map(s => {
                                             const active = (q.target_statuses || []).includes(s.value);
                                             return (
-                                                <button key={s.value} type="button" onClick={() => !qLocked && toggleTargetStatus(q.id, s.value)} style={{
+                                                <button key={s.value} type="button" onClick={() => toggleTargetStatus(q.id, s.value)} style={{
                                                     height: 28, padding: '0 10px', borderRadius: 14, fontSize: 11, fontWeight: 600,
                                                     border: `1.5px solid ${active ? T.orange : T.border}`,
                                                     background: active ? T.orangeLight : '#fff',
                                                     color: active ? T.orange : T.mutedDark,
-                                                    cursor: qLocked ? 'default' : 'pointer', fontFamily: 'inherit', transition: 'all 0.15s',
+                                                    cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s',
                                                     display: 'inline-flex', alignItems: 'center', gap: 4,
-                                                    opacity: qLocked && !active ? 0.4 : 1,
                                                 }}>
                                                     {s.icon} {s.label}
                                                 </button>
@@ -727,8 +683,7 @@ export default function TracerStudyIndex({ forms }) {
                                     )}
                                 </div>
                             </div>
-                            );
-                        })}
+                        ))}
 
                         {data.questions.length === 0 && (
                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 20px', borderRadius: 10, border: `2px dashed ${T.borderSoft}`, gap: 8 }}>

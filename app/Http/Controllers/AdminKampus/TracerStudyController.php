@@ -47,6 +47,12 @@ class TracerStudyController extends Controller
             'questions' => 'nullable|array',
         ]);
 
+        // Questions can only be edited while the form is still a draft.
+        // Once active or closed, questions are locked to preserve response data integrity.
+        if (! $tracer->isDraft() && isset($validated['questions'])) {
+            unset($validated['questions']);
+        }
+
         $tracer->update($validated);
 
         return back()->with('message', 'Form kuesioner berhasil diperbarui.');

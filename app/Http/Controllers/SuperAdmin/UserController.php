@@ -20,6 +20,7 @@ class UserController extends Controller
                 $query->where('name', 'like', "%{$search}%")
                     ->orWhere('email', 'like', "%{$search}%");
             })
+            ->latest()
             ->paginate(10)
             ->withQueryString();
 

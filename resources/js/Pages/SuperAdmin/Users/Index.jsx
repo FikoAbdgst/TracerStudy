@@ -371,6 +371,33 @@ export default function UserIndex({ users, roles, filters }) {
                         </tbody>
                     </table>
                 </div>
+
+                {/* Pagination */}
+                {users.last_page > 1 && (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 16, flexWrap: 'wrap', gap: 10 }}>
+                        <span style={{ fontSize: 12, color: '#64748b' }}>
+                            Menampilkan {users.from}–{users.to} dari {users.total} pengguna
+                        </span>
+                        <div style={{ display: 'flex', gap: 4 }}>
+                            {users.links.map((link, i) => (
+                                <button
+                                    key={i}
+                                    onClick={() => link.url && router.get(link.url)}
+                                    disabled={!link.url}
+                                    style={{
+                                        height: 32, minWidth: 32, padding: '0 10px', borderRadius: 7,
+                                        border: `1.5px solid ${link.active ? '#1a3560' : '#e2e8f0'}`,
+                                        background: link.active ? '#1a3560' : '#fff',
+                                        color: link.active ? '#fff' : link.url ? '#1a3560' : '#cbd5e1',
+                                        fontSize: 12, fontWeight: 600, cursor: link.url ? 'pointer' : 'not-allowed',
+                                        fontFamily: 'inherit', transition: 'all 0.15s',
+                                    }}
+                                    dangerouslySetInnerHTML={{ __html: link.label }}
+                                />
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* ── Modal Tambah ── */}

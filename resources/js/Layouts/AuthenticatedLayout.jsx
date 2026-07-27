@@ -31,8 +31,8 @@ const menuConfig = {
         { name: 'Dashboard', href: route('perusahaan.dashboard') },
         { name: 'Profil Perusahaan', href: route('perusahaan.profile.edit') },
         { name: 'Kelola Lowongan', href: route('perusahaan.lowongan') },
-        { name: 'Daftar Pelamar', href: route('perusahaan.pelamar') },
         { name: 'Bakat Potensial', href: route('perusahaan.talent-pool') },
+        { name: 'Daftar Pelamar', href: route('perusahaan.pelamar') },
     ],
     'Alumni': [
         { name: 'Dashboard', href: route('alumni.dashboard') },

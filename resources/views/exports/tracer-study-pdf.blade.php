@@ -301,8 +301,8 @@
         $bekerja = $responses->where('status_pekerjaan', 'Bekerja')->count();
         $mencari = $responses->where('status_pekerjaan', 'Mencari Kerja')->count();
         $wira = $responses->where('status_pekerjaan', 'Wiraswasta')->count();
-        $lanjut = $responses->where('status_pekerjaan', 'Lanjutkan Pendidikan')->count();
-        $lainnya = $total - $bekerja - $mencari - $wira - $lanjut;
+        $lanjut = $responses->where('melanjutkan_pendidikan', true)->count();
+        $lainnya = $total - $bekerja - $mencari - $wira;
         $pctBekerja = $total > 0 ? round(($bekerja / $total) * 100, 1) : 0;
         $pctMencari = $total > 0 ? round(($mencari / $total) * 100, 1) : 0;
         $pctWira = $total > 0 ? round(($wira / $total) * 100, 1) : 0;
@@ -334,9 +334,9 @@
                 <div class="summary-sub">{{ $pctWira }}% dari total responden</div>
             </td>
             <td style="width: 20%;">
-                <div class="summary-label">Lanjut Pendidikan</div>
+                <div class="summary-label">Melanjutkan Pendidikan</div>
                 <div class="summary-value">{{ $lanjut }}</div>
-                <div class="summary-sub">{{ $pctLanjut }}% dari total responden</div>
+                <div class="summary-sub">{{ $pctLanjut }}% (dapat digabung dengan bekerja)</div>
             </td>
         </tr>
     </table>
@@ -367,8 +367,15 @@
             </div>
             @php
                 $fields = [];
-                $fields[] = ['label' => 'Perusahaan / Instansi', 'value' => $resp->nama_perusahaan ?? ''];
-                $fields[] = ['label' => 'Jabatan / Posisi', 'value' => $resp->jabatan ?? ''];
+                if (($resp->status_pekerjaan ?? null) !== 'Mencari Kerja') {
+                    $fields[] = ['label' => 'Perusahaan / Usaha', 'value' => $resp->nama_perusahaan ?? ''];
+                }
+                if (($resp->status_pekerjaan ?? null) === 'Bekerja') {
+                    $fields[] = ['label' => 'Jabatan / Posisi', 'value' => $resp->jabatan ?? ''];
+                }
+                if ($resp->melanjutkan_pendidikan) {
+                    $fields[] = ['label' => 'Melanjutkan Pendidikan', 'value' => $resp->pendidikan_institusi ?? 'Ya'];
+                }
                 foreach ($questions as $q) {
                     $qId = $q['id'] ?? null;
                     $answer = $answers[$qId] ?? ($answers[$q['question']] ?? null);

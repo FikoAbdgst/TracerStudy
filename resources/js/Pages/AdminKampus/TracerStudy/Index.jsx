@@ -515,9 +515,6 @@ export default function TracerStudyIndex({ forms }) {
                                                                 Jawaban
                                                             </button>
                                                         </Link>
-                                                        <button onClick={() => openEdit(form)} style={{ ...ACTION_BTN, border: `1.5px solid ${T.border}`, background: T.bg, color: T.navyMid }}>
-                                                            Edit
-                                                        </button>
                                                     </>
                                                 )}
 
@@ -528,6 +525,10 @@ export default function TracerStudyIndex({ forms }) {
                                                                 Jawaban
                                                             </button>
                                                         </Link>
+                                                        <button onClick={() => confirmDelete(form.id)} style={{ ...ACTION_BTN, border: `1.5px solid #fecaca`, background: '#fff5f5', color: T.red }}>
+                                                            <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                                            Hapus
+                                                        </button>
                                                     </>
                                                 )}
                                             </div>
@@ -597,11 +598,11 @@ export default function TracerStudyIndex({ forms }) {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                                 <div style={{ padding: '10px 14px', borderRadius: 8, background: '#fff', border: `1px solid #fde68a` }}>
                                     <div style={{ fontSize: 11, fontWeight: 700, color: '#92400e', marginBottom: 2 }}>Q1 — Status Pekerjaan Saat Ini <span style={{ color: '#ef4444' }}>*</span></div>
-                                    <div style={{ fontSize: 12.5, color: T.mutedDark }}>Pilihan: Bekerja / Mencari Kerja / Wiraswasta / Lanjutkan Pendidikan</div>
+                                    <div style={{ fontSize: 12.5, color: T.mutedDark }}>Pilihan: Bekerja / Wiraswasta / Mencari Kerja &mdash; "Melanjutkan Pendidikan" tersedia sebagai pilihan terpisah yang bisa digabung dengan status bekerja/wiraswasta</div>
                                 </div>
                             <div style={{ padding: '10px 14px', borderRadius: 8, background: '#fff', border: `1px solid #fde68a` }}>
-                                <div style={{ fontSize: 11, fontWeight: 700, color: '#92400e', marginBottom: 2 }}>Q2 — Nama Perusahaan / Instansi / Usaha</div>
-                                <div style={{ fontSize: 12.5, color: T.mutedDark }}>Input teks (opsional jika tidak bekerja)</div>
+                                <div style={{ fontSize: 11, fontWeight: 700, color: '#92400e', marginBottom: 2 }}>Q2 — Nama Perusahaan / Usaha</div>
+                                <div style={{ fontSize: 12.5, color: T.mutedDark }}>Input teks (disembunyikan otomatis saat status "Mencari Kerja")</div>
                             </div>
                             <div style={{ padding: '10px 14px', borderRadius: 8, background: '#fff', border: `1px solid #fde68a` }}>
                                 <div style={{ fontSize: 11, fontWeight: 700, color: '#92400e', marginBottom: 2 }}>Q3 — Jabatan / Posisi</div>

@@ -29,136 +29,155 @@ const parseRp = (str) => {
 };
 
 /* ─── Salary Range Input ──────────────────────────────────────────────────── */
-// Mengubah salary_range string "Rp5jt - Rp10jt" → { min, max }
+// Mengubah salary_range string "5000000-10000000" → { min, max }
 const parseSalaryRange = (str) => {
     if (!str) return { min: 0, max: 0 };
     const nums = str.replace(/[^\d\-]/g, ' ').trim().split(/[\s\-]+/).filter(Boolean).map(Number);
-    // Jika format lama: "5000000 - 10000000"
     if (nums.length >= 2) return { min: nums[0], max: nums[1] };
     if (nums.length === 1) return { min: nums[0], max: nums[0] };
     return { min: 0, max: 0 };
 };
 
+/* Ringkas angka besar → "Rp 5 jt", "Rp 1,5 jt" */
+const formatRpShort = (n) => {
+    if (!n) return 'Rp 0';
+    const juta = n / 1000000;
+    if (juta >= 1) {
+        const s = juta.toLocaleString('id-ID', { maximumFractionDigits: 1 });
+        return `Rp ${s} jt`;
+    }
+    return `Rp ${Math.round(n / 1000).toLocaleString('id-ID')} rb`;
+};
+
+const SALARY_MIN = 1000000;    // Rp 1 jt
+const SALARY_MAX = 50000000;   // Rp 50 jt
+
+/* Bracket gaji umum — sekali tap langsung dapat rentang */
+const BRACKETS = [
+    { id: 'b1', min: SALARY_MIN, max: 2000000, label: '≤ Rp 2 jt', hint: 'Magang / Fresh graduate' },
+    { id: 'b2', min: 2000000, max: 4000000, label: 'Rp 2–4 jt', hint: 'Junior' },
+    { id: 'b3', min: 4000000, max: 7000000, label: 'Rp 4–7 jt', hint: 'Staff' },
+    { id: 'b4', min: 7000000, max: 12000000, label: 'Rp 7–12 jt', hint: 'Senior' },
+    { id: 'b5', min: 12000000, max: 20000000, label: 'Rp 12–20 jt', hint: 'Lead' },
+    { id: 'b6', min: 20000000, max: SALARY_MAX, label: '> Rp 20 jt', hint: 'Manager & di atasnya' },
+];
+
+const clampSalary = (v) => Math.min(SALARY_MAX, Math.max(SALARY_MIN, Math.round(Number(v) || 0)));
+
 const SalaryRangeInput = ({ value, onChange }) => {
     const parsed = parseSalaryRange(value);
-    const [min, setMin] = useState(parsed.min || 3000000);
-    const [max, setMax] = useState(parsed.max || 10000000);
+    const [min, setMin] = useState(parsed.min ? clampSalary(parsed.min) : 4000000);
+    const [max, setMax] = useState(parsed.max ? clampSalary(parsed.max) : 7000000);
     const [negotiable, setNegotiable] = useState(value === 'Negotiable');
+    const [custom, setCustom] = useState(value ? !BRACKETS.some(b => parsed.min === b.min && parsed.max === b.max) : false);
 
     // Sync ke parent
     useEffect(() => {
         if (negotiable) { onChange('Negotiable'); return; }
-        if (min === 0 && max === 0) { onChange(''); return; }
         onChange(`${min}-${max}`);
     }, [min, max, negotiable]);
 
-    // Sync dari parent (saat edit job)
+    // Sync dari parent (modal remount setiap dibuka → cukup sekali)
     useEffect(() => {
         if (value === 'Negotiable') { setNegotiable(true); return; }
         const p = parseSalaryRange(value);
-        if (p.min) setMin(p.min);
-        if (p.max) setMax(p.max);
+        if (!p.min && !p.max) { setMin(4000000); setMax(7000000); setCustom(false); return; }
+        if (p.min) setMin(clampSalary(p.min));
+        if (p.max) setMax(clampSalary(p.max));
+        setCustom(!BRACKETS.some(b => p.min === b.min && p.max === b.max));
     }, []);
 
-    const STEP = 500000;
-    const SALARY_MIN = 1000000;
-    const SALARY_MAX = 50000000;
+    const setMinSafe = (v) => { setCustom(true); const n = clampSalary(v); setMin(Math.min(n, max)); };
+    const setMaxSafe = (v) => { setCustom(true); const n = clampSalary(v); setMax(Math.max(n, min)); };
+    const pickBracket = (b) => { setCustom(false); setMin(b.min); setMax(b.max); };
 
-    const handleMinChange = (v) => {
-        const n = Math.min(Number(v), max - STEP);
-        setMin(Math.max(SALARY_MIN, n));
-    };
-    const handleMaxChange = (v) => {
-        const n = Math.max(Number(v), min + STEP);
-        setMax(Math.min(SALARY_MAX, n));
-    };
-
-    const minPct = ((min - SALARY_MIN) / (SALARY_MAX - SALARY_MIN)) * 100;
-    const maxPct = ((max - SALARY_MIN) / (SALARY_MAX - SALARY_MIN)) * 100;
-
-    if (negotiable) {
-        return (
-            <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                    <span style={{ fontSize: 12, color: T.mutedDark, fontWeight: 600 }}>Gaji dapat dinegosiasi</span>
-                    <button type="button" onClick={() => setNegotiable(false)}
-                        style={{ fontSize: 11, color: T.orange, fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-                        Atur Rentang →
-                    </button>
-                </div>
-                <div style={{ padding: '10px 14px', borderRadius: 9, background: T.orangeLight, border: `1.5px solid ${T.border}`, fontSize: 13.5, fontWeight: 700, color: T.orange }}>
-                    Negotiable / Dapat Dinegosiasi
-                </div>
-            </div>
-        );
-    }
+    const summaryText = negotiable
+        ? 'Negotiable'
+        : (min === max ? `${formatRpShort(min)} /bulan` : `${formatRpShort(min)} – ${formatRpShort(max)} /bulan`);
 
     return (
         <div>
-            {/* Preview nilai */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                    <div style={{ background: T.navyLight, borderRadius: 8, padding: '5px 12px', fontSize: 13, fontWeight: 700, color: T.navyMid }}>
-                        {formatRp(min)}
-                    </div>
-                    <span style={{ fontSize: 12, color: T.muted }}>—</span>
-                    <div style={{ background: T.navyLight, borderRadius: 8, padding: '5px 12px', fontSize: 13, fontWeight: 700, color: T.navyMid }}>
-                        {formatRp(max)}
+            {/* Ringkasan + toggle negotiable */}
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 10 }}>
+                <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: T.navy, letterSpacing: '-0.01em' }}>{summaryText}</div>
+                    <div style={{ fontSize: 11, color: T.muted, marginTop: 2 }}>
+                        {negotiable ? 'Besaran gaji tidak akan ditampilkan' : (custom ? 'Rentang kustom' : 'Kisaran umum untuk posisi ini')}
                     </div>
                 </div>
-                <button type="button" onClick={() => setNegotiable(true)}
-                    style={{ fontSize: 11, color: T.muted, fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-                    Ganti ke Negotiable
-                </button>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', flexShrink: 0, marginTop: 1 }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: T.mutedDark }}>Dapat dinegosiasi</span>
+                    <CustomSwitch checked={negotiable} onChange={() => setNegotiable(n => !n)} />
+                </label>
             </div>
 
-            {/* Dual slider track */}
-            <div style={{ position: 'relative', height: 36, display: 'flex', alignItems: 'center', marginBottom: 10 }}>
-                {/* Track background */}
-                <div style={{ position: 'absolute', left: 0, right: 0, height: 6, background: T.borderSoft, borderRadius: 3 }} />
-                {/* Track fill (antara min dan max) */}
-                <div style={{
-                    position: 'absolute', height: 6, background: T.orange, borderRadius: 3,
-                    left: `${minPct}%`, width: `${maxPct - minPct}%`,
-                    transition: 'left 0.05s, width 0.05s',
-                }} />
-                {/* Slider MIN */}
-                <input type="range" min={SALARY_MIN} max={SALARY_MAX} step={STEP} value={min}
-                    onChange={e => handleMinChange(e.target.value)}
-                    style={{ position: 'absolute', width: '100%', appearance: 'none', WebkitAppearance: 'none', height: 6, background: 'transparent', outline: 'none', cursor: 'pointer', zIndex: 2 }}
-                    className="salary-thumb"
-                />
-                {/* Slider MAX */}
-                <input type="range" min={SALARY_MIN} max={SALARY_MAX} step={STEP} value={max}
-                    onChange={e => handleMaxChange(e.target.value)}
-                    style={{ position: 'absolute', width: '100%', appearance: 'none', WebkitAppearance: 'none', height: 6, background: 'transparent', outline: 'none', cursor: 'pointer', zIndex: 3 }}
-                    className="salary-thumb"
-                />
-            </div>
+            {negotiable ? (
+                <div style={{ padding: '12px 14px', borderRadius: 10, background: T.orangeLight, border: `1.5px dashed ${T.orange}`, display: 'flex', alignItems: 'flex-start', gap: 10, marginTop: 8 }}>
+                    <span style={{ fontSize: 16, lineHeight: 1.4 }}>🤝</span>
+                    <div>
+                        <div style={{ fontSize: 12.5, fontWeight: 800, color: T.navy }}>Gaji fleksibel</div>
+                        <div style={{ fontSize: 11.5, color: T.mutedDark, marginTop: 2, lineHeight: 1.45 }}>
+                            Nominal tidak dipublikasikan. Kandidat yang tertarik akan mendiskusikan besaran gaji saat proses seleksi.
+                        </div>
+                    </div>
+                </div>
+            ) : (
+                <>
+                    {/* Pilihan bracket cepat */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                        {BRACKETS.map(b => {
+                            const active = !custom && min === b.min && max === b.max;
+                            return (
+                                <button key={b.id} type="button" onClick={() => pickBracket(b)}
+                                    style={{ padding: '10px 12px', borderRadius: 10, border: `1.5px solid ${active ? T.orange : T.border}`, background: active ? T.orangeLight : '#fff', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', transition: 'all 0.15s', position: 'relative' }}
+                                    onMouseEnter={e => { if (!active) e.currentTarget.style.borderColor = T.muted; }}
+                                    onMouseLeave={e => { if (!active) e.currentTarget.style.borderColor = T.border; }}>
+                                    <div style={{ fontSize: 12.5, fontWeight: 800, color: active ? T.orange : T.navy }}>{b.label}</div>
+                                    <div style={{ fontSize: 10.5, color: T.muted, marginTop: 2 }}>{b.hint}</div>
+                                    {active && <span style={{ position: 'absolute', top: 8, right: 8, color: T.orange, fontSize: 12, fontWeight: 800 }}>✓</span>}
+                                </button>
+                            );
+                        })}
 
-            {/* Input angka manual */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                <div>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Minimal</div>
-                    <input
-                        type="text"
-                        value={min.toLocaleString('id-ID')}
-                        onChange={e => handleMinChange(parseRp(e.target.value))}
-                        onFocus={onFocus} onBlur={onBlur}
-                        style={{ ...fieldBase, fontSize: 13 }}
-                    />
-                </div>
-                <div>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Maksimal</div>
-                    <input
-                        type="text"
-                        value={max.toLocaleString('id-ID')}
-                        onChange={e => handleMaxChange(parseRp(e.target.value))}
-                        onFocus={onFocus} onBlur={onBlur}
-                        style={{ ...fieldBase, fontSize: 13 }}
-                    />
-                </div>
-            </div>
+                        {/* Kustom */}
+                        <button type="button" onClick={() => setCustom(true)}
+                            style={{ padding: '10px 12px', borderRadius: 10, border: `1.5px solid ${custom ? T.orange : T.border}`, background: custom ? T.orangeLight : '#fff', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: 8 }}
+                            onMouseEnter={e => { if (!custom) e.currentTarget.style.borderColor = T.muted; }}
+                            onMouseLeave={e => { if (!custom) e.currentTarget.style.borderColor = T.border; }}>
+                            <span style={{ fontSize: 14 }}>✏️</span>
+                            <div>
+                                <div style={{ fontSize: 12.5, fontWeight: 800, color: custom ? T.orange : T.navy }}>Kustom</div>
+                                <div style={{ fontSize: 10.5, color: T.muted, marginTop: 2 }}>Isi nominal sendiri</div>
+                            </div>
+                        </button>
+                    </div>
+
+                    {custom && (
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 12, padding: '12px 14px', borderRadius: 10, background: T.borderSoft, border: `1px solid ${T.border}` }}>
+                            <div>
+                                <div style={{ fontSize: 10, fontWeight: 700, color: T.mutedDark, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Minimal</div>
+                                <div style={{ position: 'relative' }}>
+                                    <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 12, fontWeight: 700, color: T.mutedDark }}>Rp</span>
+                                    <input type="text" inputMode="numeric" value={min.toLocaleString('id-ID')}
+                                        onChange={e => setMinSafe(parseRp(e.target.value))} onFocus={onFocus} onBlur={onBlur}
+                                        style={{ ...fieldBase, paddingLeft: 32, background: '#fff', fontSize: 13 }}
+                                        placeholder="5.000.000" />
+                                </div>
+                            </div>
+                            <div>
+                                <div style={{ fontSize: 10, fontWeight: 700, color: T.mutedDark, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Maksimal</div>
+                                <div style={{ position: 'relative' }}>
+                                    <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 12, fontWeight: 700, color: T.mutedDark }}>Rp</span>
+                                    <input type="text" inputMode="numeric" value={max.toLocaleString('id-ID')}
+                                        onChange={e => setMaxSafe(parseRp(e.target.value))} onFocus={onFocus} onBlur={onBlur}
+                                        style={{ ...fieldBase, paddingLeft: 32, background: '#fff', fontSize: 13 }}
+                                        placeholder="10.000.000" />
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </>
+            )}
         </div>
     );
 };
@@ -566,21 +585,6 @@ export default function LowonganIndex({ jobs, company, isVerified, verificationS
                 .custom-scrollbar::-webkit-scrollbar { width: 6px; }
                 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
                 .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-
-                /* Slider thumb styling */
-                .salary-thumb::-webkit-slider-thumb {
-                    -webkit-appearance: none; appearance: none;
-                    width: 18px; height: 18px; border-radius: 50%;
-                    background: #fff; border: 2.5px solid ${T.orange};
-                    box-shadow: 0 1px 6px rgba(249,115,22,0.3);
-                    cursor: pointer; transition: transform 0.15s;
-                }
-                .salary-thumb::-webkit-slider-thumb:hover { transform: scale(1.2); }
-                .salary-thumb::-moz-range-thumb {
-                    width: 18px; height: 18px; border-radius: 50%;
-                    background: #fff; border: 2.5px solid ${T.orange};
-                    box-shadow: 0 1px 6px rgba(249,115,22,0.3); cursor: pointer;
-                }
             `}</style>
 
             <div className="ak-root">

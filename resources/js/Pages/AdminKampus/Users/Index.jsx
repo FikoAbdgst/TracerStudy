@@ -130,7 +130,6 @@ function Modal({ open, onClose, title, children, footer }) {
 /* ─── Role badge ─────────────────────────────────────────────────────────── */
 const roleBadge = (roleName) => {
     const map = {
-        'Super Admin': { bg: '#fff3eb', color: '#c05a0a' },
         'Admin Kampus': { bg: '#e8f0fb', color: '#1a3560' },
         'Admin PT': { bg: '#f0f4ff', color: '#3730a3' },
         'Alumni': { bg: '#f0fdf4', color: '#166534' },
@@ -229,7 +228,7 @@ export default function UserIndex({ users, roles, filters }) {
 
     const handleSearch = (e) => {
         e.preventDefault();
-        router.get(route('superadmin.users.index'), { search }, { preserveState: true, replace: true });
+        router.get(route('adminkampus.users.index'), { search }, { preserveState: true, replace: true });
     };
 
     const openCreate = () => { reset(); clearErrors(); setIsCreateOpen(true); };
@@ -242,14 +241,14 @@ export default function UserIndex({ users, roles, filters }) {
 
     const handleCreate = (e) => {
         e.preventDefault();
-        post(route('superadmin.users.store'), { onSuccess: () => setIsCreateOpen(false) });
+        post(route('adminkampus.users.store'), { onSuccess: () => setIsCreateOpen(false) });
     };
     const handleEdit = (e) => {
         e.preventDefault();
-        put(route('superadmin.users.update', selectedUser.id), { onSuccess: () => setIsEditOpen(false) });
+        put(route('adminkampus.users.update', selectedUser.id), { onSuccess: () => setIsEditOpen(false) });
     };
     const handleDelete = () => {
-        destroy(route('superadmin.users.destroy', selectedUser.id), { onSuccess: () => setIsDeleteOpen(false) });
+        destroy(route('adminkampus.users.destroy', selectedUser.id), { onSuccess: () => setIsDeleteOpen(false) });
     };
 
     return (

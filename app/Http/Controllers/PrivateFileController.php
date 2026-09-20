@@ -19,10 +19,8 @@ class PrivateFileController extends Controller
 
         $allowed = false;
 
-        if ($user->hasRole('Super Admin')) {
+        if ($user->hasRole('Admin Kampus')) {
             $allowed = true;
-        } elseif ($user->hasRole('Admin Kampus')) {
-            $allowed = str_starts_with($path, 'mou_documents/');
         } elseif ($user->hasRole('Admin PT')) {
             $company = $user->company;
             if ($company) {

@@ -52,12 +52,26 @@ function DetailModal({ open, onClose, response, questions }) {
                             </div>
                         </div>
 
-                        <div style={{ marginBottom: 12, paddingBottom: 12, borderBottom: `1px dashed #fde68a` }}>
-                            <div style={{ fontSize: 12, fontWeight: 700, color: '#92400e', marginBottom: 4 }}>Nama Perusahaan / Instansi / Usaha</div>
-                            <div style={{ fontSize: 13.5, color: T.navy, padding: '8px 12px', borderRadius: 6, background: '#fff' }}>
-                                {response.nama_perusahaan || <em style={{ color: T.muted }}>Tidak diisi</em>}
+                        {response.melanjutkan_pendidikan && (
+                            <div style={{ marginBottom: 12, paddingBottom: 12, borderBottom: `1px dashed #fde68a` }}>
+                                <div style={{ fontSize: 12, fontWeight: 700, color: '#92400e', marginBottom: 4 }}>Melanjutkan Pendidikan</div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                    <span style={{ fontSize: 12, fontWeight: 700, padding: '3px 10px', borderRadius: 20, background: '#f5f3ff', color: '#7c3aed' }}>🎓 Sedang melanjutkan studi</span>
+                                    {response.pendidikan_institusi && (
+                                        <span style={{ fontSize: 13.5, color: T.navy }}>{response.pendidikan_institusi}</span>
+                                    )}
+                                </div>
                             </div>
-                        </div>
+                        )}
+
+                        {response.status_pekerjaan === 'Mencari Kerja' ? null : (
+                            <div style={{ marginBottom: 12, paddingBottom: 12, borderBottom: `1px dashed #fde68a` }}>
+                                <div style={{ fontSize: 12, fontWeight: 700, color: '#92400e', marginBottom: 4 }}>Nama Perusahaan / Usaha</div>
+                                <div style={{ fontSize: 13.5, color: T.navy, padding: '8px 12px', borderRadius: 6, background: '#fff' }}>
+                                    {response.nama_perusahaan || <em style={{ color: T.muted }}>Tidak diisi</em>}
+                                </div>
+                            </div>
+                        )}
 
                         {response.status_pekerjaan === 'Bekerja' && (
                             <div>
@@ -124,7 +138,7 @@ export default function TracerStudyResponses({ tracer, responses }) {
                         Total Tanggapan: <strong style={{ color: T.navy }}>{responses.length}</strong> Alumni
                     </div>
                     <div style={{ display: 'flex', gap: 8 }}>
-                        {['Bekerja', 'Mencari Kerja', 'Wiraswasta', 'Lanjutkan Pendidikan'].map(s => {
+                        {['Bekerja', 'Mencari Kerja', 'Wiraswasta'].map(s => {
                             const count = responses.filter(r => r.status_pekerjaan === s).length;
                             if (count === 0) return null;
                             return (
@@ -133,6 +147,15 @@ export default function TracerStudyResponses({ tracer, responses }) {
                                 </span>
                             );
                         })}
+                        {(() => {
+                            const count = responses.filter(r => r.melanjutkan_pendidikan).length;
+                            if (count === 0) return null;
+                            return (
+                                <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20, background: T.purpleLight, color: T.purple }}>
+                                    🎓 Melanjutkan Pendidikan: {count}
+                                </span>
+                            );
+                        })()}
                     </div>
                 </div>
 

@@ -104,7 +104,7 @@ export default function LamaranIndex({ applications }) {
 
             <div className="al-root">
                 {/* Summary Cards */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 10, marginBottom: 20 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10, marginBottom: 20 }}>
                     {Object.entries(statusMap).map(([key, s], i) => (
                         <button key={key} onClick={() => setFilter(filter === key ? 'all' : key)} style={{
                             padding: '12px 10px', borderRadius: 12,
@@ -141,8 +141,8 @@ export default function LamaranIndex({ applications }) {
                         </div>
                     </div>
 
-                    <div style={{ borderRadius: 10, overflow: 'hidden', border: `1px solid ${T.borderSoft}` }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <div style={{ borderRadius: 10, overflowX: 'auto', border: `1px solid ${T.borderSoft}`, WebkitOverflowScrolling: 'touch', scrollbarWidth: 'thin' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 720 }}>
                             <thead>
                                 <tr style={{ background: T.bg, borderBottom: `1px solid ${T.border}` }}>
                                     {['Tanggal', 'Posisi', 'Perusahaan', 'Status'].map((h, i) => (

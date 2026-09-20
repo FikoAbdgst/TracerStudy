@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\SuperAdmin;
+namespace App\Http\Controllers\AdminKampus;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
@@ -26,7 +26,7 @@ class UserController extends Controller
 
         $roles = Role::all();
 
-        return Inertia::render('SuperAdmin/Users/Index', [
+        return Inertia::render('AdminKampus/Users/Index', [
             'users' => $users,
             'roles' => $roles,
             'filters' => $request->only(['search']),
@@ -77,8 +77,8 @@ class UserController extends Controller
     // Menghapus pengguna (Delete)
     public function destroy(User $user)
     {
-        if ($user->hasRole('Super Admin') && User::role('Super Admin')->count() === 1) {
-            return back()->with('error', 'Tidak dapat menghapus satu-satunya Super Admin.');
+        if ($user->hasRole('Admin Kampus') && User::role('Admin Kampus')->count() === 1) {
+            return back()->with('error', 'Tidak dapat menghapus satu-satunya Admin Kampus.');
         }
 
         $user->delete();

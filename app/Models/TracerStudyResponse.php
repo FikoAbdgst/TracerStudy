@@ -11,12 +11,15 @@ class TracerStudyResponse extends Model
         'alumni_id',
         'answers',
         'status_pekerjaan',
+        'melanjutkan_pendidikan',
+        'pendidikan_institusi',
         'nama_perusahaan',
         'jabatan',
     ];
 
     protected $casts = [
         'answers' => 'array',
+        'melanjutkan_pendidikan' => 'boolean',
     ];
 
     public function form()

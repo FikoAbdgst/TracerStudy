@@ -41,6 +41,10 @@ class TracerStudyController extends Controller
 
     public function update(Request $request, TracerStudyForm $tracer)
     {
+        if (! $tracer->isDraft()) {
+            return back()->with('error', 'Kuesioner yang sedang aktif atau telah ditutup tidak dapat diedit. Buat kuesioner baru jika membutuhkan perubahan.');
+        }
+
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -54,6 +58,10 @@ class TracerStudyController extends Controller
 
     public function destroy(TracerStudyForm $tracer)
     {
+        if ($tracer->isActive()) {
+            return back()->with('error', 'Kuesioner yang sedang aktif tidak dapat dihapus. Tutup terlebih dahulu.');
+        }
+
         $tracer->delete();
 
         return back()->with('message', 'Form dihapus.');

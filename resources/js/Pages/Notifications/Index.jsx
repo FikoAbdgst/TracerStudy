@@ -94,7 +94,7 @@ export default function NotificationIndex({ notifications }) {
                     borderRadius: 12, padding: '14px 18px',
                     display: 'flex', alignItems: 'center', gap: 10,
                     boxShadow: '0 8px 30px rgba(0,0,0,0.12)',
-                    maxWidth: 400,
+                    maxWidth: 400, width: 'calc(100vw - 40px)',
                 }}>
                     <span style={{ fontSize: 18 }}>✅</span>
                     <span style={{ fontSize: 13, fontWeight: 600, color: '#16a34a', flex: 1 }}>{toast}</span>
@@ -164,7 +164,7 @@ export default function NotificationIndex({ notifications }) {
                 </div>
 
                 {pagination?.last_page > 1 && (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 24 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 6, marginTop: 24 }}>
                         {pagination.links?.map((link, i) => (
                             <button key={i} onClick={() => goToPage(link.url)}
                                 disabled={!link.url || link.active}

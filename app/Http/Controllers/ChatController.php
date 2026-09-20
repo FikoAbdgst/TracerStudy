@@ -366,12 +366,12 @@ class ChatController extends Controller
             abort(403, 'HRD tidak dapat memulai percakapan dengan alumni melalui fitur ini.');
         }
 
-        if (! $user->hasRole('Alumni') && ! $user->hasRole('Admin Kampus') && ! $user->hasRole('Super Admin')) {
+        if (! $user->hasRole('Alumni') && ! $user->hasRole('Admin Kampus')) {
             abort(403, 'Anda tidak diizinkan memulai percakapan dengan alumni.');
         }
 
         $existingTypes = ['alumni'];
-        if ($user->hasRole('Admin Kampus') || $user->hasRole('Super Admin')) {
+        if ($user->hasRole('Admin Kampus')) {
             $existingTypes[] = 'admin';
         }
 
@@ -482,22 +482,11 @@ class ChatController extends Controller
         $targetId = $request->input('user_id');
         $targetUser = User::with('alumniProfile')->findOrFail($targetId);
 
-        if ($user->hasRole('Alumni') && $targetUser->hasRole('Alumni')) {
+        if ($targetUser->hasRole('Alumni')) {
             $type = 'alumni';
-        } elseif ($user->hasRole('Super Admin') && $targetUser->hasRole('Alumni')) {
-            $type = 'alumni';
-        } elseif ($user->hasRole('Alumni') && $targetUser->hasRole('Super Admin')) {
-            $type = 'alumni';
-        } elseif ($user->hasRole('Super Admin') && $targetUser->hasRole('Admin Kampus')) {
+        } elseif ($targetUser->hasRole('Admin Kampus')) {
             $type = 'admin';
-        } elseif ($user->hasRole('Admin Kampus') && $targetUser->hasRole('Super Admin')) {
-            $type = 'admin';
-        } elseif (($user->hasRole('Alumni') && $targetUser->hasRole('Admin Kampus')) ||
-                  ($user->hasRole('Admin Kampus') && $targetUser->hasRole('Alumni'))) {
-            $type = 'admin';
-        } elseif ($user->hasRole('Super Admin') && $targetUser->hasRole('Admin PT')) {
-            $type = 'company';
-        } elseif ($user->hasRole('Admin PT') && $targetUser->hasRole('Super Admin')) {
+        } elseif ($targetUser->hasRole('Admin PT')) {
             $type = 'company';
         } else {
             abort(403, 'Tidak dapat memulai percakapan dengan pengguna ini.');

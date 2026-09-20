@@ -22,9 +22,8 @@ use App\Http\Controllers\Perusahaan\JobPostingController;
 use App\Http\Controllers\Perusahaan\TalentPoolController;
 use App\Http\Controllers\PrivateFileController;
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\SuperAdmin\DashboardController as SuperAdminDashboard;
-use App\Http\Controllers\SuperAdmin\MasterDataController;
-use App\Http\Controllers\SuperAdmin\UserController;
+use App\Http\Controllers\AdminKampus\MasterDataController;
+use App\Http\Controllers\AdminKampus\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [GuestController::class, 'index']);
@@ -63,7 +62,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Dashboard Utama — redirect ke dashboard sesuai role
     Route::get('/dashboard', function () {
         $user = auth()->user();
-        if ($user->hasRole('Super Admin')) return redirect()->route('superadmin.dashboard');
         if ($user->hasRole('Admin Kampus')) return redirect()->route('adminkampus.dashboard');
         if ($user->hasRole('Admin PT')) return redirect()->route('perusahaan.dashboard');
         if ($user->hasRole('Alumni')) return redirect()->route('alumni.dashboard');
@@ -75,42 +73,22 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    // --- GRUP SUPER ADMIN ---
-    // routes/web.php
-
-    Route::middleware(['role:Super Admin'])->prefix('super-admin')->name('superadmin.')->group(function () {
-        // 1. Rute Dashboard (Tujuan setelah login)
-        Route::get('/dashboard', [SuperAdminDashboard::class, 'index'])->name('dashboard');
-
-        Route::post('/master-data/prodi', [MasterDataController::class, 'storeProdi'])->name('master-data.prodi.store');
-        Route::post('/master-data/industry', [MasterDataController::class, 'storeIndustry'])->name('master-data.industry.store');
-        Route::delete('/master-data/prodi/{prodi}', [MasterDataController::class, 'destroyProdi'])->name('master-data.prodi.destroy');
-        Route::delete('/master-data/industry/{industry}', [MasterDataController::class, 'destroyIndustry'])->name('master-data.industry.destroy');
-        Route::get('/master-data', [MasterDataController::class, 'index'])->name('master-data');
-        Route::put('/master-data/prodi/{prodi}', [MasterDataController::class, 'updateProdi'])->name('master-data.prodi.update');
-        Route::put('/master-data/industry/{industry}', [MasterDataController::class, 'updateIndustry'])->name('master-data.industry.update');
-        Route::get('/master-data', [MasterDataController::class, 'index'])->name('master-data');
-
-        // Rute Kategori (Tabs)
-        Route::post('/master-data/category', [MasterDataController::class, 'storeCategory'])->name('master-data.category.store');
-        Route::delete('/master-data/category/{category}', [MasterDataController::class, 'destroyCategory'])->name('master-data.category.destroy');
-
-        // Rute Item (Isi Tabel)
-        Route::post('/master-data/item', [MasterDataController::class, 'storeItem'])->name('master-data.item.store');
-        Route::put('/master-data/item/{item}', [MasterDataController::class, 'updateItem'])->name('master-data.item.update');
-        Route::delete('/master-data/item/{item}', [MasterDataController::class, 'destroyItem'])->name('master-data.item.destroy');
-
-        // 3. Rute Mengelola Hak Akses (User Management) yang baru kita buat
-        Route::resource('users', UserController::class)->except(['create', 'show', 'edit']);
-    });
-
     // --- GRUP ADMIN KAMPUS ---
     Route::middleware(['auth', 'role:Admin Kampus'])->prefix('admin-kampus')->name('adminkampus.')->group(function () {
         Route::get('/dashboard', [AdminKampusDashboard::class, 'index'])->name('dashboard');
 
+        // Pengelolaan Master Data (Sektor Industri, Program Studi, Keahlian)
+        Route::get('/master-data', [MasterDataController::class, 'index'])->name('master-data');
+        Route::post('/master-data/item', [MasterDataController::class, 'storeItem'])->name('master-data.item.store');
+        Route::put('/master-data/item/{item}', [MasterDataController::class, 'updateItem'])->name('master-data.item.update');
+        Route::delete('/master-data/item/{item}', [MasterDataController::class, 'destroyItem'])->name('master-data.item.destroy');
+
+        // Pengelolaan Hak Akses (User Management)
+        Route::resource('users', UserController::class)->except(['create', 'show', 'edit']);
+
         Route::get('/alumni', [AlumniController::class, 'index'])->name('alumni.index');
-        Route::get('/alumni/{alumni}', [AlumniController::class, 'show'])->name('alumni.show');
         Route::get('/alumni/template', [AlumniController::class, 'downloadTemplate'])->name('alumni.template');
+        Route::get('/alumni/{alumni}', [AlumniController::class, 'show'])->name('alumni.show');
         Route::get('/alumni/export/pdf', [AlumniController::class, 'exportPdf'])->name('alumni.export.pdf');
         Route::get('/alumni/preview/pdf', [AlumniController::class, 'previewPdf'])->name('alumni.preview.pdf');
         Route::post('/alumni/import', [AlumniController::class, 'import'])->name('alumni.import');
@@ -166,7 +144,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 
     // --- GRUP ALUMNI ---
-    Route::middleware(['auth', 'role:Alumni'])->prefix('alumni')->name('alumni.')->group(function () {
+    Route::middleware(['auth', 'role:Alumni', 'alumni.active'])->prefix('alumni')->name('alumni.')->group(function () {
         // 1. Dashboard
         Route::get('/dashboard', [AlumniDashboard::class, 'index'])->name('dashboard');
 
@@ -189,8 +167,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/lamaran/{lamaran}/reject-invitation', [JobPortalController::class, 'rejectInvitation'])->name('lamaran.reject-invitation');
     });
 
-    // --- FORUM DISKUSI (Alumni + Super Admin + Admin Kampus) ---
-    Route::middleware(['auth', 'verified', 'role:Alumni|Super Admin|Admin Kampus'])->prefix('alumni')->name('alumni.')->group(function () {
+    // --- FORUM DISKUSI (Alumni + Admin Kampus) ---
+    Route::middleware(['auth', 'verified', 'role:Alumni|Admin Kampus', 'alumni.active'])->prefix('alumni')->name('alumni.')->group(function () {
         Route::get('/forum', [ForumController::class, 'index'])->name('forum.index');
         Route::post('/forum', [ForumController::class, 'store'])->name('forum.store')->middleware('throttle:3,10');
         Route::get('/forum/{forum}', [ForumController::class, 'show'])->name('forum.show');
@@ -202,7 +180,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 });
 
-// --- MESSAGING (All roles except Super Admin) ---
+// --- MESSAGING ---
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/messages', [ChatController::class, 'index'])->name('messages.index');
     Route::post('/messages/{conversation}/send', [ChatController::class, 'send'])->name('messages.send');

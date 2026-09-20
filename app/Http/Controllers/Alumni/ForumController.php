@@ -53,10 +53,10 @@ class ForumController extends Controller
             $validated['attachment'] = $paths;
         }
 
-        // Only Admin Kampus & Super Admin can create announcements
+        // Only Admin Kampus can create announcements
         if ($validated['is_announcement'] ?? false) {
             $user = Auth::user();
-            if (! $user->hasAnyRole(['Admin Kampus', 'Super Admin'])) {
+            if (! $user->hasRole('Admin Kampus')) {
                 unset($validated['is_announcement']);
             }
         }
@@ -90,10 +90,10 @@ class ForumController extends Controller
             'is_announcement' => 'nullable|boolean',
         ]);
 
-        // Only Admin Kampus & Super Admin can toggle announcement
+        // Only Admin Kampus can toggle announcement
         if ($request->has('is_announcement')) {
             $user = Auth::user();
-            if (! $user->hasAnyRole(['Admin Kampus', 'Super Admin'])) {
+            if (! $user->hasRole('Admin Kampus')) {
                 unset($validated['is_announcement']);
             }
         }

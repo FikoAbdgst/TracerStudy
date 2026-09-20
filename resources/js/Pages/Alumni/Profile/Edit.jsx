@@ -16,6 +16,7 @@ const T = {
     muted: '#94a3b8', mutedDark: '#64748b',
     green: '#16a34a', greenLight: '#f0fdf4',
     red: '#dc2626',
+    purple: '#7c3aed', purpleLight: '#f5f3ff',
 };
 
 // ─── Field base styles ────────────────────────────────────────────────────────
@@ -81,10 +82,10 @@ const ViewMode = ({ profile, data }) => {
     };
 
     return (
-        <div className="al-layout">
-            <div className="al-main">
+        <div className="ap-layout">
+            <div className="ap-main">
                 <ViewSection title="Data Akademik" icon="🎓" delay={0.04}>
-                    <div className="al-grid-2">
+                    <div className="ap-grid-2">
                         <ProfileField label="NIM" value={data.nim} />
                         <ProfileField label="Jenjang" value={data.jenjang_pendidikan} />
                         <ProfileField label="Program Studi" value={data.major} full />
@@ -93,7 +94,7 @@ const ViewMode = ({ profile, data }) => {
                 </ViewSection>
 
                 <ViewSection title="Informasi Personal & Kontak" icon="📱" delay={0.07}>
-                    <div className="al-grid-2">
+                    <div className="ap-grid-2">
                         <ProfileField label="Tanggal Lahir" value={formatDate(data.tanggal_lahir)} />
                         <ProfileField label="No. WhatsApp / HP" value={data.phone_number} />
                         <ProfileField label="Domisili Saat Ini" value={data.address} full />
@@ -164,7 +165,7 @@ const ViewMode = ({ profile, data }) => {
 
             </div>
 
-            <div className="al-sidebar">
+            <div className="ap-sidebar">
 
                 <ViewSection title="Dokumen Pelengkap" icon="📄" delay={0.13}>
                     <div style={{ padding: '14px 0 6px' }}>
@@ -198,6 +199,11 @@ const ViewMode = ({ profile, data }) => {
                         <div style={{ fontSize: 12, color: T.mutedDark, marginTop: 2 }}>
                             Status pekerjaan: <strong>{data.employment_status || 'Belum diisi'}</strong>
                         </div>
+                        {data.melanjutkan_pendidikan && (
+                            <div style={{ fontSize: 12, color: T.purple, marginTop: 4, fontWeight: 600 }}>
+                                🎓 Sedang melanjutkan pendidikan{data.pendidikan_institusi ? ` — ${data.pendidikan_institusi}` : ''}
+                            </div>
+                        )}
                     </div>
                 </ViewSection>
 
@@ -294,12 +300,12 @@ const EditMode = ({ data, setData, errors, processing, submit, programStudis, ma
     return (
         <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-            <div className="al-layout">
-                <div className="al-main">
+            <div className="ap-layout">
+                <div className="ap-main">
 
                     {/* ── Data Akademik ── */}
                     <Section title="Data Akademik" icon="🎓" delay={0.04}>
-                        <div className="al-grid-akademik" style={{ marginBottom: 14 }}>
+                        <div className="ap-grid-akademik" style={{ marginBottom: 14 }}>
                             <div>
                                 <FieldLabel required>NIM</FieldLabel>
                                 <input
@@ -357,7 +363,7 @@ const EditMode = ({ data, setData, errors, processing, submit, programStudis, ma
 
                     {/* ── Informasi Personal & Kontak ── */}
                     <Section title="Informasi Personal & Kontak" icon="📱" delay={0.07}>
-                        <div className="al-grid-2" style={{ marginBottom: 14 }}>
+                        <div className="ap-grid-2" style={{ marginBottom: 14 }}>
                             <div>
                                 <FieldLabel required>Tanggal Lahir</FieldLabel>
                                 <div style={{ position: 'relative' }}>
@@ -389,7 +395,7 @@ const EditMode = ({ data, setData, errors, processing, submit, programStudis, ma
                         {/* ── DOMISILI BERHIERARKI ── */}
                         <div style={{ marginBottom: 14 }}>
                             <FieldLabel required>Domisili Saat Ini</FieldLabel>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
                                 {/* Provinsi */}
                                 <div style={{ position: 'relative' }}>
                                     <select
@@ -664,7 +670,7 @@ const EditMode = ({ data, setData, errors, processing, submit, programStudis, ma
 
                 </div>
 
-                <div className="al-sidebar">
+                <div className="ap-sidebar">
 
                     {/* ── Status Pekerjaan ── */}
                     <Section title="Status Pekerjaan" icon="💼" delay={0.115}>
@@ -675,7 +681,6 @@ const EditMode = ({ data, setData, errors, processing, submit, programStudis, ma
                                     { value: 'Bekerja', label: 'Bekerja', icon: '💼' },
                                     { value: 'Mencari Kerja', label: 'Mencari Kerja', icon: '🔍' },
                                     { value: 'Wiraswasta', label: 'Wiraswasta', icon: '🚀' },
-                                    { value: 'Lanjutkan Pendidikan', label: 'Lanjutkan Pendidikan', icon: '🎓' },
                                 ].map(opt => (
                                     <label key={opt.value} style={{
                                         display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
@@ -696,6 +701,41 @@ const EditMode = ({ data, setData, errors, processing, submit, programStudis, ma
                                 ))}
                             </div>
                             <InputError className="mt-2" message={errors.employment_status} />
+
+                            {/* ── Melanjutkan Pendidikan (checkbox independen) ── */}
+                            <div style={{
+                                marginTop: 14, padding: '12px 14px', borderRadius: 9,
+                                border: `1.5px solid ${data.melanjutkan_pendidikan ? T.purple : T.border}`,
+                                background: data.melanjutkan_pendidikan ? T.purpleLight : T.bg,
+                                transition: 'all 0.15s',
+                            }}>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: 9, cursor: 'pointer' }}>
+                                    <input type="checkbox"
+                                        checked={data.melanjutkan_pendidikan}
+                                        onChange={e => setData('melanjutkan_pendidikan', e.target.checked)}
+                                        style={{ width: 16, height: 16, accentColor: T.purple, flexShrink: 0 }}
+                                    />
+                                    <span style={{ fontSize: 13, fontWeight: 700, color: T.navy }}>
+                                        🎓 Sedang melanjutkan pendidikan
+                                        <span style={{ fontWeight: 400, fontSize: 11, color: T.muted, marginLeft: 5 }}>
+                                            (boleh digabung dengan status bekerja / wiraswasta)
+                                        </span>
+                                    </span>
+                                </label>
+                                {data.melanjutkan_pendidikan && (
+                                    <div style={{ marginTop: 10 }}>
+                                        <FieldLabel>Nama Institusi / Universitas (opsional)</FieldLabel>
+                                        <input style={fieldBase}
+                                            placeholder="Contoh: Universitas Indonesia (S2 Teknik Informatika)"
+                                            value={data.pendidikan_institusi}
+                                            onChange={e => setData('pendidikan_institusi', e.target.value)}
+                                            onFocus={e => { e.target.style.borderColor = T.purple; e.target.style.background = '#fff'; }}
+                                            onBlur={e => { e.target.style.borderColor = T.border; e.target.style.background = T.bg; }}
+                                        />
+                                        <InputError className="mt-1.5" message={errors.pendidikan_institusi} />
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </Section>
 
@@ -800,7 +840,7 @@ const EditMode = ({ data, setData, errors, processing, submit, programStudis, ma
             </div>
 
             {/* ── Footer Simpan / Batal ── */}
-            <div className="al-footer-sticky" style={{
+            <div className="ap-footer-sticky" style={{
                 display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
                 padding: '14px 20px', background: '#ffffffee', backdropFilter: 'blur(6px)', borderRadius: 14,
                 border: `1px solid ${T.borderSoft}`, boxShadow: '0 4px 18px rgba(15,31,61,0.12)',
@@ -852,7 +892,11 @@ export default function EditProfile({ profile, programStudis = [], keahlianMaste
     const [isEditing, setIsEditing] = useState(false);
     const [masterSkills, setMasterSkills] = useState(keahlianMaster);
 
-    const { data, setData, post, processing, errors } = useForm({
+    const statusMigration = profile?.employment_status || '';
+        const adaptedEmployment = statusMigration === 'Lanjutkan Pendidikan' ? '' : statusMigration;
+        const continuingEducation = statusMigration === 'Lanjutkan Pendidikan' || profile?.melanjutkan_pendidikan === true;
+
+        const { data, setData, post, processing, errors } = useForm({
         nim: profile?.nim || '',
         major: profile?.major || '',
         graduation_year: profile?.graduation_year || '',
@@ -864,7 +908,9 @@ export default function EditProfile({ profile, programStudis = [], keahlianMaste
         experience: profile?.experience || '',
         skills: profile?.skills || [],
         cv_file: null,
-        employment_status: profile?.employment_status || '',
+        employment_status: adaptedEmployment,
+        melanjutkan_pendidikan: continuingEducation,
+        pendidikan_institusi: profile?.pendidikan_institusi || '',
         company_name: profile?.company_name || '',
         position: profile?.position || '',
         job_sector: profile?.job_sector || '',
@@ -908,7 +954,7 @@ export default function EditProfile({ profile, programStudis = [], keahlianMaste
 
             <style>{`
                 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-                .al-root * { font-family: 'Plus Jakarta Sans', sans-serif; }
+                .ap-root * { font-family: 'Plus Jakarta Sans', sans-serif; }
                 [data-radix-popper-content-wrapper] { z-index: 99999 !important; }
 
                 @keyframes cardIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
@@ -925,63 +971,63 @@ export default function EditProfile({ profile, programStudis = [], keahlianMaste
 
                 /* ── Responsive grids ── */
 
-                .al-grid-akademik {
+                .ap-grid-akademik {
                     display: grid;
                     grid-template-columns: 2fr 1fr 1fr;
                     gap: 14px;
                 }
                 @media (max-width: 600px) {
-                    .al-grid-akademik { grid-template-columns: 1fr 1fr; }
-                    .al-grid-akademik > div:first-child { grid-column: 1 / -1; }
+                    .ap-grid-akademik { grid-template-columns: 1fr 1fr; }
+                    .ap-grid-akademik > div:first-child { grid-column: 1 / -1; }
                 }
                 @media (max-width: 420px) {
-                    .al-grid-akademik { grid-template-columns: 1fr; }
-                    .al-grid-akademik > div:first-child { grid-column: auto; }
+                    .ap-grid-akademik { grid-template-columns: 1fr; }
+                    .ap-grid-akademik > div:first-child { grid-column: auto; }
                 }
 
-                .al-grid-2 {
+                .ap-grid-2 {
                     display: grid;
                     grid-template-columns: 1fr 1fr;
                     gap: 0;
                 }
                 @media (max-width: 500px) {
-                    .al-grid-2 { grid-template-columns: 1fr; }
+                    .ap-grid-2 { grid-template-columns: 1fr; }
                 }
 
                 /* ── Two-column layout: konten utama + sidebar ── */
-                .al-layout {
+                .ap-layout {
                     display: flex;
                     flex-direction: column;
                     gap: 16px;
                 }
-                .al-main, .al-sidebar {
+                .ap-main, .ap-sidebar {
                     display: flex;
                     flex-direction: column;
                     gap: 14px;
                     min-width: 0;
                 }
                 @media (min-width: 960px) {
-                    .al-layout {
+                    .ap-layout {
                         display: grid;
                         grid-template-columns: 1.65fr 1fr;
                         align-items: start;
                         gap: 20px;
                     }
-                    .al-sidebar {
+                    .ap-sidebar {
                         position: sticky;
                         top: 16px;
                     }
                 }
 
                 /* Tombol Simpan/Batal tetap terlihat saat scroll (mengurangi kebutuhan scroll berulang) */
-                .al-footer-sticky {
+                .ap-footer-sticky {
                     position: sticky;
                     bottom: 14px;
                     z-index: 20;
                 }
             `}</style>
 
-            <div className="al-root" style={{ maxWidth: 1180, margin: '0 auto', padding: '0 2px' }}>
+            <div className="ap-root" style={{ maxWidth: 1180, margin: '0 auto', padding: '0 2px' }}>
 
                 {flash?.message && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', borderRadius: 10, marginBottom: 18, background: T.greenLight, border: '1px solid #bbf7d0', animation: 'fadeIn 0.3s both' }}>
@@ -1104,7 +1150,9 @@ export default function EditProfile({ profile, programStudis = [], keahlianMaste
                                 skills: profile?.skills || [],
                                 cv_file: null,
                                 photo_file: null,
-                                employment_status: profile?.employment_status || '',
+                                employment_status: adaptedEmployment,
+                                melanjutkan_pendidikan: continuingEducation,
+                                pendidikan_institusi: profile?.pendidikan_institusi || '',
                                 company_name: profile?.company_name || '',
                                 position: profile?.position || '',
                                 job_sector: profile?.job_sector || '',

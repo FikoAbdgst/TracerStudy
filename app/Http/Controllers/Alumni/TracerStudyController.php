@@ -59,7 +59,9 @@ class TracerStudyController extends Controller
         }
 
         $validated = $request->validate([
-            'status_pekerjaan' => 'required|string|in:Bekerja,Mencari Kerja,Wiraswasta,Lanjutkan Pendidikan',
+            'status_pekerjaan' => 'required|string|in:Bekerja,Mencari Kerja,Wiraswasta',
+            'melanjutkan_pendidikan' => 'nullable|boolean',
+            'pendidikan_institusi' => 'nullable|string|max:255',
             'nama_perusahaan' => 'nullable|string|max:255',
             'jabatan' => 'nullable|string|max:255',
             'answers' => 'nullable|array',
@@ -68,16 +70,23 @@ class TracerStudyController extends Controller
         DB::transaction(function () use ($validated, $alumniProfile, $kuesioner) {
             $hasCompany = in_array($validated['status_pekerjaan'], ['Bekerja', 'Wiraswasta']);
             $isWorking = $validated['status_pekerjaan'] === 'Bekerja';
+            $melanjutkanPendidikan = (bool) ($validated['melanjutkan_pendidikan'] ?? false);
 
             $alumniProfile->update([
                 'employment_status' => $validated['status_pekerjaan'],
+                'melanjutkan_pendidikan' => $melanjutkanPendidikan,
+                'pendidikan_institusi' => $melanjutkanPendidikan ? ($validated['pendidikan_institusi'] ?? null) : null,
                 'company_name' => $hasCompany ? ($validated['nama_perusahaan'] ?? null) : null,
                 'position' => $isWorking ? ($validated['jabatan'] ?? null) : null,
             ]);
 
             $questions = $kuesioner->questions ?? [];
+            $visibleStatuses = collect([$validated['status_pekerjaan']]);
+            if ($melanjutkanPendidikan) {
+                $visibleStatuses->push('Lanjutkan Pendidikan');
+            }
             $visibleIds = collect($questions)
-                ->filter(fn ($q) => empty($q['target_statuses']) || in_array($validated['status_pekerjaan'], $q['target_statuses']))
+                ->filter(fn ($q) => empty($q['target_statuses']) || collect($q['target_statuses'])->intersect($visibleStatuses)->isNotEmpty())
                 ->pluck('id')
                 ->map(fn ($id) => (string) $id)
                 ->toArray();
@@ -93,8 +102,10 @@ class TracerStudyController extends Controller
                 ],
                 [
                     'status_pekerjaan' => $validated['status_pekerjaan'],
-                    'nama_perusahaan' => $validated['nama_perusahaan'] ?? null,
-                    'jabatan' => $validated['jabatan'] ?? null,
+                    'melanjutkan_pendidikan' => $melanjutkanPendidikan,
+                    'pendidikan_institusi' => $melanjutkanPendidikan ? ($validated['pendidikan_institusi'] ?? null) : null,
+                    'nama_perusahaan' => $hasCompany ? ($validated['nama_perusahaan'] ?? null) : null,
+                    'jabatan' => $isWorking ? ($validated['jabatan'] ?? null) : null,
                     'answers' => $filteredAnswers,
                 ]
             );

@@ -7,7 +7,6 @@ import {
 } from '@/Components/ui/dropdown-menu';
 
 const roleBadge = (role) => {
-    if (role === 'Super Admin') return { text: 'Super Admin', bg: '#fef2f2', color: '#dc2626' };
     if (role === 'Admin Kampus') return { text: 'Admin', bg: '#f3e8ff', color: '#9333ea' };
     if (role === 'Admin PT') return { text: 'Perusahaan', bg: '#dbeafe', color: '#2563eb' };
     if (role === 'Alumni') return { text: 'Alumni', bg: '#dcfce7', color: '#16a34a' };
@@ -73,7 +72,6 @@ export default function ChatDropdown() {
                                 >
                                     <div className="relative flex-shrink-0">
                                         <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold ${
-                                            other?.role === 'Super Admin' ? 'bg-red-600' :
                                             other?.role === 'Admin PT' ? 'bg-blue-600' :
                                             other?.role === 'Admin Kampus' ? 'bg-purple-600' :
                                             'bg-green-600'

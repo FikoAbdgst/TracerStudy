@@ -40,14 +40,16 @@ export default function AlumniIndex({ alumnis, prodiList, yearList, filters }) {
     const [statusFilter, setStatusFilter] = useState(filters?.employment_status || '');
     const [yearFilter, setYearFilter] = useState(filters?.graduation_year || '');
     const [modalImportOpen, setModalImportOpen] = useState(false);
-    const [modalDuplicateOpen, setModalDuplicateOpen] = useState(false);
-    const [showDuplicateDetails, setShowDuplicateDetails] = useState(false);
+    const [importResult, setImportResult] = useState(null);
+    const [showDupDetails, setShowDupDetails] = useState(false);
     const [previewOpen, setPreviewOpen] = useState(false);
 
     useEffect(() => {
-        if (flash?.duplicates && flash.duplicates.length > 0) {
-            setModalDuplicateOpen(true);
-            setShowDuplicateDetails(false);
+        if (flash?.import_result) {
+            setImportResult({ type: 'success', ...flash.import_result });
+            setShowDupDetails(false);
+        } else if (flash?.import_error) {
+            setImportResult({ type: 'error', message: flash.import_error });
         }
     }, [flash]);
 
@@ -346,59 +348,71 @@ export default function AlumniIndex({ alumnis, prodiList, yearList, filters }) {
                 </div>
             </div>
 
-            {/* Duplicate Warning Modal */}
-            {modalDuplicateOpen && flash?.duplicates && (
-                <div className="modal-backdrop" style={{ zIndex: 99999 }}>
+            {/* Import Result Modal */}
+            {importResult && (
+                <div className="modal-backdrop" style={{ zIndex: 99999 }} onClick={(e) => { if (e.target === e.currentTarget) setImportResult(null) }}>
                     <div className="modal-box" style={{ animation: 'rowIn 0.25s cubic-bezier(0.22,1,0.36,1)', maxWidth: 520 }}>
-                        <div className="modal-header" style={{ background: '#fff7ed', borderBottom: '1px solid #fed7aa' }}>
+                        <div className="modal-header" style={{ background: importResult.type === 'success' ? '#f0fdf4' : '#fef2f2', borderBottom: `1px solid ${importResult.type === 'success' ? '#bbf7d0' : '#fecaca'}` }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#ffedd5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>⚠️</div>
-                                <span style={{ fontSize: 16, fontWeight: 800, color: '#9a3412' }}>Import Selesai dengan Catatan</span>
+                                <div style={{ width: 34, height: 34, borderRadius: '50%', background: importResult.type === 'success' ? '#dcfce7' : '#fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>
+                                    {importResult.type === 'success' ? '✅' : '⚠️'}
+                                </div>
+                                <span style={{ fontSize: 16, fontWeight: 800, color: importResult.type === 'success' ? '#166534' : '#991b1b' }}>
+                                    {importResult.type === 'success' ? (importResult.duplicates?.length > 0 ? 'Import Selesai dengan Catatan' : 'Import Berhasil') : 'Import Gagal'}
+                                </span>
                             </div>
-                            <button onClick={() => setModalDuplicateOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: '#9a3412' }}>✕</button>
+                            <button onClick={() => setImportResult(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: importResult.type === 'success' ? '#166534' : '#991b1b' }}>✕</button>
                         </div>
                         <div style={{ padding: 24 }}>
-                            <p style={{ fontSize: 13.5, color: TOKEN.navy, margin: '0 0 16px', lineHeight: 1.5 }}>
-                                {flash.message} Terdapat <strong>{flash.duplicates.length} NIM duplikat</strong> yang dilewati.
-                            </p>
-                            <div style={{ border: `1px solid ${TOKEN.borderSoft}`, borderRadius: 8, overflow: 'hidden' }}>
-                                <button onClick={() => setShowDuplicateDetails(!showDuplicateDetails)} style={{ width: '100%', padding: '12px 16px', background: '#fafbfc', border: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', fontSize: 13, fontWeight: 700, color: TOKEN.navyMid }}>
-                                    <span>Lihat Detail Duplikat</span>
-                                    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5" style={{ transform: showDuplicateDetails ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                                    </svg>
-                                </button>
-                                {showDuplicateDetails && (
-                                    <div style={{ maxHeight: 200, overflowY: 'auto', background: '#fff', borderTop: `1px solid ${TOKEN.borderSoft}` }}>
-                                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                                            <thead style={{ background: TOKEN.bg, position: 'sticky', top: 0 }}>
-                                                <tr>
-                                                    <th style={{ padding: '8px 16px', fontSize: 11, textAlign: 'left', color: TOKEN.mutedDark }}>NIM</th>
-                                                    <th style={{ padding: '8px 16px', fontSize: 11, textAlign: 'left', color: TOKEN.mutedDark }}>Nama</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {flash.duplicates.map((dup, i) => (
-                                                    <tr key={i} style={{ borderBottom: `1px solid ${TOKEN.borderSoft}` }}>
-                                                        <td style={{ padding: '10px 16px', fontSize: 12, fontWeight: 700, color: TOKEN.red }}>{dup.nim}</td>
-                                                        <td style={{ padding: '10px 16px', fontSize: 12, color: TOKEN.mutedDark }}>{dup.name}</td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                )}
-                            </div>
-                            <div style={{ marginTop: 24, display: 'flex', justifyContent: 'flex-end' }}>
-                                <button onClick={() => setModalDuplicateOpen(false)} style={{ height: 38, padding: '0 20px', borderRadius: 8, border: 'none', background: TOKEN.navyMid, color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Mengerti</button>
-                            </div>
+                            {importResult.type === 'error' ? (
+                                <p style={{ fontSize: 13.5, color: TOKEN.navy, margin: 0, lineHeight: 1.6 }}>{importResult.message}</p>
+                            ) : (
+                                <>
+                                    <p style={{ fontSize: 13.5, color: TOKEN.navy, margin: '0 0 16px', lineHeight: 1.5 }}>
+                                        Berhasil mengimpor <strong>{importResult.inserted}</strong> data alumni.
+                                    </p>
+                                    {importResult.duplicates?.length > 0 && (
+                                        <div style={{ border: `1px solid ${TOKEN.borderSoft}`, borderRadius: 8, overflow: 'hidden' }}>
+                                            <button onClick={() => setShowDupDetails(!showDupDetails)} style={{ width: '100%', padding: '12px 16px', background: '#fffbeb', border: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', fontSize: 13, fontWeight: 700, color: '#92400e' }}>
+                                                <span>{importResult.duplicates.length} NIM duplikat tidak dimasukkan</span>
+                                                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5" style={{ transform: showDupDetails ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                                                </svg>
+                                            </button>
+                                            {showDupDetails && (
+                                                <div style={{ maxHeight: 200, overflowY: 'auto', background: '#fff', borderTop: `1px solid ${TOKEN.borderSoft}` }}>
+                                                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                                        <thead style={{ background: TOKEN.bg, position: 'sticky', top: 0 }}>
+                                                            <tr>
+                                                                <th style={{ padding: '8px 16px', fontSize: 11, textAlign: 'left', color: TOKEN.mutedDark }}>NIM</th>
+                                                                <th style={{ padding: '8px 16px', fontSize: 11, textAlign: 'left', color: TOKEN.mutedDark }}>Nama</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {importResult.duplicates.map((dup, i) => (
+                                                                <tr key={i} style={{ borderBottom: `1px solid ${TOKEN.borderSoft}` }}>
+                                                                    <td style={{ padding: '10px 16px', fontSize: 12, fontWeight: 700, color: TOKEN.red }}>{dup.nim}</td>
+                                                                    <td style={{ padding: '10px 16px', fontSize: 12, color: TOKEN.mutedDark }}>{dup.name}</td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </>
+                            )}
+                        </div>
+                        <div style={{ padding: '0 24px 24px', display: 'flex', justifyContent: 'flex-end' }}>
+                            <button onClick={() => setImportResult(null)} style={{ height: 38, padding: '0 20px', borderRadius: 8, border: 'none', background: TOKEN.navyMid, color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Mengerti</button>
                         </div>
                     </div>
                 </div>
             )}
 
             {/* Import Modal */}
-            {modalImportOpen && !modalDuplicateOpen && (
+            {modalImportOpen && (
                 <div className="modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) setModalImportOpen(false) }}>
                     <div className="modal-box" style={{ animation: 'rowIn 0.25s cubic-bezier(0.22,1,0.36,1)' }}>
                         <div className="modal-header">
@@ -408,19 +422,19 @@ export default function AlumniIndex({ alumnis, prodiList, yearList, filters }) {
                         <form onSubmit={submitImport} style={{ padding: 24 }}>
                             <div style={{ background: '#fafbfc', padding: 16, borderRadius: 10, border: `1px solid ${TOKEN.borderSoft}`, marginBottom: 20 }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
-                                    <div style={{ fontSize: 12, fontWeight: 800, color: TOKEN.navyMid }}>Format File (CSV):</div>
+                                    <div style={{ fontSize: 12, fontWeight: 800, color: TOKEN.navyMid }}>Format File (CSV / Excel):</div>
                                     <a href={route('adminkampus.alumni.template')} className="btn-template" download>
                                         <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                                         Unduh Template
                                     </a>
                                 </div>
                                 <div style={{ fontSize: 11, color: TOKEN.mutedDark, fontStyle: 'italic' }}>
-                                    Kolom: NIM | Nama | Jenjang | Prodi | Tgl. Lahir (YYYY-MM-DD) | Tahun Lulus
+                                    Kolom (baris pertama): NIM | Nama Lengkap | Jenjang | Program Studi | Tanggal Lahir (YYYY-MM-DD) | Tahun Lulus
                                 </div>
                             </div>
                             <div style={{ marginBottom: 24 }}>
-                                <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: TOKEN.navy, marginBottom: 8 }}>Pilih File CSV</label>
-                                <input type="file" accept=".csv, .txt" required onChange={e => importForm.setData('file', e.target.files[0])}
+                                <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: TOKEN.navy, marginBottom: 8 }}>Pilih File CSV / Excel</label>
+                                <input type="file" accept=".csv, .txt, .xlsx, .xls" required onChange={e => importForm.setData('file', e.target.files[0])}
                                     style={{ width: '100%', padding: 10, border: `2px dashed ${TOKEN.border}`, borderRadius: 8, fontSize: 13, background: TOKEN.bg }} />
                                 {importForm.errors.file && <div style={{ fontSize: 12, color: TOKEN.red, marginTop: 4 }}>{importForm.errors.file}</div>}
                             </div>

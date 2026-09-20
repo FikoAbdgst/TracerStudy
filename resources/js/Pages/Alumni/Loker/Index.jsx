@@ -200,17 +200,17 @@ export default function LokerIndex({ jobs, myApplications, appliedConversationId
                             </div>
                         )}
                     </div>
-                    <div style={{ position: 'relative' }}>
+                    <div style={{ position: 'relative', flex: 1, minWidth: 200, maxWidth: 340 }}>
                         <svg style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: '#b0bec5' }} width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
                         </svg>
-                        <input style={{ ...fieldBase, paddingLeft: 33, width: 280 }} placeholder="Cari posisi, perusahaan, atau lokasi..."
+                        <input style={{ ...fieldBase, paddingLeft: 33, width: '100%' }} placeholder="Cari posisi, perusahaan, atau lokasi..."
                             value={searchQuery} onChange={e => setSearchQuery(e.target.value)} onFocus={onFocus} onBlur={onBlur} />
                     </div>
                 </div>
 
                 {/* Cards Grid */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(300px, 100%), 1fr))', gap: 16 }}>
                     {filtered.map((job, i) => {
                         const app = myApplications?.[job.id] || null;
                         const wm = job.work_model;
@@ -237,13 +237,13 @@ export default function LokerIndex({ jobs, myApplications, appliedConversationId
                             }}>
                                 {/* Header */}
                                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, marginBottom: 14 }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
                                         <div style={{ width: 40, height: 40, borderRadius: 10, background: T.navyLight, color: T.navyMid, fontSize: 16, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                                             {job.company?.name?.charAt(0)?.toUpperCase() ?? '?'}
                                         </div>
-                                        <div>
-                                            <div style={{ fontSize: 14, fontWeight: 800, color: T.navy }}>{job.title}</div>
-                                            <div style={{ fontSize: 12, color: T.muted, marginTop: 1 }}>{job.company?.name}</div>
+                                        <div style={{ minWidth: 0 }}>
+                                            <div style={{ fontSize: 14, fontWeight: 800, color: T.navy, overflowWrap: 'break-word' }}>{job.title}</div>
+                                            <div style={{ fontSize: 12, color: T.muted, marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{job.company?.name}</div>
                                             <div style={{ display: 'flex', gap: 5, marginTop: 6, flexWrap: 'wrap' }}>
                                                 <Badge variant="secondary" className="text-[10px] leading-none">Full-Time</Badge>
                                                 {wmInfo && (

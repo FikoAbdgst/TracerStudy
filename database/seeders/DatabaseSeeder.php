@@ -25,19 +25,18 @@ class DatabaseSeeder extends Seeder
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
         // 1. Buat Role di sistem Spatie
-        Role::firstOrCreate(['name' => 'Super Admin']);
         Role::firstOrCreate(['name' => 'Admin Kampus']);
         Role::firstOrCreate(['name' => 'Admin PT']);
         Role::firstOrCreate(['name' => 'Alumni']);
 
-        // 2. Buat Akun Super Admin & Admin Kampus
+        // 2. Buat Akun Admin Kampus
         $superAdmin = new User;
-        $superAdmin->name = 'Super Administrator';
+        $superAdmin->name = 'Administrator SITAMI';
         $superAdmin->email = 'superadmin@sitami.ac.id';
         $superAdmin->password = Hash::make('password123');
-        $superAdmin->role = 'Super Admin';
+        $superAdmin->role = 'Admin Kampus';
         $superAdmin->save();
-        $superAdmin->assignRole('Super Admin');
+        $superAdmin->assignRole('Admin Kampus');
 
         $adminKampus = new User;
         $adminKampus->name = 'Biro Kemahasiswaan (Admin)';
@@ -394,7 +393,11 @@ class DatabaseSeeder extends Seeder
             'skills' => ['PHP', 'Laravel', 'System Analysis', 'ERP Development', 'React.js'],
             'phone_number' => '085678901234',
             'address' => 'Jakarta Selatan',
-            'employment_status' => 'Lanjutkan Pendidikan',
+            'employment_status' => 'Bekerja',
+            'melanjutkan_pendidikan' => true,
+            'pendidikan_institusi' => 'Institut Teknologi Bandung (S2 Teknik Informatika)',
+            'company_name' => 'PT Solusi Teknologi Nusantara',
+            'position' => 'System Analyst',
             'judul_skripsi' => 'Implementasi Algoritma AHP Untuk Sistem Pendukung Keputusan Seleksi Penerimaan Karyawan',
             'portofolio_proyek' => [
                 ['nama_proyek' => 'SPK Penerimaan Karyawan', 'deskripsi_singkat' => 'Sistem pendukung keputusan berbasis web menggunakan metode AHP untuk membantu HRD melakukan seleksi kandidat.', 'tautan' => 'https://github.com/dimaspratama/spk-ahp'],
@@ -484,6 +487,12 @@ class DatabaseSeeder extends Seeder
             'content' => 'Betul sekali Pak/Bu, waktu saya melamar di Tech Company kemarin, sertifikat kompetensi Sistem Analis sangat membantu memvalidasi keahlian saya di mata user.',
         ]);
 
-        echo "Selesai! Database, Master Data, Lowongan Multi-Industri, dan Ruang Diskusi berhasil dipasang! \n";
+        // 7. SEED DATA: TRACER STUDY (form aktif + respons alumni)
+        $this->call(TracerStudySeeder::class);
+
+        // 7b. SEED DATA: LAMARAN ALUMNI KE LOWONGAN
+        $this->call(JobApplicationSeeder::class);
+
+        echo "Selesai! Database, Master Data, Lowongan Multi-Industri, Ruang Diskusi, dan Tracer Study berhasil dipasang! \n";
     }
 }

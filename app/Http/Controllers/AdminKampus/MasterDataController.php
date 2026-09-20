@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\SuperAdmin;
+namespace App\Http\Controllers\AdminKampus;
 
 use App\Http\Controllers\Controller;
 use App\Models\MasterCategory;
@@ -32,7 +32,7 @@ class MasterDataController extends Controller
             $query->latest();
         }])->get()->keyBy('slug'); // Kita jadikan 'slug' sebagai kunci array untuk mempermudah pemanggilan di React
 
-        return Inertia::render('SuperAdmin/MasterData/Index', [
+        return Inertia::render('AdminKampus/MasterData/Index', [
             'categoriesData' => $categories,
         ]);
     }
@@ -46,6 +46,24 @@ class MasterDataController extends Controller
             'parameter_value' => 'nullable|string|max:255',
         ]);
 
+        $category = MasterCategory::findOrFail($validated['master_category_id']);
+
+        $duplicateQuery = MasterItem::where('master_category_id', $validated['master_category_id'])
+            ->whereRaw('LOWER(name) = ?', [mb_strtolower(trim($validated['name']))]);
+
+        // Kategori berparameter (mis. Program Studi): nama boleh sama selama jenjang berbeda
+        if ($category->use_parameter) {
+            $duplicateQuery->where('parameter_value', $validated['parameter_value']);
+        }
+
+        if ($duplicateQuery->exists()) {
+            $message = $category->use_parameter
+                ? 'Nama "'.$validated['name'].'" dengan '.$category->parameter_label.' "'.$validated['parameter_value'].'" sudah terdaftar.'
+                : 'Nama "'.$validated['name'].'" sudah terdaftar di kategori ini.';
+
+            return back()->withErrors(['name' => $message]);
+        }
+
         MasterItem::create($validated);
 
         return back()->with('message', 'Data berhasil ditambahkan.');
@@ -57,6 +75,23 @@ class MasterDataController extends Controller
             'name' => 'required|string|max:255',
             'parameter_value' => 'nullable|string|max:255',
         ]);
+
+        $duplicateQuery = MasterItem::where('master_category_id', $item->master_category_id)
+            ->whereRaw('LOWER(name) = ?', [mb_strtolower(trim($validated['name']))])
+            ->where('id', '<>', $item->id);
+
+        // Kategori berparameter (mis. Program Studi): nama boleh sama selama jenjang berbeda
+        if ($item->category?->use_parameter) {
+            $duplicateQuery->where('parameter_value', $validated['parameter_value']);
+        }
+
+        if ($duplicateQuery->exists()) {
+            $message = $item->category?->use_parameter
+                ? 'Nama "'.$validated['name'].'" dengan '.$item->category->parameter_label.' "'.$validated['parameter_value'].'" sudah terdaftar.'
+                : 'Nama "'.$validated['name'].'" sudah terdaftar di kategori ini.';
+
+            return back()->withErrors(['name' => $message]);
+        }
 
         $item->update($validated);
 

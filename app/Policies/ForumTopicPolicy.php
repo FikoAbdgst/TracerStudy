@@ -10,12 +10,12 @@ class ForumTopicPolicy
     public function update(User $user, ForumTopic $forumTopic): bool
     {
         return $user->id === $forumTopic->user_id
-            || $user->hasAnyRole(['Super Admin', 'Admin Kampus']);
+            || $user->hasRole('Admin Kampus');
     }
 
     public function delete(User $user, ForumTopic $forumTopic): bool
     {
         return $user->id === $forumTopic->user_id
-            || $user->hasAnyRole(['Super Admin', 'Admin Kampus']);
+            || $user->hasRole('Admin Kampus');
     }
 }

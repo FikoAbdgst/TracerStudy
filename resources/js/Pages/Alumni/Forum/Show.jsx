@@ -156,20 +156,20 @@ function formatRichText(text) {
         .replace(/>/g, '&gt;')
         .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
         .replace(/\*(.+?)\*/g, '<em>$1</em>')
-        .replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer" style="color:#1a3560;text-decoration:underline">$1</a>')
+        .replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer" style="color:#1a3560;text-decoration:underline;word-break:break-all">$1</a>')
         .replace(/\n/g, '<br>');
     return html;
 }
 
 function RichContent({ text }) {
     return (
-        <span dangerouslySetInnerHTML={{ __html: formatRichText(text) }} style={{ fontSize: 14, color: '#334155', lineHeight: 1.7 }} />
+        <span dangerouslySetInnerHTML={{ __html: formatRichText(text) }} style={{ fontSize: 14, color: '#334155', lineHeight: 1.7, wordBreak: 'break-word', overflowWrap: 'anywhere' }} />
     );
 }
 
 const hasModeratorRole = (user) => {
     if (!user?.roles) return false;
-    return user.roles.some(r => r === 'Super Admin' || r === 'Admin Kampus');
+    return user.roles.some(r => r === 'Admin Kampus');
 };
 
 const BadgeModerator = ({ user }) => {
@@ -180,7 +180,7 @@ const BadgeModerator = ({ user }) => {
             background: '#dbeafe', color: '#1d4ed8', border: '1px solid #93c5fd',
             marginLeft: 6, whiteSpace: 'nowrap', letterSpacing: '0.02em',
         }}>
-            {user.roles.some(r => r === 'Super Admin') ? 'Super Admin' : 'Admin Kampus'}
+            {user.roles.some(r => r === 'Admin Kampus') ? 'Admin Kampus' : 'Moderator'}
         </span>
     );
 };

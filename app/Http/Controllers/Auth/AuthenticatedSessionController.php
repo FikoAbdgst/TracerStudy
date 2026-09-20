@@ -47,9 +47,7 @@ class AuthenticatedSessionController extends Controller
         $request->session()->regenerate();
 
         // Redirect berdasarkan Role menggunakan Spatie
-        if ($user->hasRole('Super Admin')) {
-            return redirect()->intended(route('superadmin.dashboard'));
-        } elseif ($user->hasRole('Admin Kampus')) {
+        if ($user->hasRole('Admin Kampus')) {
             return redirect()->intended(route('adminkampus.dashboard'));
         } elseif ($user->hasRole('Admin PT')) {
             return redirect()->intended(route('perusahaan.dashboard'));

@@ -20,9 +20,8 @@ const fieldBase = {
 
 const STATUS_OPTIONS = [
     { value: 'Bekerja', label: 'Bekerja', icon: '💼', desc: 'Sudah memiliki pekerjaan tetap/kontrak' },
-    { value: 'Mencari Kerja', label: 'Mencari Kerja', icon: '🔍', desc: 'Sedang aktif melamar dan mencari peluang kerja' },
     { value: 'Wiraswasta', label: 'Wiraswasta', icon: '🚀', desc: 'Memiliki usaha sendiri / freelance' },
-    { value: 'Lanjutkan Pendidikan', label: 'Lanjutkan Pendidikan', icon: '🎓', desc: 'Melanjutkan studi ke jenjang lebih tinggi' },
+    { value: 'Mencari Kerja', label: 'Mencari Kerja', icon: '🔍', desc: 'Sedang aktif melamar dan mencari peluang kerja' },
 ];
 
 const STATUS_LABELS = {
@@ -37,6 +36,8 @@ export default function KuesionerIndex({ kuesioner, existingResponse, profile, i
 
     const { data, setData, post, processing } = useForm({
         status_pekerjaan: existingResponse?.status_pekerjaan || profile?.employment_status || '',
+        melanjutkan_pendidikan: existingResponse?.melanjutkan_pendidikan ?? false,
+        pendidikan_institusi: existingResponse?.pendidikan_institusi || '',
         nama_perusahaan: existingResponse?.nama_perusahaan || profile?.company_name || '',
         jabatan: existingResponse?.jabatan || profile?.position || '',
         answers: existingResponse?.answers || {},
@@ -44,20 +45,49 @@ export default function KuesionerIndex({ kuesioner, existingResponse, profile, i
 
     const hasResponded = !!existingResponse;
 
+    const effectiveStatuses = (statusValue, isMelanjutkan) => {
+        const set = new Set();
+        if (statusValue) set.add(statusValue);
+        if (isMelanjutkan) set.add('Lanjutkan Pendidikan');
+        return set;
+    };
+
+    const visibleQuestionIds = (statusValue, isMelanjutkan) => new Set(
+        (kuesioner?.questions || []).filter(q => {
+            const targets = q.target_statuses;
+            if (!targets || targets.length === 0) return true;
+            const effective = effectiveStatuses(statusValue, isMelanjutkan);
+            return targets.some(t => effective.has(t));
+        }).map(q => String(q.id))
+    );
+
     const visibleQuestions = (kuesioner?.questions || []).filter(q => {
         const targets = q.target_statuses;
         if (!targets || targets.length === 0) return true;
-        return targets.includes(data.status_pekerjaan);
+        const effective = effectiveStatuses(data.status_pekerjaan, data.melanjutkan_pendidikan);
+        return targets.some(t => effective.has(t));
     });
 
     const handleStatusChange = (newStatus) => {
         setData('status_pekerjaan', newStatus);
-        const visibleIds = new Set(
-            (kuesioner?.questions || []).filter(q => {
-                const t = q.target_statuses;
-                return !t || t.length === 0 || t.includes(newStatus);
-            }).map(q => String(q.id))
-        );
+        if (!['Bekerja', 'Wiraswasta'].includes(newStatus)) {
+            setData('nama_perusahaan', '');
+        }
+        if (newStatus !== 'Bekerja') {
+            setData('jabatan', '');
+        }
+        const visibleIds = visibleQuestionIds(newStatus, data.melanjutkan_pendidikan);
+        const cleaned = { ...data.answers };
+        Object.keys(cleaned).forEach(k => { if (!visibleIds.has(String(k))) delete cleaned[k]; });
+        setData('answers', cleaned);
+    };
+
+    const handleEducationChange = (checked) => {
+        setData('melanjutkan_pendidikan', checked);
+        if (!checked) {
+            setData('pendidikan_institusi', '');
+        }
+        const visibleIds = visibleQuestionIds(data.status_pekerjaan, checked);
         const cleaned = { ...data.answers };
         Object.keys(cleaned).forEach(k => { if (!visibleIds.has(String(k))) delete cleaned[k]; });
         setData('answers', cleaned);
@@ -107,7 +137,7 @@ export default function KuesionerIndex({ kuesioner, existingResponse, profile, i
                     /* MODE: FORM (isi baru / edit)               */
                     /* ════════════════════════════════════════════ */
                     <form onSubmit={handleSubmit} style={{ animation: 'cardIn 0.38s both' }}>
-                        <div style={{ background: T.navy, borderRadius: '14px 14px 0 0', padding: '24px 28px', color: '#fff' }}>
+                        <div style={{ background: T.navy, borderRadius: '14px 14px 0 0', padding: '20px clamp(16px, 4vw, 28px)', color: '#fff' }}>
                             <h3 style={{ fontSize: 20, fontWeight: 800, margin: '0 0 6px' }}>{kuesioner.title}</h3>
                             {kuesioner.description && <p style={{ fontSize: 13, color: '#94a3b8', margin: 0 }}>{kuesioner.description}</p>}
                             {hasResponded && (
@@ -117,7 +147,7 @@ export default function KuesionerIndex({ kuesioner, existingResponse, profile, i
                             )}
                         </div>
 
-                        <div style={{ background: '#fff', borderRadius: '0 0 14px 14px', border: `1px solid ${T.borderSoft}`, borderTop: 'none', padding: '24px 28px' }}>
+                        <div style={{ background: '#fff', borderRadius: '0 0 14px 14px', border: `1px solid ${T.borderSoft}`, borderTop: 'none', padding: '20px clamp(16px, 4vw, 28px)' }}>
 
                             {/* ════════════════════════════════════════ */}
                             {/* BAGIAN A: PERTANYAAN STATIS SISTEM     */}
@@ -162,11 +192,47 @@ export default function KuesionerIndex({ kuesioner, existingResponse, profile, i
                                     </div>
                                 </div>
 
-                                {/* Q2: Nama Perusahaan/Instansi (hidden saat Mencari Kerja & Lanjutkan Pendidikan) */}
-                                {data.status_pekerjaan !== 'Mencari Kerja' && data.status_pekerjaan !== 'Lanjutkan Pendidikan' && (
+                                {/* Q1b: Melanjutkan Pendidikan (checkbox independen, boleh digabung) */}
+                                    <div style={{
+                                        marginBottom: 24, padding: '14px 16px', borderRadius: 10,
+                                        border: `1.5px solid ${data.melanjutkan_pendidikan ? T.purple : T.border}`,
+                                        background: data.melanjutkan_pendidikan ? T.purpleLight : T.bg,
+                                        transition: 'all 0.2s',
+                                    }}>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+                                            <input type="checkbox"
+                                                checked={data.melanjutkan_pendidikan}
+                                                onChange={e => handleEducationChange(e.target.checked)}
+                                                style={{ width: 18, height: 18, accentColor: T.purple, flexShrink: 0 }}
+                                            />
+                                            <span style={{ fontSize: 14, fontWeight: 700, color: T.navy }}>
+                                                🎓 Sedang melanjutkan pendidikan
+                                                <span style={{ fontWeight: 400, fontSize: 12, color: T.muted, marginLeft: 6 }}>
+                                                    (boleh digabung dengan status bekerja / wiraswasta)
+                                                </span>
+                                            </span>
+                                        </label>
+                                        {data.melanjutkan_pendidikan && (
+                                            <div style={{ marginTop: 12 }}>
+                                                <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: T.navy, marginBottom: 6 }}>
+                                                    Nama Institusi / Universitas <span style={{ fontWeight: 400, color: T.muted }}>(opsional)</span>
+                                                </label>
+                                                <input type="text" style={fieldBase}
+                                                    placeholder="Contoh: Universitas Indonesia (S2 Teknik Informatika)"
+                                                    value={data.pendidikan_institusi}
+                                                    onChange={e => setData('pendidikan_institusi', e.target.value)}
+                                                    onFocus={e => e.target.style.borderColor = T.purple}
+                                                    onBlur={e => e.target.style.borderColor = T.border}
+                                                />
+                                            </div>
+                                        )}
+                                    </div>
+
+                                {/* Q2: Nama Perusahaan/Instansi (hidden saat Mencari Kerja) */}
+                                {data.status_pekerjaan !== 'Mencari Kerja' && (
                                     <div style={{ marginBottom: 24 }}>
                                         <label style={{ display: 'block', fontSize: 14, fontWeight: 700, color: T.navy, marginBottom: 8 }}>
-                                            2. Nama Perusahaan / Instansi / Usaha
+                                            2. Nama Perusahaan / Usaha
                                             <span style={{ fontWeight: 400, fontSize: 12, color: T.muted, marginLeft: 6 }}>(wajib jika bekerja/wiraswasta)</span>
                                         </label>
                                         <input type="text" style={fieldBase}
@@ -269,7 +335,7 @@ export default function KuesionerIndex({ kuesioner, existingResponse, profile, i
                             {/* ── Tombol Submit ── */}
                             <hr style={{ border: 'none', borderTop: `1px solid ${T.borderSoft}`, margin: '28px 0 22px' }} />
 
-                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', flexWrap: 'wrap', gap: 10 }}>
                                 {hasResponded && (
                                     <button type="button" onClick={() => setShowForm(false)} style={{
                                         height: 44, padding: '0 24px', borderRadius: 9,
@@ -308,7 +374,7 @@ export default function KuesionerIndex({ kuesioner, existingResponse, profile, i
                             </p>
                         </div>
 
-                        <div style={{ background: '#fff', borderRadius: '0 0 14px 14px', border: `1px solid ${T.borderSoft}`, borderTop: 'none', padding: '24px 28px' }}>
+                        <div style={{ background: '#fff', borderRadius: '0 0 14px 14px', border: `1px solid ${T.borderSoft}`, borderTop: 'none', padding: '20px clamp(16px, 4vw, 28px)' }}>
 
                             {/* ── Info Wajib Sistem ── */}
                             <div style={{ marginBottom: 20, padding: 16, borderRadius: 10, background: '#fffbeb', border: `1px solid #fed7aa` }}>
@@ -325,12 +391,27 @@ export default function KuesionerIndex({ kuesioner, existingResponse, profile, i
                                         {STATUS_LABELS[existingResponse?.status_pekerjaan]?.icon} {existingResponse?.status_pekerjaan}
                                     </span>
                                 </div>
-                                <div>
-                                    <div style={{ fontSize: 12, fontWeight: 700, color: '#92400e', marginBottom: 4 }}>Nama Perusahaan / Instansi / Usaha</div>
-                                    <div style={{ fontSize: 13.5, color: T.navy, padding: '8px 12px', borderRadius: 6, background: '#fff' }}>
-                                        {existingResponse?.nama_perusahaan || <em style={{ color: T.muted }}>Tidak diisi</em>}
+                                {existingResponse?.melanjutkan_pendidikan && (
+                                    <div style={{ marginBottom: 10, paddingBottom: 10, borderBottom: `1px dashed #fde68a` }}>
+                                        <div style={{ fontSize: 12, fontWeight: 700, color: '#92400e', marginBottom: 4 }}>Melanjutkan Pendidikan</div>
+                                        <span style={{ fontSize: 12, fontWeight: 700, padding: '3px 10px', borderRadius: 20, background: T.purpleLight, color: T.purple }}>
+                                            🎓 Sedang melanjutkan studi
+                                        </span>
+                                        {existingResponse?.pendidikan_institusi && (
+                                            <div style={{ fontSize: 13.5, color: T.navy, padding: '8px 12px', borderRadius: 6, background: '#fff', marginTop: 8 }}>
+                                                {existingResponse.pendidikan_institusi}
+                                            </div>
+                                        )}
                                     </div>
-                                </div>
+                                )}
+                                {existingResponse?.status_pekerjaan === 'Mencari Kerja' ? null : (
+                                    <div>
+                                        <div style={{ fontSize: 12, fontWeight: 700, color: '#92400e', marginBottom: 4 }}>Nama Perusahaan / Usaha</div>
+                                        <div style={{ fontSize: 13.5, color: T.navy, padding: '8px 12px', borderRadius: 6, background: '#fff' }}>
+                                            {existingResponse?.nama_perusahaan || <em style={{ color: T.muted }}>Tidak diisi</em>}
+                                        </div>
+                                    </div>
+                                )}
                                 {existingResponse?.status_pekerjaan === 'Bekerja' && (
                                     <div style={{ marginTop: 10 }}>
                                         <div style={{ fontSize: 12, fontWeight: 700, color: '#92400e', marginBottom: 4 }}>Jabatan / Posisi</div>
@@ -343,11 +424,13 @@ export default function KuesionerIndex({ kuesioner, existingResponse, profile, i
 
                             {/* ── Jawaban Dinamis ── */}
                             {kuesioner.questions?.length > 0 && (() => {
-                                const respStatus = existingResponse?.status_pekerjaan;
+                                const effective = new Set();
+                                if (existingResponse?.status_pekerjaan) effective.add(existingResponse.status_pekerjaan);
+                                if (existingResponse?.melanjutkan_pendidikan) effective.add('Lanjutkan Pendidikan');
                                 const summaryVisible = kuesioner.questions.filter(q => {
                                     const targets = q.target_statuses;
                                     if (!targets || targets.length === 0) return true;
-                                    return targets.includes(respStatus);
+                                    return targets.some(t => effective.has(t));
                                 });
                                 return summaryVisible.length > 0 && (
                                     <div style={{ marginBottom: 20 }}>

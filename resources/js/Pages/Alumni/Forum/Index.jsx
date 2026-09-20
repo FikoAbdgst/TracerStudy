@@ -157,7 +157,7 @@ function Toast({ message, type, onClose }) {
 
 const hasModeratorRole = (user) => {
     if (!user?.roles) return false;
-    return user.roles.some(r => r === 'Super Admin' || r === 'Admin Kampus');
+    return user.roles.some(r => r === 'Admin Kampus');
 };
 
 const BadgeModerator = ({ user }) => {
@@ -168,7 +168,7 @@ const BadgeModerator = ({ user }) => {
             background: '#dbeafe', color: '#1d4ed8', border: '1px solid #93c5fd',
             marginLeft: 5, whiteSpace: 'nowrap', letterSpacing: '0.02em',
         }}>
-            {user.roles.some(r => r === 'Super Admin') ? 'Super Admin' : 'Admin Kampus'}
+            {user.roles.some(r => r === 'Admin Kampus') ? 'Admin Kampus' : 'Moderator'}
         </span>
     );
 };
@@ -292,6 +292,11 @@ export default function ForumIndex({ topics, filters }) {
                 @keyframes slideDown { from{opacity:0;transform:translateY(-12px)} to{opacity:1;transform:translateY(0)} }
                 .forum-card { transition:all 0.2s ease; }
                 .forum-card:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(15,31,61,0.1); border-color: ${T.navyMid}44 !important; }
+                @media (max-width: 640px) {
+                    .forum-card { flex-wrap: wrap; gap: 10px; }
+                    .forum-card > a { flex: 1 1 100%; min-width: 0; }
+                    .forum-card > div:last-child { justify-content: flex-end; }
+                }
             `}</style>
 
             <Toast message={toastMsg} type={toastType} onClose={() => setToastMsg(null)} />
@@ -341,7 +346,7 @@ export default function ForumIndex({ topics, filters }) {
                                         {announcement ? '📢' : (topic.user?.name?.charAt(0)?.toUpperCase() ?? '?')}
                                     </div>
                                     <div style={{ flex: 1, minWidth: 0 }}>
-                                        <div style={{ fontSize: 14, fontWeight: 700, color: T.navy, marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                        <div style={{ fontSize: 14, fontWeight: 700, color: T.navy, marginBottom: 4, overflow: 'hidden', wordBreak: 'break-word', display: 'flex', alignItems: 'flex-start', gap: 6, flexWrap: 'wrap' }}>
                                             {announcement && <span style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#d97706', background: '#fef3c7', borderRadius: 4, padding: '1px 7px' }}>PENGUMUMAN</span>}
                                             {topic.title}
                                         </div>
@@ -414,7 +419,7 @@ export default function ForumIndex({ topics, filters }) {
                 </div>
 
                 {topics?.last_page > 1 && (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 24 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 6, marginTop: 24 }}>
                         {topics.links?.map((link, i) => (
                             <button key={i} onClick={() => goToPage(link.url)}
                                 disabled={!link.url || link.active}

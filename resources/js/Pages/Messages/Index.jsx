@@ -13,7 +13,6 @@ const T = {
 };
 
 const roleLabel = (role) => {
-    if (role === 'Super Admin') return { text: 'Super Admin', bg: '#fef2f2', color: '#dc2626' };
     if (role === 'Admin Kampus') return { text: 'Admin', bg: '#f3e8ff', color: '#9333ea' };
     if (role === 'Admin PT') return { text: 'Perusahaan', bg: '#dbeafe', color: '#2563eb' };
     if (role === 'Alumni') return { text: 'Alumni', bg: '#dcfce7', color: '#16a34a' };
@@ -90,6 +89,13 @@ export default function MessagesIndex({ conversations: initialConvs, selectedCon
         setSelectedConv(initSelected);
         setMessages(initMessages);
     }, [initialConvs, initSelected, initMessages]);
+
+    // Buka kolom chat langsung di mobile jika halaman dibuka dengan ?conversation=
+    useEffect(() => {
+        if (initSelected?.id && window.innerWidth < 1024) {
+            setMobileShowChat(true);
+        }
+    }, [initSelected]);
 
     useEffect(() => {
         if (flash.draft_body) {
@@ -383,8 +389,7 @@ export default function MessagesIndex({ conversations: initialConvs, selectedCon
                                             >
                                                 <div className="flex items-center gap-3">
                                                     <div className="relative flex-shrink-0">
-                                                        <div className={`w-11 h-11 rounded-full flex items-center justify-center text-white font-semibold text-sm ${other?.role === 'Super Admin' ? 'bg-red-600' :
-                                                                other?.role === 'Admin PT' ? 'bg-blue-600' :
+                                                        <div className={`w-11 h-11 rounded-full flex items-center justify-center text-white font-semibold text-sm ${other?.role === 'Admin PT' ? 'bg-blue-600' :
                                                                 other?.role === 'Admin Kampus' ? 'bg-purple-600' :
                                                                     'bg-green-600'
                                                             }`}>
@@ -451,8 +456,7 @@ export default function MessagesIndex({ conversations: initialConvs, selectedCon
                                                     <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                                                 </svg>
                                             </button>
-                                            <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white font-semibold text-sm ${selectedConv.other_user?.role === 'Super Admin' ? 'bg-red-600' :
-                                                    selectedConv.other_user?.role === 'Admin PT' ? 'bg-blue-600' :
+                                            <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white font-semibold text-sm ${selectedConv.other_user?.role === 'Admin PT' ? 'bg-blue-600' :
                                                     selectedConv.other_user?.role === 'Admin Kampus' ? 'bg-purple-600' :
                                                         'bg-green-600'
                                                 }`}>
@@ -461,8 +465,7 @@ export default function MessagesIndex({ conversations: initialConvs, selectedCon
                                                 <div className="min-w-0">
                                                     <p className="text-sm font-semibold text-gray-900 truncate">{selectedConv.other_user?.name || 'Pengguna'}</p>
                                                     <p className="text-xs text-gray-500 truncate">
-                                                    {selectedConv.other_user?.role === 'Super Admin' ? 'Super Admin' :
-                                                        selectedConv.type === 'admin' ? 'Admin Kampus' :
+                                                    {selectedConv.type === 'admin' ? 'Admin Kampus' :
                                                         selectedConv.type === 'company' ? (selectedConv.other_user?.company_name || 'Perusahaan') :
                                                             selectedConv.other_user?.major || 'Alumni'}
                                                 </p>
@@ -884,8 +887,8 @@ export default function MessagesIndex({ conversations: initialConvs, selectedCon
                             </div>
                         </div>
                         <div className="p-5 space-y-4">
-                            {/* Hubungi Admin Kampus (hidden for Admin Kampus & Super Admin) */}
-                            {userRole !== 'Admin Kampus' && userRole !== 'Super Admin' && (
+                            {/* Hubungi Admin Kampus (hidden for Admin Kampus) */}
+                            {userRole !== 'Admin Kampus' && (
                             <button onClick={handleStartAdmin}
                                 className="w-full flex items-center gap-3 p-3.5 rounded-xl bg-purple-50 border border-purple-200 hover:bg-purple-100 transition-colors">
                                 <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold">

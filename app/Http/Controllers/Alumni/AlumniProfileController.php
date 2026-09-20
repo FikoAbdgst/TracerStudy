@@ -54,7 +54,9 @@ class AlumniProfileController extends Controller
             'portofolio_proyek.*.nama_proyek' => 'required_with:portofolio_proyek|string|max:255',
             'portofolio_proyek.*.deskripsi_singkat' => 'nullable|string|max:1000',
             'portofolio_proyek.*.tautan' => 'nullable|string|url|max:500',
-            'employment_status' => 'required|string|in:Bekerja,Mencari Kerja,Wiraswasta,Lanjutkan Pendidikan',
+            'employment_status' => 'required|string|in:Bekerja,Mencari Kerja,Wiraswasta',
+            'melanjutkan_pendidikan' => 'nullable|boolean',
+            'pendidikan_institusi' => 'nullable|string|max:255',
             'company_name' => 'required_if:employment_status,Bekerja,Wiraswasta|nullable|string|max:255',
             'position' => 'nullable|string|max:255',
             'job_sector' => 'nullable|string|max:255',
@@ -97,6 +99,11 @@ class AlumniProfileController extends Controller
             $validated['job_sector'] = null;
         } else {
             $validated['job_sector'] = null;
+        }
+
+        $validated['melanjutkan_pendidikan'] = (bool) ($validated['melanjutkan_pendidikan'] ?? false);
+        if (! $validated['melanjutkan_pendidikan']) {
+            $validated['pendidikan_institusi'] = null;
         }
 
         DB::transaction(function () use ($validated, $user, $alumni) {
@@ -142,6 +149,8 @@ class AlumniProfileController extends Controller
         if ($response) {
             $response->update([
                 'status_pekerjaan' => $statusPekerjaan,
+                'melanjutkan_pendidikan' => (bool) $alumni->melanjutkan_pendidikan,
+                'pendidikan_institusi' => $alumni->melanjutkan_pendidikan ? $alumni->pendidikan_institusi : null,
                 'nama_perusahaan' => $alumni->company_name,
                 'jabatan' => $alumni->position,
             ]);

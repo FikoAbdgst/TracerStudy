@@ -28,6 +28,8 @@ class AlumniProfile extends Model
         'cv_path',
         'photo_path',
         'employment_status',
+        'melanjutkan_pendidikan',
+        'pendidikan_institusi',
         'position',
         'company_name',
         'job_sector',
@@ -45,6 +47,7 @@ class AlumniProfile extends Model
         'privacy_hide_phone' => 'boolean',
         'privacy_hide_address' => 'boolean',
         'privacy_allow_search' => 'boolean',
+        'melanjutkan_pendidikan' => 'boolean',
         'portofolio_proyek' => 'array',
     ];
 

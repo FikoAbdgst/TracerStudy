@@ -4,6 +4,7 @@ namespace App\Http\Controllers\AdminKampus;
 
 use App\Http\Controllers\Controller;
 use App\Mail\CompanyCredentialsMail;
+use App\Mail\CompanyEmailUpdatedMail;
 use App\Models\Company;
 use App\Models\MouDocument;
 use App\Models\User;
@@ -82,9 +83,19 @@ class MitraController extends Controller
         $company->update(['name' => $validated['company_name']]);
 
         $user = $company->user;
+        $oldEmail = $user->email;
         $user->name = $validated['company_name'];
         $user->email = $validated['hr_email'];
         $user->save();
+
+        $emailChanged = $oldEmail !== $validated['hr_email'];
+
+        if ($emailChanged) {
+            Mail::to($validated['hr_email'])->send(new CompanyEmailUpdatedMail(
+                companyName: $validated['company_name'],
+                email: $validated['hr_email'],
+            ));
+        }
 
         if ($request->hasFile('mou_document')) {
             $path = $request->file('mou_document')->storeAs('mou_documents', preg_replace('/[^a-zA-Z0-9._-]/', '_', $request->file('mou_document')->getClientOriginalName()), 'local');
@@ -97,7 +108,9 @@ class MitraController extends Controller
             ]);
         }
 
-        return back()->with('message', 'Data mitra berhasil diperbarui.');
+        return back()->with('message', $emailChanged
+            ? 'Data mitra berhasil diperbarui. Pemberitahuan email login baru telah dikirim.'
+            : 'Data mitra berhasil diperbarui.');
     }
 
     public function destroy(Company $company)
